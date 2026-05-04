@@ -103,7 +103,7 @@ export class AuthService {
   }
 
   private handleAuthResponse(response: AuthResponse): void {
-    localStorage.setItem(this.TOKEN_KEY, response.token);
+    localStorage.setItem(this.TOKEN_KEY, response.accessToken);
     localStorage.setItem(this.REFRESH_TOKEN_KEY, response.refreshToken);
     localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));
     this.currentUserSubject.next(response.user);

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChatFlow Widget — Integration Example</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: linear-gradient(135deg, #f0f4ff, #faf5ff);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      padding: 2rem;
+    }
+    h1 { font-size: 2rem; color: #1e1b4b; }
+    p  { color: #6b7280; max-width: 600px; text-align: center; line-height: 1.6; }
+    .card {
+      background: #fff;
+      border-radius: 1rem;
+      box-shadow: 0 4px 24px rgba(0,0,0,.1);
+      padding: 2rem;
+      width: 100%;
+      max-width: 600px;
+    }
+    .card h2 { font-size: 1.1rem; color: #374151; margin-bottom: 1rem; }
+    code {
+      display: block;
+      background: #f1f5f9;
+      border-radius: .5rem;
+      padding: .75rem 1rem;
+      font-size: .85rem;
+      color: #1e1b4b;
+      line-height: 1.6;
+      overflow-x: auto;
+    }
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .75rem;
+      margin-top: 1.5rem;
+    }
+    button {
+      padding: .6rem 1.25rem;
+      border: none;
+      border-radius: .5rem;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: .9rem;
+      color: #fff;
+    }
+    .btn-primary  { background: #6366f1; }
+    .btn-success  { background: #22c55e; }
+    .btn-warning  { background: #f59e0b; }
+    .btn-danger   { background: #ef4444; }
+    .btn-neutral  { background: #6b7280; }
+    #log {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: .8rem;
+      padding: 1rem;
+      border-radius: .5rem;
+      min-height: 120px;
+      max-height: 240px;
+      overflow-y: auto;
+      font-family: monospace;
+      line-height: 1.7;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>ChatFlow Widget Demo</h1>
+  <p>
+    This page embeds the ChatFlow chat widget via a single
+    <code>&lt;script&gt;</code> tag. Use the buttons below to interact with the
+    widget API and observe real-time events.
+  </p>
+
+  <!-- ── Embed code ──────────────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>Widget Embed Snippet</h2>
+    <code>
+&lt;script<br>
+&nbsp;&nbsp;src="http://localhost:5000/widget/chatflow.js"<br>
+&nbsp;&nbsp;data-chatflow="YOUR_WORKSPACE_ID"<br>
+&nbsp;&nbsp;data-api-url="http://localhost:5000"<br>
+&nbsp;&nbsp;defer<br>
+&gt;&lt;/script&gt;
+    </code>
+  </div>
+
+  <!-- ── Widget API controls ─────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>Widget API Controls</h2>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="openWidget()">Open Widget</button>
+      <button class="btn-neutral" onclick="closeWidget()">Close Widget</button>
+      <button class="btn-success" onclick="toggleWidget()">Toggle</button>
+      <button class="btn-warning" onclick="sendAutoMessage()">Send Auto Message</button>
+      <button class="btn-danger"  onclick="destroyWidget()">Destroy Widget</button>
+    </div>
+    <div id="log">&gt; Widget event log will appear here…</div>
+  </div>
+
+  <!-- ── ChatFlow widget config ──────────────────────────────────────────── -->
+  <script>
+    window.chatFlowConfig = {
+      workspaceId: 'YOUR_WORKSPACE_ID',
+      apiUrl:      'http://localhost:5000',
+      theme: {
+        primaryColor: '#6366f1',
+        position:     'bottom-right',
+      },
+      greeting: 'Hi! How can we help you today?',
+      onLoad: function () {
+        log('▶ Widget loaded');
+      },
+      onOpen: function () {
+        log('✓ Widget opened');
+      },
+      onClose: function () {
+        log('✓ Widget closed');
+      },
+      onMessage: function (msg) {
+        log('📨 Received: ' + (msg.content ?? JSON.stringify(msg)));
+      },
+      onError: function (err) {
+        log('❌ Error: ' + (err.message ?? err));
+      },
+    };
+  </script>
+
+  <!--
+    The widget script is loaded from your locally running ChatFlow stack.
+    If the stack is not running, the widget will not appear — that is expected.
+  -->
+  <script
+    src="http://localhost:5000/widget/chatflow.js"
+    data-chatflow="YOUR_WORKSPACE_ID"
+    data-api-url="http://localhost:5000"
+    defer
+  ></script>
+
+  <!-- ── Demo control scripts ────────────────────────────────────────────── -->
+  <script>
+    const logEl = document.getElementById('log');
+
+    function log(msg) {
+      const line = document.createElement('div');
+      line.textContent = new Date().toLocaleTimeString() + '  ' + msg;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function getWidget() {
+      return window.ChatFlowWidget ?? null;
+    }
+
+    function openWidget() {
+      const w = getWidget();
+      if (!w) { log('⚠ Widget not loaded yet'); return; }
+      w.open();
+      log('▶ open() called');
+    }
+
+    function closeWidget() {
+      const w = getWidget();
+      if (!w) { log('⚠ Widget not loaded yet'); return; }
+      w.close();
+      log('▶ close() called');
+    }
+
+    function toggleWidget() {
+      const w = getWidget();
+      if (!w) { log('⚠ Widget not loaded yet'); return; }
+      w.toggle();
+      log('▶ toggle() called');
+    }
+
+    function sendAutoMessage() {
+      const w = getWidget();
+      if (!w) { log('⚠ Widget not loaded yet'); return; }
+      w.sendMessage('Hello from the host page!');
+      log('▶ sendMessage() called');
+    }
+
+    function destroyWidget() {
+      const w = getWidget();
+      if (!w) { log('⚠ Widget not loaded yet'); return; }
+      w.destroy();
+      delete window.ChatFlowWidget;
+      log('▶ destroy() called — reload the page to reinitialise');
+    }
+
+    // Listen for cross-frame events dispatched on window
+    window.addEventListener('chatflow:ready',   () => log('🟢 chatflow:ready event'));
+    window.addEventListener('chatflow:message', (e) => log('📨 chatflow:message event: ' + JSON.stringify(e.detail)));
+    window.addEventListener('chatflow:open',    () => log('🔓 chatflow:open event'));
+    window.addEventListener('chatflow:close',   () => log('🔒 chatflow:close event'));
+  </script>
+
+</body>
+</html>

@@ -10,7 +10,7 @@ describe('AuthService', () => {
   const mockConfig = { apiUrl: 'http://localhost:5000' };
 
   const mockAuthResponse: AuthResponse = {
-    token: 'mock-token',
+    accessToken: 'mock-token',
     refreshToken: 'mock-refresh-token',
     user: {
       id: '123',
@@ -55,7 +55,7 @@ describe('AuthService', () => {
 
       service.login(credentials).subscribe(response => {
         expect(response).toEqual(mockAuthResponse);
-        expect(service.getToken()).toBe(mockAuthResponse.token);
+        expect(service.getToken()).toBe(mockAuthResponse.accessToken);
         expect(service.getRefreshToken()).toBe(mockAuthResponse.refreshToken);
         expect(service.currentUserValue).toEqual(mockAuthResponse.user);
         expect(service.isAuthenticated).toBe(true);
@@ -113,10 +113,10 @@ describe('AuthService', () => {
     it('should refresh token successfully', (done) => {
       localStorage.setItem('chatflow_refresh_token', 'old-refresh-token');
 
-      const newAuthResponse = { ...mockAuthResponse, token: 'new-token' };
+      const newAuthResponse = { ...mockAuthResponse, accessToken: 'new-token' };
 
       service.refreshToken().subscribe(response => {
-        expect(response.token).toBe('new-token');
+        expect(response.accessToken).toBe('new-token');
         expect(service.getToken()).toBe('new-token');
         done();
       });

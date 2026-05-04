@@ -49,14 +49,14 @@ class Conversation extends Equatable {
 }
 
 enum ConversationStatus {
-  @JsonValue('active')
-  active,
-  @JsonValue('pending')
-  pending,
+  @JsonValue('open')
+  open,
+  @JsonValue('assigned')
+  assigned,
+  @JsonValue('resolved')
+  resolved,
   @JsonValue('closed')
   closed,
-  @JsonValue('archived')
-  archived,
 }
 
 @JsonSerializable()
@@ -140,14 +140,14 @@ class SendMessageRequest {
 
 @JsonSerializable()
 class PaginatedResponse<T> {
-  final List<T> items;
+  final List<T> data;
   final int page;
   final int limit;
   final int total;
   final int totalPages;
 
   const PaginatedResponse({
-    required this.items,
+    required this.data,
     required this.page,
     required this.limit,
     required this.total,
@@ -159,7 +159,7 @@ class PaginatedResponse<T> {
     T Function(Object? json) fromJsonT,
   ) {
     return PaginatedResponse<T>(
-      items: (json['items'] as List<dynamic>).map((e) => fromJsonT(e)).toList(),
+      data: (json['data'] as List<dynamic>).map((e) => fromJsonT(e)).toList(),
       page: json['page'] as int,
       limit: json['limit'] as int,
       total: json['total'] as int,
