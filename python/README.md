@@ -1,6 +1,6 @@
-# AI Chat Python SDK
+# ChatFlow Python SDK
 
-Official Python SDK for AI Chat SaaS platform.
+Official Python SDK for the [ChatFlow Platform](https://chatflow.com).
 
 ## Installation
 
@@ -17,7 +17,7 @@ from aichat import AIChatClient, RegisterRequest, LoginRequest
 async def main():
     # Initialize the client
     async with AIChatClient(
-        api_url="https://api.aichat.com",
+        api_url="https://api.chatflow.com",
         api_key="your-api-key",
         workspace_id="your-workspace-id",
     ) as client:
@@ -249,10 +249,10 @@ reveal_type(user)  # Revealed type is "User"
 ```python
 client = AIChatClient(
     # API base URL (default: http://localhost:5000)
-    api_url="https://api.aichat.com",
+    api_url="https://api.chatflow.com",
     
     # WebSocket URL (default: ws://localhost:5002)
-    ws_url="wss://ws.aichat.com",
+    ws_url="wss://ws.chatflow.com",
     
     # API Key for authentication
     api_key="your-api-key",
@@ -276,7 +276,7 @@ client = AIChatClient(
 Use the client as an async context manager for automatic cleanup:
 
 ```python
-async with AIChatClient(api_url="https://api.aichat.com") as client:
+async with AIChatClient(api_url="https://api.chatflow.com") as client:
     user = await client.auth.me()
     # Connections automatically closed on exit
 ```

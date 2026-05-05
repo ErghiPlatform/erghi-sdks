@@ -1,6 +1,6 @@
-# AI Chat JavaScript/TypeScript SDK
+# ChatFlow JavaScript/TypeScript SDK
 
-Official JavaScript/TypeScript SDK for AI Chat SaaS platform.
+Official JavaScript/TypeScript SDK for the [ChatFlow Platform](https://chatflow.com).
 
 ## Installation
 
@@ -19,7 +19,7 @@ import AIChatClient from '@aichat/sdk';
 
 // Initialize the client
 const client = new AIChatClient({
-  apiUrl: 'https://api.aichat.com',
+  apiUrl: 'https://api.chatflow.com',
   apiKey: 'your-api-key',
   workspaceId: 'your-workspace-id',
 });
@@ -241,10 +241,10 @@ const messages: PaginatedResponse<Message> = await client.chat.getMessages('conv
 ```typescript
 const client = new AIChatClient({
   // API base URL (default: http://localhost:5000)
-  apiUrl: 'https://api.aichat.com',
+  apiUrl: 'https://api.chatflow.com',
   
   // WebSocket URL (default: ws://localhost:5002)
-  wsUrl: 'wss://ws.aichat.com',
+  wsUrl: 'wss://ws.chatflow.com',
   
   // API Key for authentication
   apiKey: 'your-api-key',
@@ -266,10 +266,10 @@ const client = new AIChatClient({
 ## Browser Usage
 
 ```html
-<script src="https://cdn.aichat.com/sdk/latest/aichat.min.js"></script>
+<script src="https://cdn.chatflow.com/sdk/latest/chatflow.min.js"></script>
 <script>
   const client = new AIChatSDK.default({
-    apiUrl: 'https://api.aichat.com',
+    apiUrl: 'https://api.chatflow.com',
     apiKey: 'your-api-key',
   });
 
@@ -288,8 +288,8 @@ const client = new AIChatClient({
 const AIChatClient = require('@aichat/sdk').default;
 
 const client = new AIChatClient({
-  apiUrl: 'https://api.aichat.com',
-  apiKey: process.env.AICHAT_API_KEY,
+  apiUrl: 'https://api.chatflow.com',
+  apiKey: process.env.CHATFLOW_API_KEY,
 });
 ```
 

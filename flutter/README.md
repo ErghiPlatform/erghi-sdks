@@ -1,6 +1,6 @@
-# AI Chat Flutter SDK
+# ChatFlow Flutter SDK
 
-Official Flutter SDK for AI Chat - Build AI-powered chat experiences in your iOS and Android apps.
+Official Flutter SDK for the [ChatFlow Platform](https://chatflow.com) — Build AI-powered chat experiences in your iOS and Android apps.
 
 [![pub package](https://img.shields.io/pub/v/aichat_sdk.svg)](https://pub.dev/packages/aichat_sdk)
 [![Flutter](https://img.shields.io/badge/Flutter-3.10+-blue.svg)](https://flutter.dev)
@@ -39,7 +39,7 @@ import 'package:aichat_sdk/aichat_sdk.dart';
 
 final client = AIChatClient(
   config: AIChatConfig(
-    apiUrl: 'https://api.aichat.com',
+    apiUrl: 'https://api.chatflow.com',
     debug: true,
   ),
 );
@@ -155,7 +155,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _initializeChat() async {
     _client = AIChatClient(
       config: AIChatConfig(
-        apiUrl: 'https://api.aichat.com',
+        apiUrl: 'https://api.chatflow.com',
         debug: true,
       ),
     );
@@ -331,10 +331,10 @@ MIT License - see [LICENSE](LICENSE) file
 
 ## Support
 
-- 📧 Email: support@aichat.com
+- 📧 Email: support@chatflow.com
 - 💬 Discord: [Join our community](https://discord.gg/aichat)
 - 📝 Issues: [GitHub Issues](https://github.com/aichat/flutter-sdk/issues)
 
 ---
 
-Made with ❤️ by the AI Chat team
+Made with ❤️ by the ChatFlow team

@@ -1,6 +1,6 @@
-# AI Chat React SDK
+# ChatFlow React SDK
 
-React hooks and components for AI Chat SaaS platform.
+React hooks and components for the [ChatFlow Platform](https://chatflow.com).
 
 ## Installation
 
@@ -17,7 +17,7 @@ function App() {
   return (
     <AIChatProvider
       config={{
-        apiUrl: 'https://api.aichat.com',
+        apiUrl: 'https://api.chatflow.com',
         apiKey: 'your-api-key',
       }}
     >
