@@ -8,9 +8,10 @@
 ///   flutter run -d chrome        # or any connected device
 
 import 'package:flutter/material.dart';
-import '../lib/src/client.dart';
-import '../lib/src/models/conversation.dart';
-import '../lib/src/models/auth.dart';
+import 'package:aichat_sdk/src/aichat_client.dart';
+import 'package:aichat_sdk/src/config/aichat_config.dart';
+import 'package:aichat_sdk/src/models/conversation.dart';
+import 'package:aichat_sdk/src/models/user.dart';
 
 void main() {
   runApp(const SimulationApp());
@@ -46,8 +47,10 @@ class SimulationPage extends StatefulWidget {
 
 class _SimulationPageState extends State<SimulationPage> {
   final AIChatClient _client = AIChatClient(
-    apiUrl: 'http://localhost:5000',
-    debug: true,
+    config: AIChatConfig(
+      apiUrl: 'http://localhost:5000',
+      debug: true,
+    ),
   );
 
   // ── Auth form state ──────────────────────────────────────────────────────
@@ -70,18 +73,15 @@ class _SimulationPageState extends State<SimulationPage> {
   void initState() {
     super.initState();
     // Listen to WebSocket messages
-    _client.messageStream.listen((msg) {
-      setState(() => _messages.add(msg));
+    _client.messageStream?.listen((msg) {
+      setState(() => _messages.add(msg.toJson()));
       _scrollToBottom();
-    });
-    _client.connectionStateStream.listen((connected) {
-      setState(() => _isConnected = connected);
     });
   }
 
   @override
   void dispose() {
-    _client.disconnect();
+    _client.disconnectWebSocket();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _firstNameCtrl.dispose();
@@ -98,15 +98,19 @@ class _SimulationPageState extends State<SimulationPage> {
       AuthResponse auth;
       if (_isRegistering) {
         auth = await _client.auth.register(
-          email: _emailCtrl.text.trim(),
-          password: _passwordCtrl.text,
-          firstName: _firstNameCtrl.text.trim(),
-          lastName: 'User',
+          RegisterRequest(
+            email: _emailCtrl.text.trim(),
+            password: _passwordCtrl.text,
+            firstName: _firstNameCtrl.text.trim(),
+            lastName: 'User',
+          ),
         );
       } else {
         auth = await _client.auth.login(
-          email: _emailCtrl.text.trim(),
-          password: _passwordCtrl.text,
+          LoginRequest(
+            email: _emailCtrl.text.trim(),
+            password: _passwordCtrl.text,
+          ),
         );
       }
       debugPrint('Logged in: ${auth.user.email}');
@@ -122,7 +126,7 @@ class _SimulationPageState extends State<SimulationPage> {
   Future<void> _setupChat() async {
     try {
       // Connect WebSocket
-      await _client.connect();
+      await _client.connectWebSocket();
 
       // Create a conversation
       final conv = await _client.chat.createConversation(
@@ -132,7 +136,7 @@ class _SimulationPageState extends State<SimulationPage> {
       setState(() => _conversationId = conv.id);
 
       // Join the conversation room
-      await _client.joinConversation(conv.id);
+      _client.joinConversation(conv.id);
 
       // Load history
       final history = await _client.chat.getMessages(conv.id);
@@ -150,7 +154,7 @@ class _SimulationPageState extends State<SimulationPage> {
     try {
       final msg = await _client.chat.sendMessage(
         _conversationId!,
-        content: text,
+        SendMessageRequest(content: text),
       );
       setState(() => _messages.add(msg.toJson()));
       _scrollToBottom();

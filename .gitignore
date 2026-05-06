@@ -53,6 +53,8 @@ npm-debug.log*
 yarn-error.log*
 .npm/
 .yarn/
+package-lock.json
+yarn.lock
 
 # Angular SDK
 .angular/
@@ -76,6 +78,9 @@ build/
 *.g.dart
 *.freezed.dart
 doc/api/
+pubspec.lock
+.flutter-plugins
+.flutter-plugins-dependencies
 
 # Swift SDK
 .build/
