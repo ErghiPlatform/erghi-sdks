@@ -19,7 +19,7 @@ module.exports = {
     extensions: ['.ts', '.js'],
   },
   output: {
-    filename: 'chatflow-widget.min.js',
+    filename: 'widget.js',
     path: path.resolve(__dirname, 'dist'),
     library: 'ChatFlowWidget',
     libraryTarget: 'umd',

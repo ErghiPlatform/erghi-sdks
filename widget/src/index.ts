@@ -1,49 +1,77 @@
-import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
+import { buildStyles, ICON_CHAT, ICON_SEND } from './styles';
+import { ConversationRealtimeClient } from './realtime';
+import { playMessageNotification } from './notification';
 
 export interface ChatFlowConfig {
-  workspace: string;
+  /** Widget UUID from admin portal */
+  widgetId: string;
+  /** @deprecated use widgetId */
+  workspace?: string;
   apiUrl?: string;
-  signalrUrl?: string;
-  theme?: 'light' | 'dark' | 'auto';
   position?: 'bottom-left' | 'bottom-right';
   primaryColor?: string;
   greeting?: string;
-  avatar?: string;
+  title?: string;
   autoOpen?: boolean;
+  /** Arbitrary visitor / session context passed to the AI (customerId, claims, etc.) */
+  visitorContext?: Record<string, unknown>;
 }
 
 interface Message {
   id: string;
   content: string;
-  sender: 'visitor' | 'agent' | 'system';
-  createdAt: string;
+  sender: string;
+  createdAt?: string;
 }
 
 export default class ChatFlowWidget {
-  private config: Required<ChatFlowConfig>;
-  private container: HTMLElement | null = null;
+  private config: Required<Omit<ChatFlowConfig, 'workspace' | 'visitorContext'>> & {
+    workspace?: string;
+    visitorContext: Record<string, unknown>;
+  };
+  private host: HTMLElement | null = null;
+  private shadow: ShadowRoot | null = null;
   private isOpen = false;
   private conversationId: string | null = null;
-  private hubConnection: HubConnection | null = null;
   private messages: Message[] = [];
+  private isTyping = false;
+  private knownMessageIds = new Set<string>();
+  private realtime = new ConversationRealtimeClient();
+  private fallbackPollTimer: ReturnType<typeof setTimeout> | null = null;
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private awaitingReply = false;
+  private lastInactivityWarningAt = 0;
+  private pendingFile: File | null = null;
+  private translations: Record<string, string> = {};
+  private locale = 'en';
+  private displayConfig = {
+    aiAssistantName: 'AI Assistant',
+    showAiLabel: true,
+    showAgentName: true,
+    assignedAgentName: '',
+  };
 
   constructor(config: ChatFlowConfig) {
+    const widgetId = config.widgetId || config.workspace;
+    if (!widgetId) throw new Error('ChatFlow: widgetId is required');
+
     this.config = {
+      widgetId,
       workspace: config.workspace,
-      apiUrl: config.apiUrl || 'https://api.chatflow.com',
-      signalrUrl: config.signalrUrl || 'https://api.chatflow.com/hubs/chat',
-      theme: config.theme || 'light',
+      apiUrl: config.apiUrl || 'http://localhost:5080',
       position: config.position || 'bottom-right',
-      primaryColor: config.primaryColor || '#007bff',
+      primaryColor: config.primaryColor || '#0066FF',
       greeting: config.greeting || 'Hi! How can we help you today?',
-      avatar: config.avatar || '',
-      autoOpen: config.autoOpen || false
+      title: config.title || 'ChatFlow',
+      autoOpen: config.autoOpen ?? false,
+      visitorContext: { ...(config.visitorContext ?? {}) },
     };
 
-    this.init();
+    this.bootstrap();
   }
 
-  private init(): void {
+  private async bootstrap(): Promise<void> {
+    await Promise.all([this.loadWidgetEmbedConfig(), this.loadTranslations()]);
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => this.render());
     } else {
@@ -51,356 +79,674 @@ export default class ChatFlowWidget {
     }
   }
 
-  private render(): void {
-    this.injectStyles();
-    this.createContainer();
-    this.attachEventListeners();
+  private detectLocale(): string {
+    try {
+      const stored = localStorage.getItem('chatflow:locale') || localStorage.getItem('ui-language');
+      if (stored) return stored.slice(0, 2);
+    } catch { /* ignore */ }
+    return (document.documentElement.lang || navigator.language || 'en').slice(0, 2);
+  }
 
-    if (this.config.autoOpen) {
-      this.open();
+  private tr(key: string, fallback: string): string {
+    return this.translations[key] || fallback;
+  }
+
+  private async loadTranslations(): Promise<void> {
+    this.locale = this.detectLocale();
+    try {
+      const res = await fetch(
+        `${this.config.apiUrl}/api/v1/i18n/translations?language=${encodeURIComponent(this.locale)}&context=widget`
+      );
+      if (res.ok) this.translations = await res.json();
+    } catch { /* optional */ }
+  }
+
+  private async loadWidgetEmbedConfig(): Promise<void> {
+    try {
+      const res = await fetch(`${this.config.apiUrl}/api/widgets/${this.config.widgetId}/public`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.primaryColor) this.config.primaryColor = data.primaryColor;
+      if (data.welcomeMessage) this.config.greeting = data.welcomeMessage;
+      if (data.companyName) this.config.title = data.companyName;
+      this.displayConfig = {
+        aiAssistantName: data.aiAssistantName ?? data.AiAssistantName ?? 'AI Assistant',
+        showAiLabel: data.showAiLabel ?? data.ShowAiLabel ?? true,
+        showAgentName: data.showAgentName ?? data.ShowAgentName ?? true,
+        assignedAgentName: this.displayConfig.assignedAgentName,
+      };
+    } catch { /* optional */ }
+  }
+
+  /**
+   * Set or merge visitor context (customerId, email, JWT claims, custom fields).
+   * Call before or after opening the widget; syncs to the server when a conversation exists.
+   */
+  public identify(context: Record<string, unknown>): void {
+    this.setContext(context, true);
+  }
+
+  /** Replace or merge visitor context metadata. */
+  public setContext(context: Record<string, unknown>, merge = true): void {
+    if (merge) {
+      this.config.visitorContext = { ...this.config.visitorContext, ...context };
+    } else {
+      this.config.visitorContext = { ...context };
+    }
+    if (this.conversationId) {
+      void this.syncMetadata();
     }
   }
 
-  private injectStyles(): void {
+  public getContext(): Readonly<Record<string, unknown>> {
+    return { ...this.config.visitorContext };
+  }
+
+  private render(): void {
+    if (this.host) return;
+
+    this.host = document.createElement('div');
+    this.host.id = 'chatflow-widget-root';
+    this.shadow = this.host.attachShadow({ mode: 'open' });
+
     const style = document.createElement('style');
-    style.textContent = `
-      .chatflow-widget {
-        position: fixed;
-        ${this.config.position === 'bottom-right' ? 'right: 20px;' : 'left: 20px;'}
-        bottom: 20px;
-        z-index: 9999;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      }
+    style.textContent = buildStyles(this.config.primaryColor, this.config.position);
+    this.shadow.appendChild(style);
 
-      .chatflow-bubble {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: ${this.config.primaryColor};
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.2s;
-      }
-
-      .chatflow-bubble:hover {
-        transform: scale(1.1);
-      }
-
-      .chatflow-bubble svg {
-        width: 28px;
-        height: 28px;
-        fill: white;
-      }
-
-      .chatflow-window {
-        display: none;
-        position: fixed;
-        ${this.config.position === 'bottom-right' ? 'right: 20px;' : 'left: 20px;'}
-        bottom: 100px;
-        width: 380px;
-        height: 600px;
-        max-height: calc(100vh - 120px);
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-        flex-direction: column;
-        overflow: hidden;
-      }
-
-      .chatflow-window.open {
-        display: flex;
-      }
-
-      .chatflow-header {
-        background: ${this.config.primaryColor};
-        color: white;
-        padding: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-
-      .chatflow-header-info {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .chatflow-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.2);
-      }
-
-      .chatflow-close {
-        background: none;
-        border: none;
-        color: white;
-        font-size: 24px;
-        cursor: pointer;
-        padding: 0;
-        width: 30px;
-        height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .chatflow-messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .chatflow-message {
-        max-width: 80%;
-        padding: 10px 14px;
-        border-radius: 12px;
-        word-wrap: break-word;
-      }
-
-      .chatflow-message.visitor {
-        align-self: flex-end;
-        background: ${this.config.primaryColor};
-        color: white;
-      }
-
-      .chatflow-message.agent {
-        align-self: flex-start;
-        background: #f0f0f0;
-        color: #333;
-      }
-
-      .chatflow-input-container {
-        padding: 16px;
-        border-top: 1px solid #e0e0e0;
-        display: flex;
-        gap: 8px;
-      }
-
-      .chatflow-input {
-        flex: 1;
-        padding: 10px 14px;
-        border: 1px solid #e0e0e0;
-        border-radius: 20px;
-        outline: none;
-        font-size: 14px;
-      }
-
-      .chatflow-input:focus {
-        border-color: ${this.config.primaryColor};
-      }
-
-      .chatflow-send {
-        background: ${this.config.primaryColor};
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .chatflow-send:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      @media (max-width: 480px) {
-        .chatflow-window {
-          width: calc(100vw - 40px);
-          height: calc(100vh - 120px);
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  private createContainer(): void {
-    this.container = document.createElement('div');
-    this.container.className = 'chatflow-widget';
-    this.container.innerHTML = `
-      <div class="chatflow-bubble" id="chatflow-bubble">
-        <svg viewBox="0 0 24 24">
-          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
-        </svg>
-      </div>
-      <div class="chatflow-window" id="chatflow-window">
-        <div class="chatflow-header">
-          <div class="chatflow-header-info">
-            ${this.config.avatar ? `<img src="${this.config.avatar}" class="chatflow-avatar" alt="Support">` : '<div class="chatflow-avatar"></div>'}
-            <div>
-              <div style="font-weight: 600;">Support Team</div>
-              <div style="font-size: 12px; opacity: 0.9;">Usually replies in minutes</div>
-            </div>
+    const root = document.createElement('div');
+    root.className = 'root';
+    root.innerHTML = `
+      <div class="panel" id="cf-panel" role="dialog" aria-label="Chat">
+        <div class="header">
+          <div>
+            <p class="header-title">${escapeHtml(this.config.title)}</p>
+            <p class="header-sub">We typically reply in minutes</p>
           </div>
-          <button class="chatflow-close" id="chatflow-close">&times;</button>
+          <button type="button" class="icon-btn" id="cf-close" aria-label="Close chat">&times;</button>
         </div>
-        <div class="chatflow-messages" id="chatflow-messages">
-          <div class="chatflow-message agent">${this.config.greeting}</div>
-        </div>
-        <div class="chatflow-input-container">
-          <input type="text" class="chatflow-input" id="chatflow-input" placeholder="Type your message...">
-          <button class="chatflow-send" id="chatflow-send">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-            </svg>
-          </button>
+        <div class="messages" id="cf-messages"></div>
+        <div class="typing" id="cf-typing"><span></span><span></span><span></span></div>
+        <div class="composer">
+          <input type="file" id="cf-file" accept="image/*,.pdf,.txt" hidden />
+          <button type="button" class="attach-btn" id="cf-attach" aria-label="Attach file">📎</button>
+          <input type="text" id="cf-input" placeholder="${escapeHtml(this.tr('widget.input.placeholder', 'Type a message…'))}" autocomplete="off" maxlength="4000" />
+          <button type="button" class="send-btn" id="cf-send" aria-label="Send">${ICON_SEND}</button>
         </div>
       </div>
+      <button type="button" class="bubble" id="cf-bubble" aria-label="Open chat">${ICON_CHAT}</button>
     `;
-    document.body.appendChild(this.container);
+    this.shadow.appendChild(root);
+
+    document.body.appendChild(this.host);
+    this.bindEvents();
+    this.addSystemMessage(this.config.greeting);
+    void this.tryRestoreSession();
+
+    if (this.config.autoOpen) this.open();
   }
 
-  private attachEventListeners(): void {
-    const bubble = document.getElementById('chatflow-bubble');
-    const closeBtn = document.getElementById('chatflow-close');
-    const input = document.getElementById('chatflow-input') as HTMLInputElement;
-    const sendBtn = document.getElementById('chatflow-send');
-
-    bubble?.addEventListener('click', () => this.toggle());
-    closeBtn?.addEventListener('click', () => this.close());
-    sendBtn?.addEventListener('click', () => this.sendMessage());
-    input?.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') this.sendMessage();
+  private bindEvents(): void {
+    const s = this.shadow!;
+    s.getElementById('cf-bubble')?.addEventListener('click', () => this.toggle());
+    s.getElementById('cf-close')?.addEventListener('click', () => this.close());
+    s.getElementById('cf-send')?.addEventListener('click', () => void this.sendMessage());
+    s.getElementById('cf-attach')?.addEventListener('click', () => {
+      (s.getElementById('cf-file') as HTMLInputElement)?.click();
+    });
+    s.getElementById('cf-file')?.addEventListener('change', (e) => {
+      const input = e.target as HTMLInputElement;
+      this.pendingFile = input.files?.[0] ?? null;
+    });
+    s.getElementById('cf-input')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        void this.sendMessage();
+      }
     });
   }
 
+  private $(id: string): HTMLElement | null {
+    return this.shadow?.getElementById(id) ?? null;
+  }
+
   public open(): void {
-    const window = document.getElementById('chatflow-window');
-    if (window) {
-      window.classList.add('open');
-      this.isOpen = true;
-      
-      if (!this.conversationId) {
-        this.startConversation();
-      }
+    this.isOpen = true;
+    this.$('cf-panel')?.classList.add('open');
+    this.$('cf-bubble')?.classList.add('hidden');
+    this.$('cf-bubble')?.classList.remove('has-unread');
+    void this.ensureConversation();
+    (this.$('cf-input') as HTMLInputElement | null)?.focus();
+    this.scrollMessages(true);
+  }
+
+  private async ensureConversation(): Promise<void> {
+    if (this.conversationId) {
+      await this.connectRealtime();
+      this.startHeartbeat();
+      return;
     }
+    const restored = await this.tryRestoreSession();
+    if (!restored) await this.startConversation();
   }
 
   public close(): void {
-    const window = document.getElementById('chatflow-window');
-    if (window) {
-      window.classList.remove('open');
-      this.isOpen = false;
-    }
+    this.isOpen = false;
+    this.$('cf-panel')?.classList.remove('open');
+    this.$('cf-bubble')?.classList.remove('hidden');
+    this.stopHeartbeat();
+    this.stopFallbackPoll();
+    // Keep SignalR connected so new replies still arrive (and play notification) while minimized.
   }
 
   public toggle(): void {
-    if (this.isOpen) {
-      this.close();
-    } else {
-      this.open();
+    this.isOpen ? this.close() : this.open();
+  }
+
+  public destroy(): void {
+    this.stopHeartbeat();
+    this.stopFallbackPoll();
+    void this.realtime.disconnect();
+    this.host?.remove();
+    this.host = null;
+    this.shadow = null;
+  }
+
+  private buildMetadata(): Record<string, unknown> {
+    return { ...this.config.visitorContext, locale: this.locale };
+  }
+
+  private async syncMetadata(): Promise<void> {
+    if (!this.conversationId) return;
+    const metadata = this.buildMetadata();
+    if (Object.keys(metadata).length === 0) return;
+
+    try {
+      await fetch(`${this.config.apiUrl}/api/conversations/${this.conversationId}/metadata`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ metadata, merge: true }),
+      });
+    } catch (err) {
+      console.warn('[ChatFlow] Failed to sync visitor context:', err);
     }
   }
 
   private async startConversation(): Promise<void> {
     try {
-      const response = await fetch(`${this.config.apiUrl}/api/conversations`, {
+      const res = await fetch(`${this.config.apiUrl}/api/conversations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          widgetId: this.config.workspace,
-          metadata: {
-            page: window.location.href,
-            userAgent: navigator.userAgent
-          }
-        })
+          widgetId: this.config.widgetId,
+          metadata: this.buildMetadata(),
+        }),
       });
-
-      const data = await response.json();
-      this.conversationId = data.id;
-      
-      await this.connectSignalR();
-    } catch (error) {
-      console.error('Failed to start conversation:', error);
-    }
-  }
-
-  private async connectSignalR(): Promise<void> {
-    if (!this.conversationId) return;
-
-    this.hubConnection = new HubConnectionBuilder()
-      .withUrl(this.config.signalrUrl)
-      .withAutomaticReconnect()
-      .configureLogging(LogLevel.Warning)
-      .build();
-
-    this.hubConnection.on('ReceiveMessage', (message: Message) => {
-      this.addMessage(message);
-    });
-
-    try {
-      await this.hubConnection.start();
-      await this.hubConnection.invoke('JoinConversation', this.conversationId);
-    } catch (error) {
-      console.error('SignalR connection failed:', error);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      this.conversationId = data.id ?? data.Id;
+      this.saveSession();
+      void this.loadPublicBranding(data.workspaceId ?? data.WorkspaceId);
+      void this.connectRealtime();
+      this.startHeartbeat();
+    } catch (err) {
+      console.error('[ChatFlow] Failed to start conversation:', err);
+      this.addSystemMessage('Unable to connect. Please try again.');
     }
   }
 
   private async sendMessage(): Promise<void> {
-    const input = document.getElementById('chatflow-input') as HTMLInputElement;
-    const content = input.value.trim();
+    const input = this.$('cf-input') as HTMLInputElement | null;
+    const content = input?.value.trim() || (this.pendingFile ? `[${this.pendingFile.name}]` : '');
+    if (!content && !this.pendingFile) return;
 
-    if (!content || !this.conversationId) return;
+    if (!this.conversationId) {
+      await this.startConversation();
+      if (!this.conversationId) return;
+    }
+
+    const tempId = `temp-${Date.now()}`;
+    this.appendMessageEl({ id: tempId, content: content || `📎 ${this.pendingFile!.name}`, sender: 'visitor' });
+    if (input) input.value = '';
+    this.setTyping(true);
 
     try {
-      const response = await fetch(`${this.config.apiUrl}/api/conversations/${this.conversationId}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, type: 'text' })
+      let attachments: Array<{ id: string; filename: string; contentType: string; size: number; url: string }> | undefined;
+      if (this.pendingFile) {
+        const fd = new FormData();
+        fd.append('file', this.pendingFile);
+        const up = await fetch(
+          `${this.config.apiUrl}/api/conversations/${this.conversationId}/attachments`,
+          { method: 'POST', body: fd }
+        );
+        if (!up.ok) throw new Error(`Upload HTTP ${up.status}`);
+        const uploaded = await up.json();
+        attachments = [{
+          id: uploaded.id ?? uploaded.Id,
+          filename: uploaded.filename ?? uploaded.Filename,
+          contentType: uploaded.contentType ?? uploaded.ContentType,
+          size: uploaded.size ?? uploaded.Size,
+          url: uploaded.url ?? uploaded.Url,
+        }];
+        this.pendingFile = null;
+        const fileInput = this.$('cf-file') as HTMLInputElement | null;
+        if (fileInput) fileInput.value = '';
+      }
+
+      const res = await fetch(
+        `${this.config.apiUrl}/api/conversations/${this.conversationId}/messages`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content, type: 'text', attachments }),
+        }
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const saved = await res.json();
+      const serverId = saved.id ?? saved.Id;
+      this.replaceTempId(tempId, serverId);
+      this.knownMessageIds.add(serverId);
+      this.awaitReply();
+    } catch (err) {
+      console.error('[ChatFlow] Send failed:', err);
+      this.setTyping(false);
+      this.addSystemMessage('Message failed to send.');
+    }
+  }
+
+  private replaceTempId(tempId: string, serverId: string): void {
+    this.knownMessageIds.delete(tempId);
+    this.knownMessageIds.add(serverId);
+    const el = this.shadow?.querySelector(`[data-id="${tempId}"]`);
+    if (el) el.setAttribute('data-id', serverId);
+    const msg = this.messages.find(m => m.id === tempId);
+    if (msg) msg.id = serverId;
+  }
+
+  private extractMessages(payload: unknown): Message[] {
+    if (Array.isArray(payload)) return payload as Message[];
+    const obj = payload as Record<string, unknown>;
+    const list = obj?.data ?? obj?.Data ?? obj?.items ?? obj?.Items;
+    return Array.isArray(list) ? (list as Message[]) : [];
+  }
+
+  private awaitReply(): void {
+    this.awaitingReply = true;
+    this.setTyping(true);
+  }
+
+  private async loadPublicBranding(workspaceId: string | undefined): Promise<void> {
+    if (!workspaceId) return;
+    try {
+      const res = await fetch(`${this.config.apiUrl}/api/v1/branding/public/${workspaceId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      this.displayConfig = {
+        aiAssistantName: data.aiAssistantName ?? data.AiAssistantName ?? 'AI Assistant',
+        showAiLabel: data.showAiLabel ?? data.ShowAiLabel ?? true,
+        showAgentName: data.showAgentName ?? data.ShowAgentName ?? true,
+        assignedAgentName: this.displayConfig.assignedAgentName,
+      };
+    } catch {
+      // optional
+    }
+  }
+
+  private async connectRealtime(): Promise<void> {
+    if (!this.conversationId) return;
+
+    try {
+      await this.realtime.connect(this.config.apiUrl, this.conversationId, {
+        onMessage: (msg) => this.handleInboundMessage(msg),
+        onClosed: () => this.handleSessionEnded(),
+        onEscalated: (payload) => {
+          if (payload.queuePosition > 1) {
+            this.addSystemMessage(`You're #${payload.queuePosition} in the queue. An agent will join shortly.`);
+          }
+        },
+        onAssigned: (payload) => {
+          this.displayConfig.assignedAgentName = payload.agentName;
+          this.addSystemMessage(`You're connected with ${payload.agentName}.`);
+          this.awaitingReply = false;
+          this.setTyping(false);
+        },
+        onStateChange: (connected) => {
+          if (connected) {
+            this.stopFallbackPoll();
+          } else {
+            this.startFallbackPoll();
+          }
+        },
+        onInactivityWarning: (payload) => {
+          const mins = Math.max(1, Math.ceil(payload.secondsUntilClose / 60));
+          this.addSystemMessage(
+            `This chat will close in about ${mins} minute${mins === 1 ? '' : 's'} due to inactivity. Send a message to stay connected.`
+          );
+        },
       });
-
-      const message = await response.json();
-      this.addMessage(message);
-      input.value = '';
-    } catch (error) {
-      console.error('Failed to send message:', error);
+    } catch (err) {
+      console.warn('[ChatFlow] SignalR connect failed, using HTTP fallback:', err);
+      this.startFallbackPoll();
     }
   }
 
-  private addMessage(message: Message): void {
-    const messagesContainer = document.getElementById('chatflow-messages');
-    if (!messagesContainer) return;
-
-    const messageEl = document.createElement('div');
-    messageEl.className = `chatflow-message ${message.sender}`;
-    messageEl.textContent = message.content;
-    messagesContainer.appendChild(messageEl);
-    
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  private handleInboundMessage(msg: { id: string; content: string; sender: string }): void {
+    const sender = msg.sender.toLowerCase();
+    if (sender === 'system') {
+      if (this.knownMessageIds.has(msg.id)) return;
+      this.knownMessageIds.add(msg.id);
+      this.appendMessageEl({ id: msg.id, content: msg.content, sender: 'system' });
+      this.awaitingReply = false;
+      this.setTyping(false);
+      return;
+    }
+    if (sender === 'visitor' || sender === 'user') {
+      this.knownMessageIds.add(msg.id);
+      return;
+    }
+    if (this.knownMessageIds.has(msg.id)) return;
+    this.knownMessageIds.add(msg.id);
+    this.appendMessageEl({ id: msg.id, content: msg.content, sender: msg.sender });
+    this.awaitingReply = false;
+    this.setTyping(false);
+    if (!this.isOpen) {
+      this.$('cf-bubble')?.classList.add('has-unread');
+    }
+    playMessageNotification();
   }
 
-  public destroy(): void {
-    if (this.hubConnection) {
-      this.hubConnection.stop();
+  private startFallbackPoll(): void {
+    if (this.fallbackPollTimer || !this.conversationId) return;
+    const poll = async () => {
+      if (!this.conversationId || this.realtime.isConnected()) {
+        this.stopFallbackPoll();
+        return;
+      }
+      try {
+        const res = await fetch(`${this.config.apiUrl}/api/conversations/${this.conversationId}/messages`);
+        const list = this.extractMessages(await res.json());
+        list.forEach(m => {
+          const id = (m as Message & { Id?: string }).id ?? (m as Message & { Id?: string }).Id ?? '';
+          const sender = m.sender ?? (m as Message & { Sender?: string }).Sender ?? '';
+          const content = m.content ?? (m as Message & { Content?: string }).Content ?? '';
+          if (id && !this.knownMessageIds.has(id) && sender !== 'visitor' && sender !== 'user') {
+            this.handleInboundMessage({ id, content, sender });
+          }
+        });
+      } catch {
+        // retry on next interval
+      }
+      if (!this.realtime.isConnected() && this.conversationId) {
+        this.fallbackPollTimer = setTimeout(poll, 5000);
+      }
+    };
+    void poll();
+  }
+
+  private stopFallbackPoll(): void {
+    if (this.fallbackPollTimer) {
+      clearTimeout(this.fallbackPollTimer);
+      this.fallbackPollTimer = null;
     }
-    if (this.container) {
-      this.container.remove();
+  }
+
+  private startHeartbeat(): void {
+    if (this.heartbeatTimer || !this.conversationId) return;
+    const ping = () => void this.sendHeartbeat();
+    ping();
+    this.heartbeatTimer = setInterval(ping, 60_000);
+  }
+
+  private async sendHeartbeat(): Promise<void> {
+    if (!this.conversationId || !this.isOpen) return;
+    try {
+      const res = await fetch(
+        `${this.config.apiUrl}/api/conversations/${this.conversationId}/heartbeat`,
+        { method: 'POST' }
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.active === false) {
+        this.handleSessionEnded();
+        return;
+      }
+      if (data.inactivityWarning && typeof data.secondsUntilClose === 'number') {
+        const now = Date.now();
+        if (now - this.lastInactivityWarningAt > 120_000) {
+          this.lastInactivityWarningAt = now;
+          const mins = Math.max(1, Math.ceil(data.secondsUntilClose / 60));
+          this.addSystemMessage(
+            `Still there? This chat will close in about ${mins} minute${mins === 1 ? '' : 's'} unless you reply.`
+          );
+        }
+      }
+    } catch {
+      // retry on next interval
     }
+    void this.realtime.ping(this.conversationId);
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
+  private setTyping(on: boolean): void {
+    this.isTyping = on;
+    this.$('cf-typing')?.classList.toggle('visible', on);
+    this.scrollMessages(true);
+  }
+
+  private addSystemMessage(text: string): void {
+    this.appendMessageEl({ id: `sys-${Date.now()}`, content: text, sender: 'system' });
+  }
+
+  private appendMessageEl(msg: Message): void {
+    if (msg.sender !== 'system' && this.messages.some(m => m.id === msg.id)) return;
+    if (msg.sender !== 'system') {
+      this.messages.push(msg);
+      this.knownMessageIds.add(msg.id);
+    }
+
+    const box = this.$('cf-messages');
+    if (!box) return;
+
+    const el = document.createElement('div');
+    const role = msg.sender === 'visitor' || msg.sender === 'user' ? 'visitor'
+      : msg.sender === 'bot' ? 'bot'
+      : msg.sender === 'system' ? 'system' : 'agent';
+    el.className = `msg ${role}`;
+    el.setAttribute('data-id', msg.id);
+
+    if (msg.sender !== 'system' && msg.sender !== 'visitor' && msg.sender !== 'user') {
+      const label = this.senderLabel(msg.sender);
+      if (label) {
+        const labelEl = document.createElement('div');
+        labelEl.className = 'msg-label';
+        labelEl.textContent = label;
+        el.appendChild(labelEl);
+      }
+    }
+
+    const textEl = document.createElement('div');
+    textEl.className = 'msg-text';
+    textEl.textContent = msg.content;
+    el.appendChild(textEl);
+    box.appendChild(el);
+    this.scrollMessages(true);
+  }
+
+  private scrollMessages(force = false): void {
+    const box = this.$('cf-messages') as HTMLElement | null;
+    if (!box) return;
+    const distanceFromBottom = box.scrollHeight - box.scrollTop - box.clientHeight;
+    if (!force && distanceFromBottom > 80) return;
+    requestAnimationFrame(() => {
+      box.scrollTop = box.scrollHeight;
+      requestAnimationFrame(() => {
+        box.scrollTop = box.scrollHeight;
+      });
+    });
+  }
+
+  private sessionKey(): string {
+    return `chatflow:session:${this.config.widgetId}`;
+  }
+
+  private saveSession(): void {
+    if (!this.conversationId) return;
+    try {
+      localStorage.setItem(this.sessionKey(), JSON.stringify({
+        conversationId: this.conversationId,
+        savedAt: Date.now(),
+      }));
+    } catch {
+      // private mode / storage full
+    }
+  }
+
+  private clearSession(): void {
+    try {
+      localStorage.removeItem(this.sessionKey());
+    } catch {
+      // ignore
+    }
+  }
+
+  private handleSessionEnded(): void {
+    this.addSystemMessage('This conversation has ended. Start a new chat if you need more help.');
+    this.conversationId = null;
+    this.clearSession();
+    void this.realtime.disconnect();
+    this.stopHeartbeat();
+  }
+
+  private async tryRestoreSession(): Promise<boolean> {
+    let raw: string | null = null;
+    try {
+      raw = localStorage.getItem(this.sessionKey());
+    } catch {
+      return false;
+    }
+    if (!raw) return false;
+
+    let conversationId: string;
+    try {
+      conversationId = JSON.parse(raw).conversationId as string;
+    } catch {
+      this.clearSession();
+      return false;
+    }
+    if (!conversationId) return false;
+
+    try {
+      const convRes = await fetch(`${this.config.apiUrl}/api/conversations/${conversationId}`);
+      if (!convRes.ok) {
+        this.clearSession();
+        return false;
+      }
+      const conv = await convRes.json();
+      const status = String(conv.status ?? conv.Status ?? '').toLowerCase();
+      if (status === 'closed' || status === 'resolved') {
+        this.clearSession();
+        return false;
+      }
+
+      this.conversationId = conversationId;
+      void this.loadPublicBranding(conv.workspaceId ?? conv.WorkspaceId);
+      await this.loadMessageHistory();
+      await this.connectRealtime();
+      if (this.isOpen) this.startHeartbeat();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async loadMessageHistory(): Promise<void> {
+    if (!this.conversationId) return;
+    const box = this.$('cf-messages');
+    if (box) box.innerHTML = '';
+    this.messages = [];
+    this.knownMessageIds.clear();
+
+    try {
+      const res = await fetch(`${this.config.apiUrl}/api/conversations/${this.conversationId}/messages?limit=200`);
+      const list = this.extractMessages(await res.json());
+      const sorted = [...list].sort((a, b) => {
+        const ta = new Date(a.createdAt ?? (a as Message & { CreatedAt?: string }).CreatedAt ?? 0).getTime();
+        const tb = new Date(b.createdAt ?? (b as Message & { CreatedAt?: string }).CreatedAt ?? 0).getTime();
+        return ta - tb;
+      });
+      for (const m of sorted) {
+        const id = (m as Message & { Id?: string }).id ?? (m as Message & { Id?: string }).Id ?? '';
+        const sender = String(m.sender ?? (m as Message & { Sender?: string }).Sender ?? 'bot').toLowerCase();
+        const content = String(m.content ?? (m as Message & { Content?: string }).Content ?? '');
+        if (!id || !content) continue;
+        this.knownMessageIds.add(id);
+        this.appendMessageEl({ id, content, sender });
+      }
+      if (sorted.length === 0) this.addSystemMessage(this.config.greeting);
+      this.scrollMessages(true);
+    } catch {
+      this.addSystemMessage(this.config.greeting);
+    }
+  }
+
+  private senderLabel(sender: string): string {
+    const s = sender.toLowerCase();
+    if (s === 'bot' && this.displayConfig.showAiLabel)
+      return this.displayConfig.aiAssistantName;
+    if (s === 'agent' && this.displayConfig.showAgentName)
+      return this.displayConfig.assignedAgentName || 'Support Agent';
+    return '';
   }
 }
 
-// Auto-init if config is in window
-if (typeof window !== 'undefined') {
-  (window as any).ChatFlowWidget = ChatFlowWidget;
-  
-  // Check for inline config
-  const scripts = document.querySelectorAll('script[data-chatflow]');
-  if (scripts.length > 0) {
-    const workspace = scripts[0].getAttribute('data-chatflow');
-    if (workspace) {
-      new ChatFlowWidget({ workspace });
-    }
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function parseJsonAttr(raw: string | null): Record<string, unknown> | undefined {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    console.warn('[ChatFlow] Invalid JSON in data-visitor-context');
+    return undefined;
   }
+}
+
+/** Auto-init from script tag attributes */
+function autoInit(): void {
+  const script =
+    document.currentScript as HTMLScriptElement | null ??
+    (document.querySelector('script[data-widget-id]') as HTMLScriptElement | null);
+  if (!script) return;
+
+  const widgetId = script.getAttribute('data-widget-id') ?? script.getAttribute('data-chatflow');
+  if (!widgetId) return;
+
+  const visitorContext = parseJsonAttr(script.getAttribute('data-visitor-context'));
+
+  const widget = new ChatFlowWidget({
+    widgetId,
+    apiUrl: script.getAttribute('data-api-url') ?? undefined,
+    primaryColor: script.getAttribute('data-primary-color') ?? undefined,
+    position: (script.getAttribute('data-position') as 'bottom-left' | 'bottom-right') ?? undefined,
+    title: script.getAttribute('data-title') ?? undefined,
+    greeting: script.getAttribute('data-greeting') ?? undefined,
+    visitorContext,
+  });
+
+  (window as unknown as { chatflowWidget?: ChatFlowWidget }).chatflowWidget = widget;
+}
+
+if (typeof window !== 'undefined') {
+  (window as unknown as { ChatFlowWidget: typeof ChatFlowWidget }).ChatFlowWidget = ChatFlowWidget;
+  autoInit();
 }

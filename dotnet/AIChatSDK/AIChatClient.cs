@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using ChatFlow.SDK.Errors;
 using ChatFlow.SDK.Models;
 using ChatFlow.SDK.Resources;
+using ChatFlow.SDK.Auth;
 
 namespace ChatFlow.SDK;
 
@@ -51,7 +52,16 @@ public sealed class AIChatClient : IAsyncDisposable
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));
 
-        _http = new HttpClient
+        Auth = new AuthResource(null!, this); // Dummy HTTP client for now, initialized properly below
+        Chat = new ChatResource(null!, this);
+        Workspace = new WorkspaceResource(null!);
+
+        var handler = new M2MAuthHandler(config, token =>
+        {
+            Auth.StoreM2MTokens(token);
+        });
+
+        _http = new HttpClient(handler)
         {
             BaseAddress = new Uri(config.ApiUrl.TrimEnd('/') + "/"),
             Timeout = config.Timeout,
@@ -70,6 +80,7 @@ public sealed class AIChatClient : IAsyncDisposable
         if (config.AccessToken is not null)
             SetAccessToken(config.AccessToken);
 
+        // Re-initialize resource structures with the actual HttpClient that uses the M2M handler
         Auth = new AuthResource(_http, this);
         Chat = new ChatResource(_http, this);
         Workspace = new WorkspaceResource(_http);

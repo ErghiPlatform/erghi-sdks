@@ -172,6 +172,41 @@ class AuthResource {
     }
   }
 
+  /// Authenticate using Client Credentials to obtain a JWT token
+  Future<String> authenticate() async {
+    if (config.clientId == null || config.clientSecret == null) {
+      throw AuthenticationException('Client ID and Client Secret are required for token exchange');
+    }
+
+    try {
+      final response = await client.post(
+        Uri.parse('${config.apiUrl}/api/v1/auth/token'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'grant_type': 'client_credentials',
+          'client_id': config.clientId,
+          'client_secret': config.clientSecret,
+        }),
+      ).timeout(config.timeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        _accessToken = data['access_token'];
+        return _accessToken!;
+      } else {
+        final error = jsonDecode(response.body);
+        throw AuthenticationException(
+          error['message'] ?? 'Client authentication failed',
+          statusCode: response.statusCode,
+          details: error,
+        );
+      }
+    } catch (e) {
+      if (e is AIChatException) rethrow;
+      throw NetworkException('Network error: $e');
+    }
+  }
+
   /// Set tokens manually (e.g., from storage)
   void setTokens({String? accessToken, String? refreshToken}) {
     _accessToken = accessToken;

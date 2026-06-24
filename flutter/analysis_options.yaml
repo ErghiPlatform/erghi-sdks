@@ -1,0 +1,12 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+  errors:
+    dangling_library_doc_comments: ignore
+    implementation_imports: ignore
+    prefer_final_fields: ignore
+    unnecessary_library_name: ignore
+    avoid_print: ignore
+    use_super_parameters: ignore

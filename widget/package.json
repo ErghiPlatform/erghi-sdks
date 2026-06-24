@@ -2,13 +2,14 @@
   "name": "@chatflow/widget",
   "version": "1.0.0",
   "description": "Embeddable chat widget for websites - Vanilla JS, no dependencies",
-  "main": "dist/chatflow-widget.min.js",
+  "main": "dist/widget.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "webpack --mode production",
+    "build:portal": "npm run build && cp dist/widget.js ../../ChatFlow/chatflow-user-portal/public/widget.js",
     "dev": "webpack --mode development --watch",
     "test": "jest --coverage",
     "test:watch": "jest --watch",

@@ -94,6 +94,11 @@ public sealed class AuthResource
         _client.SetAccessToken(auth.AccessToken);
     }
 
+    internal void StoreM2MTokens(string token)
+    {
+        AccessToken = token;
+    }
+
     private static async Task<T> ReadResponseAsync<T>(HttpResponseMessage response, CancellationToken ct)
     {
         var body = await response.Content.ReadAsStringAsync(ct);

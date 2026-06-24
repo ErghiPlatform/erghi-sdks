@@ -26,6 +26,16 @@ public sealed class AIChatConfig
     public string? AccessToken { get; set; }
 
     /// <summary>
+    /// Client ID for M2M authentication.
+    /// </summary>
+    public string? ClientId { get; set; }
+
+    /// <summary>
+    /// Client Secret for M2M authentication.
+    /// </summary>
+    public string? ClientSecret { get; set; }
+
+    /// <summary>
     /// Workspace ID to include in every request header.
     /// </summary>
     public string? WorkspaceId { get; set; }

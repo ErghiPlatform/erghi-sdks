@@ -40,6 +40,8 @@ export class AIChatClient extends EventEmitter {
       wsUrl: config.wsUrl || 'ws://localhost:5002',
       apiKey: config.apiKey || '',
       accessToken: config.accessToken || '',
+      clientId: config.clientId || '',
+      clientSecret: config.clientSecret || '',
       workspaceId: config.workspaceId || '',
       timeout: config.timeout || 30000,
       debug: config.debug || false,
@@ -55,7 +57,14 @@ export class AIChatClient extends EventEmitter {
     });
 
     // Add request interceptor
-    this.httpClient.interceptors.request.use((config) => {
+    this.httpClient.interceptors.request.use(async (config) => {
+      if (this.config.clientId && this.config.clientSecret && !this.config.accessToken) {
+        try {
+          await this.authenticate();
+        } catch (err) {
+          this.debug('Auto-authentication failed', err);
+        }
+      }
       if (this.config.apiKey) {
         config.headers['X-API-Key'] = this.config.apiKey;
       }
@@ -80,6 +89,31 @@ export class AIChatClient extends EventEmitter {
     this.auth = new AuthResource(this);
     this.chat = new ChatResource(this);
     this.workspace = new WorkspaceResource(this);
+  }
+
+  /**
+   * Authenticate using Client Credentials to obtain a JWT token
+   */
+  public async authenticate(): Promise<string> {
+    if (!this.config.clientId || !this.config.clientSecret) {
+      throw new AuthenticationError('Client ID and Client Secret are required for token exchange');
+    }
+
+    try {
+      const response = await axios.post(`${this.config.apiUrl}/api/v1/auth/token`, {
+        grant_type: 'client_credentials',
+        client_id: this.config.clientId,
+        client_secret: this.config.clientSecret,
+      }, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const token = response.data.access_token;
+      this.setAccessToken(token);
+      return token;
+    } catch (error: any) {
+      throw new AuthenticationError(error.response?.data?.message || 'Failed to authenticate');
+    }
   }
 
   /**

@@ -35,6 +35,8 @@ class AIChatClient:
         ws_url: str = "ws://localhost:5002",
         api_key: Optional[str] = None,
         access_token: Optional[str] = None,
+        client_id: Optional[str] = None,
+        client_secret: Optional[str] = None,
         workspace_id: Optional[str] = None,
         timeout: float = 30.0,
         debug: bool = False,
@@ -47,6 +49,8 @@ class AIChatClient:
             ws_url: WebSocket URL
             api_key: API key for authentication
             access_token: Access token (JWT)
+            client_id: Client ID for M2M authentication
+            client_secret: Client Secret for M2M authentication
             workspace_id: Workspace ID
             timeout: Request timeout in seconds
             debug: Enable debug logging
@@ -55,6 +59,8 @@ class AIChatClient:
         self.ws_url = ws_url
         self.api_key = api_key
         self.access_token = access_token
+        self.client_id = client_id
+        self.client_secret = client_secret
         self.workspace_id = workspace_id
         self.timeout = timeout
         self.debug = debug
@@ -94,6 +100,37 @@ class AIChatClient:
         await self.disconnect()
         await self._http_client.aclose()
 
+    async def authenticate(self) -> str:
+        """Authenticate using Client Credentials to obtain a JWT token"""
+        if not self.client_id or not self.client_secret:
+            raise AuthenticationError("client_id and client_secret are required for token exchange")
+
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                url = urljoin(self.api_url + "/", "api/v1/auth/token")
+                response = await client.post(
+                    url,
+                    json={
+                        "grant_type": "client_credentials",
+                        "client_id": self.client_id,
+                        "client_secret": self.client_secret,
+                    },
+                    headers={"Content-Type": "application/json"}
+                )
+                response.raise_for_status()
+                data = response.json()
+                token = data["access_token"]
+                self.set_access_token(token)
+                return token
+        except httpx.HTTPStatusError as e:
+            try:
+                msg = e.response.json().get("message", str(e))
+            except Exception:
+                msg = str(e)
+            raise AuthenticationError(f"Failed to authenticate: {msg}")
+        except Exception as e:
+            raise AuthenticationError(f"Failed to authenticate: {str(e)}")
+
     def _get_headers(self) -> Dict[str, str]:
         """Get request headers"""
         headers: Dict[str, str] = {}
@@ -116,6 +153,12 @@ class AIChatClient:
         **kwargs: Any,
     ) -> httpx.Response:
         """Make HTTP request"""
+        if self.client_id and self.client_secret and not self.access_token:
+            try:
+                await self.authenticate()
+            except Exception as e:
+                logger.error(f"Auto-authentication failed: {e}")
+
         try:
             headers = self._get_headers()
             headers.update(kwargs.pop("headers", {}))

@@ -19,8 +19,11 @@ class AIChatClient {
   bool _isConnected = false;
 
   AIChatClient({required this.config}) {
-    _httpClient = http.Client();
+    final innerClient = http.Client();
+    final m2mClient = M2MHttpClient(innerClient, config);
+    _httpClient = m2mClient;
     auth = AuthResource(config: config, client: _httpClient);
+    m2mClient.auth = auth;
     chat = ChatResource(config: config, client: _httpClient, auth: auth);
   }
 
@@ -144,5 +147,29 @@ class AIChatClient {
   void dispose() {
     disconnectWebSocket();
     _httpClient.close();
+  }
+}
+
+class M2MHttpClient extends http.BaseClient {
+  final http.Client _inner;
+  final AIChatConfig config;
+  AuthResource? auth;
+
+  M2MHttpClient(this._inner, this.config);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request.url.path.endsWith('/api/v1/auth/token')) {
+      return _inner.send(request);
+    }
+
+    if (config.clientId != null && config.clientSecret != null && auth?.accessToken == null) {
+      try {
+        await auth?.authenticate();
+      } catch (e) {
+        // Auto-auth failed
+      }
+    }
+    return _inner.send(request);
   }
 }

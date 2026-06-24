@@ -11,6 +11,12 @@ class AIChatConfig extends Equatable {
   /// API Key (optional, can use JWT instead)
   final String? apiKey;
 
+  /// Client ID for M2M authentication
+  final String? clientId;
+
+  /// Client Secret for M2M authentication
+  final String? clientSecret;
+
   /// Request timeout duration
   final Duration timeout;
 
@@ -21,6 +27,8 @@ class AIChatConfig extends Equatable {
     required this.apiUrl,
     this.wsUrl,
     this.apiKey,
+    this.clientId,
+    this.clientSecret,
     this.timeout = const Duration(seconds: 30),
     this.debug = false,
   });
@@ -38,6 +46,8 @@ class AIChatConfig extends Equatable {
     String? apiUrl,
     String? wsUrl,
     String? apiKey,
+    String? clientId,
+    String? clientSecret,
     Duration? timeout,
     bool? debug,
   }) {
@@ -45,11 +55,13 @@ class AIChatConfig extends Equatable {
       apiUrl: apiUrl ?? this.apiUrl,
       wsUrl: wsUrl ?? this.wsUrl,
       apiKey: apiKey ?? this.apiKey,
+      clientId: clientId ?? this.clientId,
+      clientSecret: clientSecret ?? this.clientSecret,
       timeout: timeout ?? this.timeout,
       debug: debug ?? this.debug,
     );
   }
 
   @override
-  List<Object?> get props => [apiUrl, wsUrl, apiKey, timeout, debug];
+  List<Object?> get props => [apiUrl, wsUrl, apiKey, clientId, clientSecret, timeout, debug];
 }

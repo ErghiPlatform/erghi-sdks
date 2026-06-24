@@ -138,7 +138,7 @@ class SendMessageRequest {
   Map<String, dynamic> toJson() => _$SendMessageRequestToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(genericArgumentFactories: true)
 class PaginatedResponse<T> {
   final List<T> data;
   final int page;

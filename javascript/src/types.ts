@@ -11,6 +11,10 @@ export interface AIChatConfig {
   apiKey?: string;
   /** Access token (JWT) */
   accessToken?: string;
+  /** Client ID for M2M authentication */
+  clientId?: string;
+  /** Client Secret for M2M authentication */
+  clientSecret?: string;
   /** Workspace ID */
   workspaceId?: string;
   /** Request timeout in milliseconds */
