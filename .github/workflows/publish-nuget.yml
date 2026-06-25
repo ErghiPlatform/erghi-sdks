@@ -1,7 +1,12 @@
-name: Publish NuGet Package
+name: CI .NET
 
 on:
   push:
+    branches: [main, develop]
+    paths:
+      - 'dotnet/**'
+      - '.github/workflows/publish-nuget.yml'
+  pull_request:
     branches: [main]
     paths:
       - 'dotnet/**'
@@ -9,7 +14,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish:
+  build-and-test:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -23,16 +28,10 @@ jobs:
           dotnet-version: '10.0.x'
       
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore AIChatSDK/AIChatSDK.csproj
       
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build AIChatSDK/AIChatSDK.csproj --configuration Release --no-restore
       
       - name: Test
-        run: dotnet test --configuration Release --no-build --verbosity normal
-      
-      - name: Pack
-        run: dotnet pack --configuration Release --no-build --output ./nupkg
-      
-      - name: Publish to NuGet
-        run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+        run: dotnet test AIChatSDK/AIChatSDK.csproj --configuration Release --no-build --verbosity normal

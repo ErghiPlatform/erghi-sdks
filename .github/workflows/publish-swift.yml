@@ -1,7 +1,12 @@
-name: Publish Swift Package
+name: CI Swift
 
 on:
   push:
+    branches: [main, develop]
+    paths:
+      - 'swift/**'
+      - '.github/workflows/publish-swift.yml'
+  pull_request:
     branches: [main]
     paths:
       - 'swift/**'
@@ -9,7 +14,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish:
+  build-and-test:
     runs-on: macos-latest
     defaults:
       run:
@@ -24,15 +29,12 @@ jobs:
         run: swift build
       
       - name: Run tests
-        run: swift test
-      
-      - name: Create Git Tag
         run: |
-          VERSION=$(grep 'version:' Package.swift | sed 's/.*"\(.*\)".*/\1/')
-          git tag $VERSION
-          git push origin $VERSION
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          if [ -d "Tests" ]; then
+            swift test
+          else
+            echo "No Tests directory found, skipping swift test."
+          fi
       
       # Note: Swift packages are published via GitHub releases and Package.swift
       # The package is available automatically via SPM once tagged

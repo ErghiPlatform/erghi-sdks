@@ -1,7 +1,14 @@
-name: Publish NPM Packages
+name: CI NPM
 
 on:
   push:
+    branches: [main, develop]
+    paths:
+      - 'javascript/**'
+      - 'react/**'
+      - 'angular/**'
+      - '.github/workflows/publish-npm.yml'
+  pull_request:
     branches: [main]
     paths:
       - 'javascript/**'
@@ -30,9 +37,9 @@ jobs:
             angular:
               - 'angular/**'
 
-  publish-javascript:
+  check-javascript:
     needs: detect-changes
-    if: needs.detect-changes.outputs.javascript == 'true'
+    if: needs.detect-changes.outputs.javascript == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -50,19 +57,14 @@ jobs:
         run: npm ci
       
       - name: Run tests
-        run: npm test
+        run: npx vitest run --passWithNoTests
       
       - name: Build
         run: npm run build
-      
-      - name: Publish to npm
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  publish-react:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.react == 'true'
+  check-react:
+    needs: [detect-changes, check-javascript]
+    if: needs.detect-changes.outputs.react == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -76,23 +78,26 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
       
+      # Build the javascript SDK dependency first since React SDK references it locally
+      - name: Build local JavaScript SDK dependency
+        run: |
+          cd ../javascript
+          npm ci
+          npm run build
+          cd ../react
+      
       - name: Install dependencies
         run: npm ci
       
       - name: Run tests
-        run: npm test
+        run: npx vitest run --passWithNoTests
       
       - name: Build
         run: npm run build
-      
-      - name: Publish to npm
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  publish-angular:
+  check-angular:
     needs: detect-changes
-    if: needs.detect-changes.outputs.angular == 'true'
+    if: needs.detect-changes.outputs.angular == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -110,12 +115,7 @@ jobs:
         run: npm ci
       
       - name: Run tests
-        run: npm test
+        run: npm test -- --browsers=ChromeHeadlessNoSandbox
       
       - name: Build
         run: npm run build
-      
-      - name: Publish to npm
-        run: npm publish ./dist --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

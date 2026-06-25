@@ -18,10 +18,18 @@ import { AuthResource } from './resources/auth';
 import { ChatResource } from './resources/chat';
 import { WorkspaceResource } from './resources/workspace';
 
+type WebSocketEvents = {
+  [K in WebSocketEventType]: (data?: any) => void;
+} & {
+  connected: () => void;
+  disconnected: () => void;
+  error: (error: any) => void;
+};
+
 /**
  * Main AI Chat SDK Client
  */
-export class AIChatClient extends EventEmitter {
+export class AIChatClient extends EventEmitter<WebSocketEvents> {
   private config: Required<AIChatConfig>;
   private httpClient: AxiosInstance;
   private ws?: WebSocket;
@@ -197,13 +205,7 @@ export class AIChatClient extends EventEmitter {
     this.ws.send(JSON.stringify(message));
   }
 
-  /**
-   * Subscribe to WebSocket events
-   */
-  public on(event: WebSocketEventType, handler: (data: any) => void): this;
-  public on(event: string, handler: (...args: any[]) => void): this {
-    return super.on(event, handler);
-  }
+  // Inherits typed 'on' from EventEmitter<WebSocketEvents>
 
   private reconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
@@ -223,7 +225,7 @@ export class AIChatClient extends EventEmitter {
 
   private handleWebSocketMessage(message: WebSocketMessage): void {
     this.debug('WebSocket message received', message);
-    this.emit(message.type, message.data);
+    this.emit(message.type as any, message.data);
   }
 
   private handleError(error: AxiosError): AIChatError {

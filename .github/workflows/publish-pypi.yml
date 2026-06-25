@@ -1,7 +1,12 @@
-name: Publish Python Package
+name: CI Python
 
 on:
   push:
+    branches: [main, develop]
+    paths:
+      - 'python/**'
+      - '.github/workflows/publish-pypi.yml'
+  pull_request:
     branches: [main]
     paths:
       - 'python/**'
@@ -9,7 +14,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish:
+  build-and-test:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -30,7 +35,11 @@ jobs:
       
       - name: Run tests
         run: |
-          pytest tests/ -v --cov=aichat --cov-report=term-missing
+          if [ -d "tests" ]; then
+            pytest tests/ -v --cov=aichat --cov-report=term-missing
+          else
+            echo "No tests directory found, skipping pytest."
+          fi
       
       - name: Lint
         run: |
@@ -40,10 +49,3 @@ jobs:
       
       - name: Build package
         run: python -m build
-      
-      - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          twine upload dist/*

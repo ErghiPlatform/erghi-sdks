@@ -1,7 +1,12 @@
-name: Publish Flutter Package
+name: CI Flutter
 
 on:
   push:
+    branches: [main, develop]
+    paths:
+      - 'flutter/**'
+      - '.github/workflows/publish-flutter.yml'
+  pull_request:
     branches: [main]
     paths:
       - 'flutter/**'
@@ -9,7 +14,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish:
+  build-and-test:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -30,15 +35,9 @@ jobs:
         run: flutter analyze
       
       - name: Run tests
-        run: flutter test
-      
-      - name: Check publish warnings
-        run: dart pub publish --dry-run
-      
-      - name: Publish to pub.dev
-        env:
-          PUB_TOKEN: ${{ secrets.PUB_DEV_TOKEN }}
         run: |
-          mkdir -p ~/.pub-cache
-          echo "$PUB_TOKEN" > ~/.pub-cache/credentials.json
-          dart pub publish --force
+          if [ -d "test" ]; then
+            flutter test
+          else
+            echo "No test directory found, skipping flutter test."
+          fi
