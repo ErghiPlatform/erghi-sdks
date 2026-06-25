@@ -35,10 +35,10 @@ class WorkspaceResource:
             "/api/workspaces",
             json={"name": name, "slug": slug},
         )
-        
+
         workspace = Workspace.model_validate(response.json())
         self.client.set_workspace_id(workspace.id)
-        
+
         return workspace
 
     async def update(

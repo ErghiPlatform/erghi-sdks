@@ -7,6 +7,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 class User(BaseModel):
     """User model"""
+
     id: str
     email: EmailStr
     first_name: Optional[str] = Field(None, alias="firstName")
@@ -24,6 +25,7 @@ class User(BaseModel):
 
 class RegisterRequest(BaseModel):
     """Register request"""
+
     email: EmailStr
     password: str
     first_name: Optional[str] = Field(None, alias="firstName")
@@ -32,6 +34,7 @@ class RegisterRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     """Login request"""
+
     email: EmailStr
     password: str
     two_factor_code: Optional[str] = Field(None, alias="twoFactorCode")
@@ -39,6 +42,7 @@ class LoginRequest(BaseModel):
 
 class AuthResponse(BaseModel):
     """Authentication response"""
+
     access_token: str = Field(alias="accessToken")
     refresh_token: str = Field(alias="refreshToken")
     expires_in: int = Field(alias="expiresIn")
@@ -51,6 +55,7 @@ class AuthResponse(BaseModel):
 
 class Attachment(BaseModel):
     """Message attachment"""
+
     id: str
     filename: str
     content_type: str = Field(alias="contentType")
@@ -63,6 +68,7 @@ class Attachment(BaseModel):
 
 class Message(BaseModel):
     """Chat message"""
+
     id: str
     conversation_id: str = Field(alias="conversationId")
     sender: Literal["visitor", "agent", "system", "ai"]
@@ -81,6 +87,7 @@ class Message(BaseModel):
 
 class Conversation(BaseModel):
     """Chat conversation"""
+
     id: str
     workspace_id: str = Field(alias="workspaceId")
     widget_id: str = Field(alias="widgetId")
@@ -98,6 +105,7 @@ class Conversation(BaseModel):
 
 class Workspace(BaseModel):
     """Workspace model"""
+
     id: str
     name: str
     slug: str
@@ -112,6 +120,7 @@ class Workspace(BaseModel):
 
 class PaginationParams(BaseModel):
     """Pagination parameters"""
+
     page: Optional[int] = 1
     limit: Optional[int] = 50
     sort: Optional[str] = None
@@ -120,6 +129,7 @@ class PaginationParams(BaseModel):
 
 class PaginatedResponse(BaseModel):
     """Paginated response"""
+
     data: List[Any]
     total: int
     page: int

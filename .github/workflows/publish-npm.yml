@@ -54,7 +54,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       
       - name: Install dependencies
-        run: npm ci
+        run: npm install
       
       - name: Run tests
         run: npx vitest run --passWithNoTests
@@ -82,12 +82,12 @@ jobs:
       - name: Build local JavaScript SDK dependency
         run: |
           cd ../javascript
-          npm ci
+          npm install
           npm run build
           cd ../react
       
       - name: Install dependencies
-        run: npm ci
+        run: npm install
       
       - name: Run tests
         run: npx vitest run --passWithNoTests
@@ -112,7 +112,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       
       - name: Install dependencies
-        run: npm ci
+        run: npm install
       
       - name: Run tests
         run: npm test -- --browsers=ChromeHeadlessNoSandbox

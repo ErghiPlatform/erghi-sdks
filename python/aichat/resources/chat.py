@@ -2,7 +2,6 @@
 
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-import httpx
 
 from ..types import Conversation, Message, PaginatedResponse, PaginationParams
 
@@ -30,7 +29,7 @@ class ChatResource:
     ) -> PaginatedResponse:
         """List conversations"""
         query_params = params.model_dump(exclude_none=True) if params else {}
-        
+
         response = await self.client.request(
             "GET",
             "/api/conversations",
@@ -73,10 +72,10 @@ class ChatResource:
                 "content": content,
                 "type": message_type,
             }
-            
+
             for attachment in attachments:
                 files.append(("attachments", attachment))
-            
+
             response = await self.client.request(
                 "POST",
                 f"/api/conversations/{conversation_id}/messages",
@@ -90,7 +89,7 @@ class ChatResource:
                 f"/api/conversations/{conversation_id}/messages",
                 json={"content": content, "type": message_type},
             )
-        
+
         return Message.model_validate(response.json())
 
     async def get_messages(
@@ -100,7 +99,7 @@ class ChatResource:
     ) -> PaginatedResponse:
         """Get messages for a conversation"""
         query_params = params.model_dump(exclude_none=True) if params else {}
-        
+
         response = await self.client.request(
             "GET",
             f"/api/conversations/{conversation_id}/messages",

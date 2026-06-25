@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 
 import httpx
 import websockets
-from websockets.client import WebSocketClientProtocol
+from websockets.client import WebSocketClientProtocol  # type: ignore
 
 from .errors import (
     AIChatError,
@@ -115,11 +115,11 @@ class AIChatClient:
                         "client_id": self.client_id,
                         "client_secret": self.client_secret,
                     },
-                    headers={"Content-Type": "application/json"}
+                    headers={"Content-Type": "application/json"},
                 )
                 response.raise_for_status()
                 data = response.json()
-                token = data["access_token"]
+                token = str(data["access_token"])
                 self.set_access_token(token)
                 return token
         except httpx.HTTPStatusError as e:
@@ -134,16 +134,16 @@ class AIChatClient:
     def _get_headers(self) -> Dict[str, str]:
         """Get request headers"""
         headers: Dict[str, str] = {}
-        
+
         if self.api_key:
             headers["X-API-Key"] = self.api_key
-        
+
         if self.access_token:
             headers["Authorization"] = f"Bearer {self.access_token}"
-        
+
         if self.workspace_id:
             headers["X-Workspace-ID"] = self.workspace_id
-        
+
         return headers
 
     async def request(
@@ -181,7 +181,7 @@ class AIChatClient:
     def _handle_error(self, error: httpx.HTTPStatusError) -> AIChatError:
         """Handle HTTP errors"""
         response = error.response
-        
+
         try:
             data = response.json()
             message = data.get("message", str(error))
@@ -218,15 +218,15 @@ class AIChatClient:
             return
 
         ws_url = f"{self.ws_url}/hubs/chat?access_token={self.access_token}"
-        
+
         try:
             self._ws = await websockets.connect(ws_url)
             self._reconnect_attempts = 0
             logger.debug("WebSocket connected")
-            
+
             # Start listening for messages
             self._ws_task = asyncio.create_task(self._listen())
-            
+
             # Emit connected event
             await self._emit("connected", {})
 
@@ -290,10 +290,10 @@ class AIChatClient:
                     data = json.loads(message)
                     event_type = data.get("type")
                     event_data = data.get("data")
-                    
+
                     logger.debug(f"WebSocket message: {event_type}")
                     await self._emit(event_type, event_data)
-                    
+
                 except json.JSONDecodeError:
                     logger.error(f"Failed to parse WebSocket message: {message}")
 
@@ -309,9 +309,9 @@ class AIChatClient:
             return
 
         self._reconnect_attempts += 1
-        delay = min(2 ** self._reconnect_attempts, 30)
-        
+        delay = min(2**self._reconnect_attempts, 30)
+
         logger.debug(f"Reconnecting in {delay}s (attempt {self._reconnect_attempts})")
         await asyncio.sleep(delay)
-        
+
         await self.connect()

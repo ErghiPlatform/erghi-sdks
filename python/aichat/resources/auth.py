@@ -21,10 +21,10 @@ class AuthResource:
             "/api/auth/register",
             json=data.model_dump(by_alias=True, exclude_none=True),
         )
-        
+
         auth_response = AuthResponse.model_validate(response.json())
         self.client.set_access_token(auth_response.access_token)
-        
+
         return auth_response
 
     async def login(self, data: LoginRequest) -> AuthResponse:
@@ -34,10 +34,10 @@ class AuthResource:
             "/api/auth/login",
             json=data.model_dump(by_alias=True, exclude_none=True),
         )
-        
+
         auth_response = AuthResponse.model_validate(response.json())
         self.client.set_access_token(auth_response.access_token)
-        
+
         return auth_response
 
     async def refresh(self, refresh_token: str) -> AuthResponse:
@@ -47,10 +47,10 @@ class AuthResource:
             "/api/auth/refresh",
             json={"refreshToken": refresh_token},
         )
-        
+
         auth_response = AuthResponse.model_validate(response.json())
         self.client.set_access_token(auth_response.access_token)
-        
+
         return auth_response
 
     async def logout(self) -> None:

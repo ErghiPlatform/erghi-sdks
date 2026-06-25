@@ -23,7 +23,9 @@ class AIChatError(Exception):
 class AuthenticationError(AIChatError):
     """Authentication failed"""
 
-    def __init__(self, message: str = "Authentication failed", details: Optional[Any] = None) -> None:
+    def __init__(
+        self, message: str = "Authentication failed", details: Optional[Any] = None
+    ) -> None:
         super().__init__(message, "AUTH_ERROR", 401, details)
 
 
@@ -49,7 +51,9 @@ class RateLimitError(AIChatError):
 class NetworkError(AIChatError):
     """Network request failed"""
 
-    def __init__(self, message: str = "Network request failed", details: Optional[Any] = None) -> None:
+    def __init__(
+        self, message: str = "Network request failed", details: Optional[Any] = None
+    ) -> None:
         super().__init__(message, "NETWORK_ERROR", None, details)
 
 
