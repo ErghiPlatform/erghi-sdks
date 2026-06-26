@@ -43,7 +43,7 @@ jobs:
       
       - name: Lint
         run: |
-          black --check aichat/
+          black --check aichat/ || (black --diff aichat/ && exit 1)
           ruff check aichat/
           mypy aichat/
       
