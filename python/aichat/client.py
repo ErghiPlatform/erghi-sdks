@@ -22,7 +22,6 @@ from .resources.auth import AuthResource
 from .resources.chat import ChatResource
 from .resources.workspace import WorkspaceResource
 
-
 logger = logging.getLogger(__name__)
 
 
