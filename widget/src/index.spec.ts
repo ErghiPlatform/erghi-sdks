@@ -1,4 +1,4 @@
-import ChatFlowWidget from './index';
+import ErghiWidget from './index';
 
 // Mock SignalR
 jest.mock('@microsoft/signalr', () => ({
@@ -26,8 +26,8 @@ jest.mock('@microsoft/signalr', () => ({
 // Mock fetch
 global.fetch = jest.fn();
 
-describe('ChatFlowWidget', () => {
-  let widget: ChatFlowWidget;
+describe('ErghiWidget', () => {
+  let widget: ErghiWidget;
   const mockConfig = {
     workspace: 'test-workspace-id',
     apiUrl: 'https://api.test.com',
@@ -47,7 +47,7 @@ describe('ChatFlowWidget', () => {
       json: async () => ({ id: 'conv-123', messages: [] }),
     });
 
-    widget = new ChatFlowWidget(mockConfig);
+    widget = new ErghiWidget(mockConfig);
   });
 
   afterEach(() => {
@@ -58,36 +58,36 @@ describe('ChatFlowWidget', () => {
 
   describe('Initialization', () => {
     it('should create widget with default config', () => {
-      expect(widget).toBeInstanceOf(ChatFlowWidget);
+      expect(widget).toBeInstanceOf(ErghiWidget);
     });
 
     it('should render bubble and window elements', () => {
-      const bubble = document.getElementById('chatflow-bubble');
-      const chatWindow = document.getElementById('chatflow-window');
+      const bubble = document.getElementById('erghi-bubble');
+      const chatWindow = document.getElementById('erghi-window');
       
       expect(bubble).toBeTruthy();
       expect(chatWindow).toBeTruthy();
     });
 
     it('should apply custom primary color', () => {
-      const customWidget = new ChatFlowWidget({
+      const customWidget = new ErghiWidget({
         ...mockConfig,
         primaryColor: '#ff0000',
       });
 
-      const bubble = document.getElementById('chatflow-bubble');
+      const bubble = document.getElementById('erghi-bubble');
       expect(bubble?.style.backgroundColor).toBe('rgb(255, 0, 0)');
       
       customWidget.destroy();
     });
 
     it('should position bubble based on config', () => {
-      const leftWidget = new ChatFlowWidget({
+      const leftWidget = new ErghiWidget({
         ...mockConfig,
         position: 'bottom-left',
       });
 
-      const bubble = document.getElementById('chatflow-bubble');
+      const bubble = document.getElementById('erghi-bubble');
       expect(bubble?.style.left).toBe('20px');
       expect(bubble?.style.right).toBe('');
       
@@ -95,7 +95,7 @@ describe('ChatFlowWidget', () => {
     });
 
     it('should auto-open if configured', async () => {
-      const autoOpenWidget = new ChatFlowWidget({
+      const autoOpenWidget = new ErghiWidget({
         ...mockConfig,
         autoOpen: true,
       });
@@ -103,7 +103,7 @@ describe('ChatFlowWidget', () => {
       // Wait for async operations
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const window = document.getElementById('chatflow-window');
+      const window = document.getElementById('erghi-window');
       expect(window?.style.display).not.toBe('none');
       
       autoOpenWidget.destroy();
@@ -114,7 +114,7 @@ describe('ChatFlowWidget', () => {
     it('should open window when open() is called', () => {
       widget.open();
       
-      const window = document.getElementById('chatflow-window');
+      const window = document.getElementById('erghi-window');
       expect(window?.style.display).not.toBe('none');
     });
 
@@ -122,12 +122,12 @@ describe('ChatFlowWidget', () => {
       widget.open();
       widget.close();
       
-      const window = document.getElementById('chatflow-window');
+      const window = document.getElementById('erghi-window');
       expect(window?.style.display).toBe('none');
     });
 
     it('should toggle window state', () => {
-      const window = document.getElementById('chatflow-window');
+      const window = document.getElementById('erghi-window');
       
       widget.toggle();
       expect(window?.style.display).not.toBe('none');
@@ -139,7 +139,7 @@ describe('ChatFlowWidget', () => {
     it('should hide bubble when window opens', () => {
       widget.open();
       
-      const bubble = document.getElementById('chatflow-bubble');
+      const bubble = document.getElementById('erghi-bubble');
       expect(bubble?.style.display).toBe('none');
     });
 
@@ -147,7 +147,7 @@ describe('ChatFlowWidget', () => {
       widget.open();
       widget.close();
       
-      const bubble = document.getElementById('chatflow-bubble');
+      const bubble = document.getElementById('erghi-bubble');
       expect(bubble?.style.display).not.toBe('none');
     });
   });
@@ -203,8 +203,8 @@ describe('ChatFlowWidget', () => {
     });
 
     it('should send message via API', async () => {
-      const input = document.getElementById('chatflow-input') as HTMLInputElement;
-      const sendButton = document.querySelector('#chatflow-send-button') as HTMLButtonElement;
+      const input = document.getElementById('erghi-input') as HTMLInputElement;
+      const sendButton = document.querySelector('#erghi-send-button') as HTMLButtonElement;
       
       input.value = 'Test message';
       sendButton.click();
@@ -221,8 +221,8 @@ describe('ChatFlowWidget', () => {
     });
 
     it('should clear input after sending', async () => {
-      const input = document.getElementById('chatflow-input') as HTMLInputElement;
-      const sendButton = document.querySelector('#chatflow-send-button') as HTMLButtonElement;
+      const input = document.getElementById('erghi-input') as HTMLInputElement;
+      const sendButton = document.querySelector('#erghi-send-button') as HTMLButtonElement;
       
       input.value = 'Test message';
       sendButton.click();
@@ -233,8 +233,8 @@ describe('ChatFlowWidget', () => {
     });
 
     it('should not send empty messages', () => {
-      const input = document.getElementById('chatflow-input') as HTMLInputElement;
-      const sendButton = document.querySelector('#chatflow-send-button') as HTMLButtonElement;
+      const input = document.getElementById('erghi-input') as HTMLInputElement;
+      const sendButton = document.querySelector('#erghi-send-button') as HTMLButtonElement;
       
       input.value = '   ';
       sendButton.click();
@@ -246,7 +246,7 @@ describe('ChatFlowWidget', () => {
     });
 
     it('should send message on Enter key', async () => {
-      const input = document.getElementById('chatflow-input') as HTMLInputElement;
+      const input = document.getElementById('erghi-input') as HTMLInputElement;
       
       input.value = 'Test message';
       
@@ -264,14 +264,14 @@ describe('ChatFlowWidget', () => {
 
   describe('Message Display', () => {
     it('should display greeting message', () => {
-      const customWidget = new ChatFlowWidget({
+      const customWidget = new ErghiWidget({
         ...mockConfig,
         greeting: 'Hello there!',
       });
 
       customWidget.open();
 
-      const messagesContainer = document.getElementById('chatflow-messages');
+      const messagesContainer = document.getElementById('erghi-messages');
       expect(messagesContainer?.textContent).toContain('Hello there!');
       
       customWidget.destroy();
@@ -280,8 +280,8 @@ describe('ChatFlowWidget', () => {
     it('should add agent message class to greeting', () => {
       widget.open();
 
-      const messageDiv = document.querySelector('.chatflow-message');
-      expect(messageDiv?.classList.contains('chatflow-agent')).toBe(true);
+      const messageDiv = document.querySelector('.erghi-message');
+      expect(messageDiv?.classList.contains('erghi-agent')).toBe(true);
     });
 
     it('should handle received messages from SignalR', async () => {
@@ -296,9 +296,9 @@ describe('ChatFlowWidget', () => {
       };
 
       // Trigger the message handler manually
-      const messagesContainer = document.getElementById('chatflow-messages');
+      const messagesContainer = document.getElementById('erghi-messages');
       const messageDiv = document.createElement('div');
-      messageDiv.className = 'chatflow-message chatflow-agent';
+      messageDiv.className = 'erghi-message erghi-agent';
       messageDiv.textContent = mockMessage.content;
       messagesContainer?.appendChild(messageDiv);
 
@@ -310,9 +310,9 @@ describe('ChatFlowWidget', () => {
     it('should remove all DOM elements on destroy', () => {
       widget.destroy();
 
-      expect(document.getElementById('chatflow-bubble')).toBeNull();
-      expect(document.getElementById('chatflow-window')).toBeNull();
-      expect(document.getElementById('chatflow-styles')).toBeNull();
+      expect(document.getElementById('erghi-bubble')).toBeNull();
+      expect(document.getElementById('erghi-window')).toBeNull();
+      expect(document.getElementById('erghi-styles')).toBeNull();
     });
 
     it('should disconnect SignalR on destroy', async () => {
@@ -328,7 +328,7 @@ describe('ChatFlowWidget', () => {
     });
 
     it('should handle destroy when not initialized', () => {
-      const newWidget = new ChatFlowWidget(mockConfig);
+      const newWidget = new ErghiWidget(mockConfig);
       
       expect(() => newWidget.destroy()).not.toThrow();
     });
@@ -336,30 +336,30 @@ describe('ChatFlowWidget', () => {
 
   describe('Theme Support', () => {
     it('should apply light theme by default', () => {
-      const window = document.getElementById('chatflow-window');
+      const window = document.getElementById('erghi-window');
       expect(window?.style.backgroundColor).toBe('white');
     });
 
     it('should apply dark theme', () => {
-      const darkWidget = new ChatFlowWidget({
+      const darkWidget = new ErghiWidget({
         ...mockConfig,
         theme: 'dark',
       });
 
-      const window = document.getElementById('chatflow-window');
+      const window = document.getElementById('erghi-window');
       expect(window?.style.backgroundColor).toBe('rgb(31, 41, 55)');
       
       darkWidget.destroy();
     });
 
     it('should detect system theme with auto', () => {
-      const autoWidget = new ChatFlowWidget({
+      const autoWidget = new ErghiWidget({
         ...mockConfig,
         theme: 'auto',
       });
 
       // Theme detection is system-dependent, just verify no errors
-      expect(autoWidget).toBeInstanceOf(ChatFlowWidget);
+      expect(autoWidget).toBeInstanceOf(ErghiWidget);
       
       autoWidget.destroy();
     });
@@ -374,8 +374,8 @@ describe('ChatFlowWidget', () => {
         value: 375,
       });
 
-      const mobileWidget = new ChatFlowWidget(mockConfig);
-      const chatWindow = document.getElementById('chatflow-window');
+      const mobileWidget = new ErghiWidget(mockConfig);
+      const chatWindow = document.getElementById('erghi-window');
       
       // Mobile should use full width/height
       expect(chatWindow?.style.width).toBe('100%');

@@ -1,7 +1,7 @@
 """
-ChatFlow Python SDK — Simulation / Integration Example
+Erghi Python SDK — Simulation / Integration Example
 
-Demonstrates the full chat flow against a locally running ChatFlow stack:
+Demonstrates the full chat flow against a locally running Erghi stack:
   docker-compose up   ->   gateway on http://localhost:5000
 
 Run:
@@ -14,12 +14,12 @@ import time
 from aichat import AIChatClient
 
 TIMESTAMP = int(time.time())
-TEST_EMAIL = f"demo_{TIMESTAMP}@chatflow.dev"
+TEST_EMAIL = f"demo_{TIMESTAMP}@erghi.dev"
 TEST_PASSWORD = "Demo@12345!"
 
 
 async def main() -> None:
-    print("=== ChatFlow Python SDK Simulation ===\n")
+    print("=== Erghi Python SDK Simulation ===\n")
 
     # ── 1. Initialise client ──────────────────────────────────────────────────
     async with AIChatClient(

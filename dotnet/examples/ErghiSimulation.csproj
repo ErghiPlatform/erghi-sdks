@@ -1,5 +1,5 @@
 <!--
-  ChatFlow .NET SDK — Simulation / Integration Example
+  Erghi .NET SDK — Simulation / Integration Example
   Console application that exercises AIChatClient against http://localhost:5000
 
   dotnet run
@@ -12,12 +12,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
-    <AssemblyName>ChatFlowSimulation</AssemblyName>
-    <RootNamespace>ChatFlow.Simulation</RootNamespace>
+    <AssemblyName>ErghiSimulation</AssemblyName>
+    <RootNamespace>Erghi.Simulation</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../AIChatSDK/ChatFlow.SDK.csproj" />
+    <ProjectReference Include="../AIChatSDK/Erghi.SDK.csproj" />
   </ItemGroup>
 
 </Project>

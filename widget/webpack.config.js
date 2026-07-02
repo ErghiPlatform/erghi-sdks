@@ -21,7 +21,7 @@ module.exports = {
   output: {
     filename: 'widget.js',
     path: path.resolve(__dirname, 'dist'),
-    library: 'ChatFlowWidget',
+    library: 'ErghiWidget',
     libraryTarget: 'umd',
     libraryExport: 'default',
     globalObject: 'this',

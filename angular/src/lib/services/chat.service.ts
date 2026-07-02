@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { CHATFLOW_CONFIG, ChatFlowConfig } from '../chatflow.config';
+import { ERGHI_CONFIG, ErghiConfig } from '../erghi.config';
 import { Conversation, Message, Widget, PaginatedResponse } from '../models';
 
 @Injectable({
@@ -11,7 +11,7 @@ import { Conversation, Message, Widget, PaginatedResponse } from '../models';
 export class ChatService {
   constructor(
     private http: HttpClient,
-    @Inject(CHATFLOW_CONFIG) private config: ChatFlowConfig
+    @Inject(ERGHI_CONFIG) private config: ErghiConfig
   ) {}
 
   // Conversations

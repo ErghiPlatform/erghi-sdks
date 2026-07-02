@@ -2,23 +2,23 @@ import { Injectable, Inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { tap, catchError, map } from 'rxjs/operators';
-import { CHATFLOW_CONFIG, ChatFlowConfig } from '../chatflow.config';
+import { ERGHI_CONFIG, ErghiConfig } from '../erghi.config';
 import { AuthResponse, LoginRequest, RegisterRequest, User } from '../models';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly TOKEN_KEY = 'chatflow_token';
-  private readonly REFRESH_TOKEN_KEY = 'chatflow_refresh_token';
-  private readonly USER_KEY = 'chatflow_user';
+  private readonly TOKEN_KEY = 'erghi_token';
+  private readonly REFRESH_TOKEN_KEY = 'erghi_refresh_token';
+  private readonly USER_KEY = 'erghi_user';
   
   private currentUserSubject = new BehaviorSubject<User | null>(this.getUserFromStorage());
   public currentUser$ = this.currentUserSubject.asObservable();
   
   constructor(
     private http: HttpClient,
-    @Inject(CHATFLOW_CONFIG) private config: ChatFlowConfig
+    @Inject(ERGHI_CONFIG) private config: ErghiConfig
   ) {}
 
   private getUserFromStorage(): User | null {

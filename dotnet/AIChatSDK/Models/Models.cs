@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace ChatFlow.SDK.Models;
+namespace Erghi.SDK.Models;
 
 // ── User ──────────────────────────────────────────────────────────────────────
 

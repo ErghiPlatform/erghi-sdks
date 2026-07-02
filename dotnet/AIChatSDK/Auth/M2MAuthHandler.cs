@@ -1,8 +1,8 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using ChatFlow.SDK.Errors;
+using Erghi.SDK.Errors;
 
-namespace ChatFlow.SDK.Auth;
+namespace Erghi.SDK.Auth;
 
 internal sealed class M2MAuthHandler : DelegatingHandler
 {

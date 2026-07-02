@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { ChatService } from './chat.service';
-import { CHATFLOW_CONFIG } from '../chatflow.config';
+import { ERGHI_CONFIG } from '../erghi.config';
 import { Conversation, Message, Widget, PaginatedResponse } from '../models';
 
 describe('ChatService', () => {
@@ -42,7 +42,7 @@ describe('ChatService', () => {
       imports: [HttpClientTestingModule],
       providers: [
         ChatService,
-        { provide: CHATFLOW_CONFIG, useValue: mockConfig }
+        { provide: ERGHI_CONFIG, useValue: mockConfig }
       ]
     });
     service = TestBed.inject(ChatService);

@@ -1,14 +1,14 @@
 /**
- * ChatFlow Angular SDK — Simulation Component
+ * Erghi Angular SDK — Simulation Component
  *
  * A standalone Angular component that exercises AuthService, ChatService,
  * and SignalRService against http://localhost:5000.
  *
- * Add it to any Angular 17+ app that imports the ChatFlow Angular SDK:
+ * Add it to any Angular 17+ app that imports the Erghi Angular SDK:
  *
  *   // app.config.ts
- *   import { provideChatFlow } from '@chatflow/angular-sdk';
- *   providers: [provideChatFlow({ apiUrl: 'http://localhost:5000' })]
+ *   import { provideErghi } from '@erghi/angular-sdk';
+ *   providers: [provideErghi({ apiUrl: 'http://localhost:5000' })]
  *
  * Then use <app-simulation /> in your template.
  */
@@ -43,7 +43,7 @@ interface MessageItem {
     <div class="simulation-root">
       <!-- Auth Panel -->
       <div *ngIf="!isLoggedIn()" class="auth-panel">
-        <h2>ChatFlow Angular SDK Demo</h2>
+        <h2>Erghi Angular SDK Demo</h2>
 
         <div *ngIf="authMode() === 'register'">
           <input [(ngModel)]="firstName" placeholder="First Name" />
@@ -74,7 +74,7 @@ interface MessageItem {
       <!-- Chat Panel -->
       <div *ngIf="isLoggedIn()" class="chat-panel">
         <div class="chat-header">
-          <span>ChatFlow Demo</span>
+          <span>Erghi Demo</span>
           <span class="badge" [class.online]="isConnected()">
             {{ isConnected() ? '● Connected' : '○ Offline' }}
           </span>

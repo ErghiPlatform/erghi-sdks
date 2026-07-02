@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ChatFlow Widget — Integration Example</title>
+  <title>Erghi Widget — Integration Example</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -75,9 +75,9 @@
 </head>
 <body>
 
-  <h1>ChatFlow Widget Demo</h1>
+  <h1>Erghi Widget Demo</h1>
   <p>
-    This page embeds the ChatFlow chat widget via a single
+    This page embeds the Erghi chat widget via a single
     <code>&lt;script&gt;</code> tag. Use the buttons below to interact with the
     widget API and observe real-time events.
   </p>
@@ -87,8 +87,8 @@
     <h2>Widget Embed Snippet</h2>
     <code>
 &lt;script<br>
-&nbsp;&nbsp;src="http://localhost:5000/widget/chatflow.js"<br>
-&nbsp;&nbsp;data-chatflow="YOUR_WORKSPACE_ID"<br>
+&nbsp;&nbsp;src="http://localhost:5000/widget/erghi.js"<br>
+&nbsp;&nbsp;data-erghi="YOUR_WORKSPACE_ID"<br>
 &nbsp;&nbsp;data-api-url="http://localhost:5000"<br>
 &nbsp;&nbsp;defer<br>
 &gt;&lt;/script&gt;
@@ -108,7 +108,7 @@
     <div id="log">&gt; Widget event log will appear here…</div>
   </div>
 
-  <!-- ── ChatFlow widget config ──────────────────────────────────────────── -->
+  <!-- ── Erghi widget config ──────────────────────────────────────────── -->
   <script>
     window.chatFlowConfig = {
       workspaceId: 'YOUR_WORKSPACE_ID',
@@ -137,12 +137,12 @@
   </script>
 
   <!--
-    The widget script is loaded from your locally running ChatFlow stack.
+    The widget script is loaded from your locally running Erghi stack.
     If the stack is not running, the widget will not appear — that is expected.
   -->
   <script
-    src="http://localhost:5000/widget/chatflow.js"
-    data-chatflow="YOUR_WORKSPACE_ID"
+    src="http://localhost:5000/widget/erghi.js"
+    data-erghi="YOUR_WORKSPACE_ID"
     data-api-url="http://localhost:5000"
     defer
   ></script>
@@ -159,7 +159,7 @@
     }
 
     function getWidget() {
-      return window.ChatFlowWidget ?? null;
+      return window.ErghiWidget ?? null;
     }
 
     function openWidget() {
@@ -194,15 +194,15 @@
       const w = getWidget();
       if (!w) { log('⚠ Widget not loaded yet'); return; }
       w.destroy();
-      delete window.ChatFlowWidget;
+      delete window.ErghiWidget;
       log('▶ destroy() called — reload the page to reinitialise');
     }
 
     // Listen for cross-frame events dispatched on window
-    window.addEventListener('chatflow:ready',   () => log('🟢 chatflow:ready event'));
-    window.addEventListener('chatflow:message', (e) => log('📨 chatflow:message event: ' + JSON.stringify(e.detail)));
-    window.addEventListener('chatflow:open',    () => log('🔓 chatflow:open event'));
-    window.addEventListener('chatflow:close',   () => log('🔒 chatflow:close event'));
+    window.addEventListener('erghi:ready',   () => log('🟢 erghi:ready event'));
+    window.addEventListener('erghi:message', (e) => log('📨 erghi:message event: ' + JSON.stringify(e.detail)));
+    window.addEventListener('erghi:open',    () => log('🔓 erghi:open event'));
+    window.addEventListener('erghi:close',   () => log('🔒 erghi:close event'));
   </script>
 
 </body>

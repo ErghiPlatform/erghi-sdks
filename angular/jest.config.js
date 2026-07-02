@@ -19,6 +19,6 @@ module.exports = {
     ],
   },
   moduleNameMapper: {
-    '^@chatflow/angular$': '<rootDir>/src/public-api.ts',
+    '^@erghi/angular$': '<rootDir>/src/public-api.ts',
   },
 };

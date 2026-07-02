@@ -1,7 +1,7 @@
 import { Injectable, Inject, OnDestroy } from '@angular/core';
 import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
-import { CHATFLOW_CONFIG, ChatFlowConfig } from '../chatflow.config';
+import { ERGHI_CONFIG, ErghiConfig } from '../erghi.config';
 import { Message } from '../models';
 import { AuthService } from './auth.service';
 
@@ -22,7 +22,7 @@ export class SignalRService implements OnDestroy {
   public events$ = this.eventsSubject.asObservable();
   
   constructor(
-    @Inject(CHATFLOW_CONFIG) private config: ChatFlowConfig,
+    @Inject(ERGHI_CONFIG) private config: ErghiConfig,
     private authService: AuthService
   ) {}
 

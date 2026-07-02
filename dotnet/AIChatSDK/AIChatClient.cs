@@ -1,13 +1,13 @@
 using Microsoft.AspNetCore.SignalR.Client;
-using ChatFlow.SDK.Errors;
-using ChatFlow.SDK.Models;
-using ChatFlow.SDK.Resources;
-using ChatFlow.SDK.Auth;
+using Erghi.SDK.Errors;
+using Erghi.SDK.Models;
+using Erghi.SDK.Resources;
+using Erghi.SDK.Auth;
 
-namespace ChatFlow.SDK;
+namespace Erghi.SDK;
 
 /// <summary>
-/// Main entry point for the ChatFlow SDK.
+/// Main entry point for the Erghi SDK.
 /// Provides authenticated HTTP resources and a real-time SignalR connection.
 /// </summary>
 public sealed class AIChatClient : IAsyncDisposable
@@ -89,7 +89,7 @@ public sealed class AIChatClient : IAsyncDisposable
     // ── SignalR ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Connect to the ChatFlow SignalR hub and begin receiving real-time events.
+    /// Connect to the Erghi SignalR hub and begin receiving real-time events.
     /// Must be authenticated before calling this method.
     /// </summary>
     public async Task ConnectAsync(CancellationToken ct = default)
@@ -112,7 +112,7 @@ public sealed class AIChatClient : IAsyncDisposable
         _hub.Closed += ex =>
         {
             if (_config.Debug)
-                Console.Error.WriteLine($"[ChatFlow] Hub disconnected: {ex?.Message}");
+                Console.Error.WriteLine($"[Erghi] Hub disconnected: {ex?.Message}");
             Disconnected?.Invoke(ex);
             return Task.CompletedTask;
         };
@@ -120,7 +120,7 @@ public sealed class AIChatClient : IAsyncDisposable
         _hub.Reconnected += _ =>
         {
             if (_config.Debug)
-                Console.WriteLine("[ChatFlow] Hub reconnected.");
+                Console.WriteLine("[Erghi] Hub reconnected.");
             Connected?.Invoke();
             return Task.CompletedTask;
         };
@@ -129,12 +129,12 @@ public sealed class AIChatClient : IAsyncDisposable
         {
             await _hub.StartAsync(ct);
             if (_config.Debug)
-                Console.WriteLine($"[ChatFlow] Connected to hub: {_config.ResolvedHubUrl}");
+                Console.WriteLine($"[Erghi] Connected to hub: {_config.ResolvedHubUrl}");
             Connected?.Invoke();
         }
         catch (Exception ex)
         {
-            throw new NetworkException("Failed to connect to ChatFlow hub.", ex);
+            throw new NetworkException("Failed to connect to Erghi hub.", ex);
         }
     }
 
@@ -145,7 +145,7 @@ public sealed class AIChatClient : IAsyncDisposable
         {
             await _hub.StopAsync(ct);
             if (_config.Debug)
-                Console.WriteLine("[ChatFlow] Disconnected from hub.");
+                Console.WriteLine("[Erghi] Disconnected from hub.");
         }
     }
 
@@ -201,28 +201,28 @@ public sealed class AIChatClient : IAsyncDisposable
         _hub!.On<Message>("ReceiveMessage", msg =>
         {
             if (_config.Debug)
-                Console.WriteLine($"[ChatFlow] Message from {msg.Sender}: {msg.Content}");
+                Console.WriteLine($"[Erghi] Message from {msg.Sender}: {msg.Content}");
             MessageReceived?.Invoke(msg);
         });
 
         _hub.On<TypingEvent>("UserTyping", evt =>
         {
             if (_config.Debug)
-                Console.WriteLine($"[ChatFlow] Typing: {evt.UserId} isTyping={evt.IsTyping}");
+                Console.WriteLine($"[Erghi] Typing: {evt.UserId} isTyping={evt.IsTyping}");
             UserTyping?.Invoke(evt);
         });
 
         _hub.On<string>("UserOnline", userId =>
         {
             if (_config.Debug)
-                Console.WriteLine($"[ChatFlow] Online: {userId}");
+                Console.WriteLine($"[Erghi] Online: {userId}");
             UserOnline?.Invoke(userId);
         });
 
         _hub.On<string>("UserOffline", userId =>
         {
             if (_config.Debug)
-                Console.WriteLine($"[ChatFlow] Offline: {userId}");
+                Console.WriteLine($"[Erghi] Offline: {userId}");
             UserOffline?.Invoke(userId);
         });
     }
@@ -230,6 +230,6 @@ public sealed class AIChatClient : IAsyncDisposable
     private void EnsureConnected()
     {
         if (!IsConnected)
-            throw new NetworkException("Not connected to ChatFlow hub. Call ConnectAsync first.");
+            throw new NetworkException("Not connected to Erghi hub. Call ConnectAsync first.");
     }
 }

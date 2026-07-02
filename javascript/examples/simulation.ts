@@ -1,7 +1,7 @@
 /**
- * ChatFlow JavaScript SDK — Simulation / Integration Example
+ * Erghi JavaScript SDK — Simulation / Integration Example
  *
- * Demonstrates the full chat flow against a locally running ChatFlow stack:
+ * Demonstrates the full chat flow against a locally running Erghi stack:
  *   docker-compose up   →   gateway on http://localhost:5000
  *
  * Run:
@@ -11,7 +11,7 @@
 import { AIChatClient } from '../src';
 
 const TIMESTAMP = Date.now();
-const TEST_EMAIL = `demo_${TIMESTAMP}@chatflow.dev`;
+const TEST_EMAIL = `demo_${TIMESTAMP}@erghi.dev`;
 const TEST_PASSWORD = 'Demo@12345!';
 
 async function sleep(ms: number) {
@@ -19,7 +19,7 @@ async function sleep(ms: number) {
 }
 
 async function main() {
-  console.log('=== ChatFlow JavaScript SDK Simulation ===\n');
+  console.log('=== Erghi JavaScript SDK Simulation ===\n');
 
   // ── 1. Initialise client ─────────────────────────────────────────────────
   const client = new AIChatClient({

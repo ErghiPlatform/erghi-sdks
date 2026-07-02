@@ -1,5 +1,5 @@
 #!/bin/bash
-# Pre-commit hook for chatflow-sdks repository.
+# Pre-commit hook for erghi-sdks repository.
 set -e
 
 echo "=== Running pre-commit validation for SDKs ==="

@@ -1,10 +1,10 @@
-/// ChatFlow Flutter SDK — Simulation / Integration Example
+/// Erghi Flutter SDK — Simulation / Integration Example
 ///
 /// A minimal Flutter application that demonstrates the full chat flow
-/// against a locally running ChatFlow stack (http://localhost:5000).
+/// against a locally running Erghi stack (http://localhost:5000).
 ///
 /// To run:
-///   cd chatflow-sdks/flutter
+///   cd erghi-sdks/flutter
 ///   flutter run -d chrome        # or any connected device
 
 import 'package:flutter/material.dart';
@@ -25,7 +25,7 @@ class SimulationApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ChatFlow Flutter Demo',
+      title: 'Erghi Flutter Demo',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorSchemeSeed: const Color(0xFF6366F1),
@@ -182,7 +182,7 @@ class _SimulationPageState extends State<SimulationPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('ChatFlow Flutter SDK Demo'),
+        title: const Text('Erghi Flutter SDK Demo'),
         backgroundColor: const Color(0xFF6366F1),
         foregroundColor: Colors.white,
         actions: [

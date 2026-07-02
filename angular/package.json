@@ -1,7 +1,7 @@
 {
-  "name": "@chatflow/angular",
+  "name": "@erghi/angular",
   "version": "1.0.0",
-  "description": "Official Angular SDK for ChatFlow - Real-time chat with SignalR",
+  "description": "Official Angular SDK for Erghi - Real-time chat with SignalR",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -16,18 +16,18 @@
     "lint": "eslint src --ext .ts"
   },
   "keywords": [
-    "chatflow",
+    "erghi",
     "angular",
     "chat",
     "signalr",
     "real-time",
     "websocket"
   ],
-  "author": "ChatFlow Team",
+  "author": "Erghi Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ChatFlowPlatform/chatflow-sdks"
+    "url": "https://github.com/ErghiPlatform/erghi-sdks"
   },
   "peerDependencies": {
     "@angular/common": "^19.0.0",

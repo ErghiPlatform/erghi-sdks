@@ -1,12 +1,12 @@
-namespace ChatFlow.SDK;
+namespace Erghi.SDK;
 
 /// <summary>
-/// Configuration options for the ChatFlow SDK client.
+/// Configuration options for the Erghi SDK client.
 /// </summary>
 public sealed class AIChatConfig
 {
     /// <summary>
-    /// Base URL of the ChatFlow API gateway. Defaults to http://localhost:5000.
+    /// Base URL of the Erghi API gateway. Defaults to http://localhost:5000.
     /// </summary>
     public string ApiUrl { get; set; } = "http://localhost:5000";
 

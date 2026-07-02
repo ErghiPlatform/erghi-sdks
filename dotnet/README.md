@@ -1,8 +1,8 @@
-# ChatFlow .NET SDK
+# Erghi .NET SDK
 
-Official .NET 10 SDK for [ChatFlow](https://chatflow.com) — Real-time customer chat with SignalR integration.
+Official .NET 10 SDK for [Erghi](https://erghi.com) — Real-time customer chat with SignalR integration.
 
-[![NuGet](https://img.shields.io/nuget/v/ChatFlow.SDK.svg)](https://www.nuget.org/packages/ChatFlow.SDK)
+[![NuGet](https://img.shields.io/nuget/v/Erghi.SDK.svg)](https://www.nuget.org/packages/Erghi.SDK)
 [![.NET](https://img.shields.io/badge/.NET-10.0-purple.svg)](https://dotnet.microsoft.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../../LICENSE)
 
@@ -14,7 +14,7 @@ Official .NET 10 SDK for [ChatFlow](https://chatflow.com) — Real-time customer
 - 🔄 Automatic reconnection with exponential backoff
 - 📦 Strongly-typed models with nullable reference types
 - 🛠️ Dependency injection friendly
-- 🧪 Fully tested against the live ChatFlow stack
+- 🧪 Fully tested against the live Erghi stack
 
 ## Requirements
 
@@ -24,24 +24,24 @@ Official .NET 10 SDK for [ChatFlow](https://chatflow.com) — Real-time customer
 ## Installation
 
 ```bash
-dotnet add package ChatFlow.SDK
+dotnet add package Erghi.SDK
 ```
 
 Or via the NuGet Package Manager:
 
 ```
-Install-Package ChatFlow.SDK
+Install-Package Erghi.SDK
 ```
 
 ## Quick Start
 
 ```csharp
-using ChatFlow.SDK;
-using ChatFlow.SDK.Models;
+using Erghi.SDK;
+using Erghi.SDK.Models;
 
 await using var client = new AIChatClient(new AIChatConfig
 {
-    ApiUrl = "https://api.chatflow.com",
+    ApiUrl = "https://api.erghi.com",
     ApiKey = "your-api-key",
     Debug = true,
 });
@@ -85,12 +85,12 @@ Console.WriteLine($"Sent: {message.Id}");
 ```csharp
 var config = new AIChatConfig
 {
-    // Base URL of the ChatFlow API gateway (default: http://localhost:5000)
-    ApiUrl = "https://api.chatflow.com",
+    // Base URL of the Erghi API gateway (default: http://localhost:5000)
+    ApiUrl = "https://api.erghi.com",
 
     // Optional: override SignalR hub URL (derived from ApiUrl when not set)
     // Default: {ApiUrl}/hubs/chat
-    HubUrl = "https://api.chatflow.com/hubs/chat",
+    HubUrl = "https://api.erghi.com/hubs/chat",
 
     // API key for widget/server-side authentication
     ApiKey = "your-api-key",
@@ -268,7 +268,7 @@ Console.WriteLine($"Workspace ID: {workspace.Id}");
 ## Error Handling
 
 ```csharp
-using ChatFlow.SDK.Errors;
+using Erghi.SDK.Errors;
 
 try
 {
@@ -289,7 +289,7 @@ catch (NetworkException ex)
 }
 catch (AIChatException ex)
 {
-    // Base exception for all ChatFlow SDK errors
+    // Base exception for all Erghi SDK errors
     Console.Error.WriteLine($"SDK error [{ex.StatusCode}]: {ex.Message}");
 }
 ```
@@ -309,9 +309,9 @@ Use the SDK in ASP.NET Core apps with DI:
 // Program.cs
 builder.Services.AddSingleton(new AIChatConfig
 {
-    ApiUrl = builder.Configuration["ChatFlow:ApiUrl"]!,
-    ApiKey = builder.Configuration["ChatFlow:ApiKey"],
-    WorkspaceId = builder.Configuration["ChatFlow:WorkspaceId"],
+    ApiUrl = builder.Configuration["Erghi:ApiUrl"]!,
+    ApiKey = builder.Configuration["Erghi:ApiKey"],
+    WorkspaceId = builder.Configuration["Erghi:WorkspaceId"],
 });
 
 builder.Services.AddScoped<AIChatClient>();
@@ -320,8 +320,8 @@ builder.Services.AddScoped<AIChatClient>();
 ```csharp
 // appsettings.json
 {
-  "ChatFlow": {
-    "ApiUrl": "https://api.chatflow.com",
+  "Erghi": {
+    "ApiUrl": "https://api.erghi.com",
     "ApiKey": "your-api-key",
     "WorkspaceId": "your-workspace-id"
   }
@@ -356,10 +356,10 @@ if (client.IsConnected)
 
 ```bash
 # Clone the SDK repo
-git clone https://github.com/ChatFlowPlatform/chatflow-sdks.git
-cd chatflow-sdks/dotnet/examples
+git clone https://github.com/ErghiPlatform/erghi-sdks.git
+cd erghi-sdks/dotnet/examples
 
-# Start the ChatFlow platform first (from the main repo)
+# Start the Erghi platform first (from the main repo)
 # docker compose up
 
 dotnet run
@@ -369,4 +369,4 @@ The example exercises the full flow: register → login → create workspace →
 
 ## License
 
-MIT — © 2026 ChatFlow Platform
+MIT — © 2026 Erghi Platform

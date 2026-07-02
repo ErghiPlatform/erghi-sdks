@@ -1,11 +1,11 @@
-# ChatFlow Angular SDK
+# Erghi Angular SDK
 
-Official Angular 19+ SDK for ChatFlow - Real-time chat with SignalR integration.
+Official Angular 19+ SDK for Erghi - Real-time chat with SignalR integration.
 
 ## Installation
 
 ```bash
-npm install @chatflow/angular @microsoft/signalr
+npm install @erghi/angular @microsoft/signalr
 ```
 
 ## Setup
@@ -15,7 +15,7 @@ npm install @chatflow/angular @microsoft/signalr
 ```typescript
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { CHATFLOW_CONFIG, authInterceptor, errorInterceptor } from '@chatflow/angular';
+import { ERGHI_CONFIG, authInterceptor, errorInterceptor } from '@erghi/angular';
 
 bootstrapApplication(AppComponent, {
   providers: [
@@ -23,7 +23,7 @@ bootstrapApplication(AppComponent, {
       withInterceptors([authInterceptor, errorInterceptor])
     ),
     {
-      provide: CHATFLOW_CONFIG,
+      provide: ERGHI_CONFIG,
       useValue: {
         apiUrl: 'http://localhost:5000',
         signalrUrl: 'http://localhost:5002/hubs/chat' // optional
@@ -39,7 +39,7 @@ bootstrapApplication(AppComponent, {
 
 ```typescript
 import { Component, inject } from '@angular/core';
-import { AuthService } from '@chatflow/angular';
+import { AuthService } from '@erghi/angular';
 
 @Component({
   selector: 'app-login',
@@ -72,7 +72,7 @@ export class LoginComponent {
 
 ```typescript
 import { Component, inject, OnInit } from '@angular/core';
-import { ChatService, Message } from '@chatflow/angular';
+import { ChatService, Message } from '@erghi/angular';
 
 @Component({
   selector: 'app-chat',
@@ -116,7 +116,7 @@ export class ChatComponent implements OnInit {
 
 ```typescript
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
-import { SignalRService, Message } from '@chatflow/angular';
+import { SignalRService, Message } from '@erghi/angular';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -175,7 +175,7 @@ export class RealtimeChatComponent implements OnInit, OnDestroy {
 
 ```typescript
 import { Component, inject } from '@angular/core';
-import { ChatService, Widget } from '@chatflow/angular';
+import { ChatService, Widget } from '@erghi/angular';
 
 @Component({
   selector: 'app-widgets',

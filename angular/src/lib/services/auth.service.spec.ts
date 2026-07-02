@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { AuthService } from './auth.service';
-import { CHATFLOW_CONFIG } from '../chatflow.config';
+import { ERGHI_CONFIG } from '../erghi.config';
 import { AuthResponse, LoginRequest, RegisterRequest } from '../models';
 
 describe('AuthService', () => {
@@ -29,7 +29,7 @@ describe('AuthService', () => {
       imports: [HttpClientTestingModule],
       providers: [
         AuthService,
-        { provide: CHATFLOW_CONFIG, useValue: mockConfig }
+        { provide: ERGHI_CONFIG, useValue: mockConfig }
       ]
     });
     service = TestBed.inject(AuthService);
@@ -111,7 +111,7 @@ describe('AuthService', () => {
 
   describe('refreshToken', () => {
     it('should refresh token successfully', (done) => {
-      localStorage.setItem('chatflow_refresh_token', 'old-refresh-token');
+      localStorage.setItem('erghi_refresh_token', 'old-refresh-token');
 
       const newAuthResponse = { ...mockAuthResponse, accessToken: 'new-token' };
 
@@ -138,9 +138,9 @@ describe('AuthService', () => {
 
   describe('logout', () => {
     it('should logout and clear tokens', (done) => {
-      localStorage.setItem('chatflow_token', 'token');
-      localStorage.setItem('chatflow_refresh_token', 'refresh');
-      localStorage.setItem('chatflow_user', JSON.stringify(mockAuthResponse.user));
+      localStorage.setItem('erghi_token', 'token');
+      localStorage.setItem('erghi_refresh_token', 'refresh');
+      localStorage.setItem('erghi_user', JSON.stringify(mockAuthResponse.user));
 
       service.logout().subscribe(() => {
         expect(service.getToken()).toBeNull();
@@ -155,7 +155,7 @@ describe('AuthService', () => {
     });
 
     it('should clear tokens even if logout API fails', (done) => {
-      localStorage.setItem('chatflow_token', 'token');
+      localStorage.setItem('erghi_token', 'token');
 
       service.logout().subscribe({
         error: () => {

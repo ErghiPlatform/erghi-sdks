@@ -1,7 +1,7 @@
-namespace ChatFlow.SDK.Errors;
+namespace Erghi.SDK.Errors;
 
 /// <summary>
-/// Base exception for all ChatFlow SDK errors.
+/// Base exception for all Erghi SDK errors.
 /// </summary>
 public class AIChatException : Exception
 {

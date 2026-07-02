@@ -1,22 +1,22 @@
 /**
- * ChatFlow .NET SDK — Simulation / Integration Example
+ * Erghi .NET SDK — Simulation / Integration Example
  *
- * Exercises AIChatClient against a locally running ChatFlow stack.
+ * Exercises AIChatClient against a locally running Erghi stack.
  *   docker-compose up   →   gateway on http://localhost:5000
  *
  * Run:
- *   cd chatflow-sdks/dotnet/examples
+ *   cd erghi-sdks/dotnet/examples
  *   dotnet run
  */
 
-using ChatFlow.SDK;
-using ChatFlow.SDK.Models;
+using Erghi.SDK;
+using Erghi.SDK.Models;
 
 var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-var testEmail = $"demo_{timestamp}@chatflow.dev";
+var testEmail = $"demo_{timestamp}@erghi.dev";
 const string TestPassword = "Demo@12345!";
 
-Console.WriteLine("=== ChatFlow .NET SDK Simulation ===\n");
+Console.WriteLine("=== Erghi .NET SDK Simulation ===\n");
 
 await using var client = new AIChatClient(new AIChatConfig
 {

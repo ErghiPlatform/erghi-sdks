@@ -1,12 +1,12 @@
-# AI Developer and Agent Rules - ChatFlow SDKs
+# AI Developer and Agent Rules - Erghi SDKs
 
-Guidelines for modifying and expanding the ChatFlow client SDKs.
+Guidelines for modifying and expanding the Erghi client SDKs.
 
 ---
 
 ## 1. Project Overview & SDK Alignment
 
-This repository contains client-side SDKs for integrating ChatFlow services into various client applications:
+This repository contains client-side SDKs for integrating Erghi services into various client applications:
 - **Angular / React / JavaScript / Widget (TS/JS)**: Web integrations, frontend UI packages.
 - **Flutter / Dart**: Cross-platform mobile/web/desktop.
 - **dotnet**: C# backend and desktop clients.
@@ -19,7 +19,7 @@ All SDKs must align with the open API definitions and maintain consistent naming
 
 ## 2. Platform-Specific Design Principles
 
-- **Typing**: Make payloads type-safe. Ensure models represent correct payload fields returned from `chatflow-conversation-api`.
+- **Typing**: Make payloads type-safe. Ensure models represent correct payload fields returned from `erghi-conversation-api`.
 - **Flutter/Dart**: Follow standard `lints` or `flutter_lints` patterns. Use asynchronous operations (`async`/`await`) and Stream controllers for live messages.
 - **React/JS**: Leverage lightweight client architectures to keep widget sizes low. Minimize external dependencies.
 - **Python**: Use standard type annotations and modern http clients (e.g., `httpx` or `aiohttp`).

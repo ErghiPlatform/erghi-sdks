@@ -6,15 +6,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     
-    <PackageId>ChatFlow.SDK</PackageId>
+    <PackageId>Erghi.SDK</PackageId>
     <Version>2.0.0</Version>
-    <Authors>ChatFlow Team</Authors>
-    <Company>ChatFlow Platform</Company>
-    <Description>Official .NET 10 SDK for ChatFlow - Real-time chat with SignalR</Description>
-    <PackageTags>chatflow;ai;chat;chatbot;sdk;websocket;real-time;signalr;dotnet10</PackageTags>
+    <Authors>Erghi Team</Authors>
+    <Company>Erghi Platform</Company>
+    <Description>Official .NET 10 SDK for Erghi - Real-time chat with SignalR</Description>
+    <PackageTags>erghi;ai;chat;chatbot;sdk;websocket;real-time;signalr;dotnet10</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://chatflow.com</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/ChatFlowPlatform/chatflow-sdks</RepositoryUrl>
+    <PackageProjectUrl>https://erghi.com</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ErghiPlatform/erghi-sdks</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>

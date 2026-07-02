@@ -1,11 +1,11 @@
 /**
- * ChatFlow React SDK — Simulation / Demo App
+ * Erghi React SDK — Simulation / Demo App
  *
  * A complete working chat UI that exercises the React SDK against
- * a locally running ChatFlow stack (http://localhost:5000).
+ * a locally running Erghi stack (http://localhost:5000).
  *
  * Add this component to a Create-React-App or Vite project that has the
- * @chatflow/react-sdk package installed (or use the local source via path alias).
+ * @erghi/react-sdk package installed (or use the local source via path alias).
  */
 
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
@@ -56,7 +56,7 @@ function AuthForm({ onAuthenticated }: { onAuthenticated: (convId: string) => vo
 
   return (
     <form onSubmit={handleSubmit} style={styles.form}>
-      <h2 style={styles.heading}>ChatFlow {isRegistering ? 'Register' : 'Login'}</h2>
+      <h2 style={styles.heading}>Erghi {isRegistering ? 'Register' : 'Login'}</h2>
 
       {isRegistering && (
         <input
@@ -150,7 +150,7 @@ function ChatWindow({ conversationId }: { conversationId: string }) {
     <div style={styles.chatWindow}>
       {/* Header */}
       <div style={styles.chatHeader}>
-        <span>ChatFlow Demo</span>
+        <span>Erghi Demo</span>
         <span style={{ ...styles.badge, background: isConnected ? '#22c55e' : '#ef4444' }}>
           {isConnected ? '● Connected' : '○ Offline'}
         </span>

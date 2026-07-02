@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install git hooks for chatflow-sdks repository
+# Install git hooks for erghi-sdks repository
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GIT_DIR="$(git -C "$SCRIPT_DIR" rev-parse --git-dir 2>/dev/null)"
@@ -21,4 +21,4 @@ chmod +x "$HOOK_SRC"
 cp "$HOOK_SRC" "$HOOK_DEST"
 chmod +x "$HOOK_DEST"
 
-echo "✅ Git hooks installed successfully for chatflow-sdks!"
+echo "✅ Git hooks installed successfully for erghi-sdks!"

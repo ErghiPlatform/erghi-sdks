@@ -1,4 +1,4 @@
-# ChatFlow Widget
+# Erghi Widget
 
 Embeddable chat widget for websites - No dependencies, pure Vanilla JavaScript with TypeScript.
 
@@ -7,19 +7,19 @@ Embeddable chat widget for websites - No dependencies, pure Vanilla JavaScript w
 ### Option 1: CDN (Easiest)
 
 ```html
-<script src="https://cdn.chatflow.com/widget.min.js" data-chatflow="YOUR_WORKSPACE_ID"></script>
+<script src="https://cdn.erghi.com/widget.min.js" data-erghi="YOUR_WORKSPACE_ID"></script>
 ```
 
 ### Option 2: npm
 
 ```bash
-npm install @chatflow/widget
+npm install @erghi/widget
 ```
 
 ```javascript
-import ChatFlowWidget from '@chatflow/widget';
+import ErghiWidget from '@erghi/widget';
 
-new ChatFlowWidget({
+new ErghiWidget({
   workspace: 'YOUR_WORKSPACE_ID'
 });
 ```
@@ -27,9 +27,9 @@ new ChatFlowWidget({
 ### Option 3: Manual
 
 ```html
-<script src="path/to/chatflow-widget.min.js"></script>
+<script src="path/to/erghi-widget.min.js"></script>
 <script>
-  new ChatFlowWidget({
+  new ErghiWidget({
     workspace: 'YOUR_WORKSPACE_ID'
   });
 </script>
@@ -38,13 +38,13 @@ new ChatFlowWidget({
 ## Configuration
 
 ```javascript
-new ChatFlowWidget({
+new ErghiWidget({
   // Required
   workspace: 'ws_xxxxx',
 
   // Optional
-  apiUrl: 'https://api.chatflow.com',  // Custom API URL
-  signalrUrl: 'https://api.chatflow.com/hubs/chat',  // Custom SignalR URL
+  apiUrl: 'https://api.erghi.com',  // Custom API URL
+  signalrUrl: 'https://api.erghi.com/hubs/chat',  // Custom SignalR URL
   theme: 'light',  // 'light' | 'dark' | 'auto'
   position: 'bottom-right',  // 'bottom-left' | 'bottom-right'
   primaryColor: '#007bff',  // Brand color
@@ -57,7 +57,7 @@ new ChatFlowWidget({
 ## API Methods
 
 ```javascript
-const widget = new ChatFlowWidget({ workspace: 'ws_xxx' });
+const widget = new ErghiWidget({ workspace: 'ws_xxx' });
 
 // Open the chat window
 widget.open();
@@ -85,10 +85,10 @@ widget.destroy();
 <body>
   <h1>Welcome!</h1>
   
-  <!-- ChatFlow Widget -->
-  <script src="https://cdn.chatflow.com/widget.min.js"></script>
+  <!-- Erghi Widget -->
+  <script src="https://cdn.erghi.com/widget.min.js"></script>
   <script>
-    new ChatFlowWidget({
+    new ErghiWidget({
       workspace: 'ws_abc123',
       theme: 'light',
       primaryColor: '#ff6b6b',
@@ -102,7 +102,7 @@ widget.destroy();
 ### Custom Styling
 
 ```javascript
-new ChatFlowWidget({
+new ErghiWidget({
   workspace: 'ws_abc123',
   theme: 'dark',
   primaryColor: '#8b5cf6',
@@ -114,7 +114,7 @@ new ChatFlowWidget({
 ### Auto-open Widget
 
 ```javascript
-new ChatFlowWidget({
+new ErghiWidget({
   workspace: 'ws_abc123',
   autoOpen: true,  // Opens immediately
   greeting: 'Hi there! 👋 How can we assist you today?'
@@ -124,7 +124,7 @@ new ChatFlowWidget({
 ### Programmatic Control
 
 ```javascript
-const widget = new ChatFlowWidget({ workspace: 'ws_abc123' });
+const widget = new ErghiWidget({ workspace: 'ws_abc123' });
 
 // Open after 5 seconds
 setTimeout(() => {
@@ -142,7 +142,7 @@ document.getElementById('closeChat').addEventListener('click', () => {
 ```javascript
 // Initialize on component mount
 useEffect(() => {
-  const widget = new ChatFlowWidget({
+  const widget = new ErghiWidget({
     workspace: 'ws_abc123',
     theme: 'light'
   });

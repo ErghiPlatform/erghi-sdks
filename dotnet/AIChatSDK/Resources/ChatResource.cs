@@ -1,10 +1,10 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using ChatFlow.SDK.Errors;
-using ChatFlow.SDK.Models;
+using Erghi.SDK.Errors;
+using Erghi.SDK.Models;
 
-namespace ChatFlow.SDK.Resources;
+namespace Erghi.SDK.Resources;
 
 /// <summary>
 /// Provides chat operations: conversations, messages, typing indicators.

@@ -2,7 +2,7 @@ import { buildStyles, ICON_CHAT, ICON_SEND } from './styles';
 import { ConversationRealtimeClient } from './realtime';
 import { playMessageNotification } from './notification';
 
-export interface ChatFlowConfig {
+export interface ErghiConfig {
   /** Widget UUID from admin portal */
   widgetId: string;
   /** @deprecated use widgetId */
@@ -24,8 +24,8 @@ interface Message {
   createdAt?: string;
 }
 
-export default class ChatFlowWidget {
-  private config: Required<Omit<ChatFlowConfig, 'workspace' | 'visitorContext'>> & {
+export default class ErghiWidget {
+  private config: Required<Omit<ErghiConfig, 'workspace' | 'visitorContext'>> & {
     workspace?: string;
     visitorContext: Record<string, unknown>;
   };
@@ -51,9 +51,9 @@ export default class ChatFlowWidget {
     assignedAgentName: '',
   };
 
-  constructor(config: ChatFlowConfig) {
+  constructor(config: ErghiConfig) {
     const widgetId = config.widgetId || config.workspace;
-    if (!widgetId) throw new Error('ChatFlow: widgetId is required');
+    if (!widgetId) throw new Error('Erghi: widgetId is required');
 
     this.config = {
       widgetId,
@@ -62,7 +62,7 @@ export default class ChatFlowWidget {
       position: config.position || 'bottom-right',
       primaryColor: config.primaryColor || '#0066FF',
       greeting: config.greeting || 'Hi! How can we help you today?',
-      title: config.title || 'ChatFlow',
+      title: config.title || 'Erghi',
       autoOpen: config.autoOpen ?? false,
       visitorContext: { ...(config.visitorContext ?? {}) },
     };
@@ -81,7 +81,7 @@ export default class ChatFlowWidget {
 
   private detectLocale(): string {
     try {
-      const stored = localStorage.getItem('chatflow:locale') || localStorage.getItem('ui-language');
+      const stored = localStorage.getItem('erghi:locale') || localStorage.getItem('ui-language');
       if (stored) return stored.slice(0, 2);
     } catch { /* ignore */ }
     return (document.documentElement.lang || navigator.language || 'en').slice(0, 2);
@@ -146,7 +146,7 @@ export default class ChatFlowWidget {
     if (this.host) return;
 
     this.host = document.createElement('div');
-    this.host.id = 'chatflow-widget-root';
+    this.host.id = 'erghi-widget-root';
     this.shadow = this.host.attachShadow({ mode: 'open' });
 
     const style = document.createElement('style');
@@ -267,7 +267,7 @@ export default class ChatFlowWidget {
         body: JSON.stringify({ metadata, merge: true }),
       });
     } catch (err) {
-      console.warn('[ChatFlow] Failed to sync visitor context:', err);
+      console.warn('[Erghi] Failed to sync visitor context:', err);
     }
   }
 
@@ -289,7 +289,7 @@ export default class ChatFlowWidget {
       void this.connectRealtime();
       this.startHeartbeat();
     } catch (err) {
-      console.error('[ChatFlow] Failed to start conversation:', err);
+      console.error('[Erghi] Failed to start conversation:', err);
       this.addSystemMessage('Unable to connect. Please try again.');
     }
   }
@@ -347,7 +347,7 @@ export default class ChatFlowWidget {
       this.knownMessageIds.add(serverId);
       this.awaitReply();
     } catch (err) {
-      console.error('[ChatFlow] Send failed:', err);
+      console.error('[Erghi] Send failed:', err);
       this.setTyping(false);
       this.addSystemMessage('Message failed to send.');
     }
@@ -424,7 +424,7 @@ export default class ChatFlowWidget {
         },
       });
     } catch (err) {
-      console.warn('[ChatFlow] SignalR connect failed, using HTTP fallback:', err);
+      console.warn('[Erghi] SignalR connect failed, using HTTP fallback:', err);
       this.startFallbackPoll();
     }
   }
@@ -591,7 +591,7 @@ export default class ChatFlowWidget {
   }
 
   private sessionKey(): string {
-    return `chatflow:session:${this.config.widgetId}`;
+    return `erghi:session:${this.config.widgetId}`;
   }
 
   private saveSession(): void {
@@ -716,7 +716,7 @@ function parseJsonAttr(raw: string | null): Record<string, unknown> | undefined 
       ? (parsed as Record<string, unknown>)
       : undefined;
   } catch {
-    console.warn('[ChatFlow] Invalid JSON in data-visitor-context');
+    console.warn('[Erghi] Invalid JSON in data-visitor-context');
     return undefined;
   }
 }
@@ -728,12 +728,12 @@ function autoInit(): void {
     (document.querySelector('script[data-widget-id]') as HTMLScriptElement | null);
   if (!script) return;
 
-  const widgetId = script.getAttribute('data-widget-id') ?? script.getAttribute('data-chatflow');
+  const widgetId = script.getAttribute('data-widget-id') ?? script.getAttribute('data-erghi');
   if (!widgetId) return;
 
   const visitorContext = parseJsonAttr(script.getAttribute('data-visitor-context'));
 
-  const widget = new ChatFlowWidget({
+  const widget = new ErghiWidget({
     widgetId,
     apiUrl: script.getAttribute('data-api-url') ?? undefined,
     primaryColor: script.getAttribute('data-primary-color') ?? undefined,
@@ -743,10 +743,10 @@ function autoInit(): void {
     visitorContext,
   });
 
-  (window as unknown as { chatflowWidget?: ChatFlowWidget }).chatflowWidget = widget;
+  (window as unknown as { erghiWidget?: ErghiWidget }).erghiWidget = widget;
 }
 
 if (typeof window !== 'undefined') {
-  (window as unknown as { ChatFlowWidget: typeof ChatFlowWidget }).ChatFlowWidget = ChatFlowWidget;
+  (window as unknown as { ErghiWidget: typeof ErghiWidget }).ErghiWidget = ErghiWidget;
   autoInit();
 }

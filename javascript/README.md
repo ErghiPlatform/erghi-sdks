@@ -1,6 +1,6 @@
-# ChatFlow JavaScript/TypeScript SDK
+# Erghi JavaScript/TypeScript SDK
 
-Official JavaScript/TypeScript SDK for the [ChatFlow Platform](https://chatflow.com).
+Official JavaScript/TypeScript SDK for the [Erghi Platform](https://erghi.com).
 
 ## Installation
 
@@ -19,7 +19,7 @@ import AIChatClient from '@aichat/sdk';
 
 // Initialize the client
 const client = new AIChatClient({
-  apiUrl: 'https://api.chatflow.com',
+  apiUrl: 'https://api.erghi.com',
   apiKey: 'your-api-key',
   workspaceId: 'your-workspace-id',
 });
@@ -241,10 +241,10 @@ const messages: PaginatedResponse<Message> = await client.chat.getMessages('conv
 ```typescript
 const client = new AIChatClient({
   // API base URL (default: http://localhost:5000)
-  apiUrl: 'https://api.chatflow.com',
+  apiUrl: 'https://api.erghi.com',
   
   // WebSocket URL (default: ws://localhost:5002)
-  wsUrl: 'wss://ws.chatflow.com',
+  wsUrl: 'wss://ws.erghi.com',
   
   // API Key for authentication
   apiKey: 'your-api-key',
@@ -266,10 +266,10 @@ const client = new AIChatClient({
 ## Browser Usage
 
 ```html
-<script src="https://cdn.chatflow.com/sdk/latest/chatflow.min.js"></script>
+<script src="https://cdn.erghi.com/sdk/latest/erghi.min.js"></script>
 <script>
   const client = new AIChatSDK.default({
-    apiUrl: 'https://api.chatflow.com',
+    apiUrl: 'https://api.erghi.com',
     apiKey: 'your-api-key',
   });
 
@@ -288,8 +288,8 @@ const client = new AIChatClient({
 const AIChatClient = require('@aichat/sdk').default;
 
 const client = new AIChatClient({
-  apiUrl: 'https://api.chatflow.com',
-  apiKey: process.env.CHATFLOW_API_KEY,
+  apiUrl: 'https://api.erghi.com',
+  apiKey: process.env.ERGHI_API_KEY,
 });
 ```
 

@@ -1,6 +1,6 @@
-# ChatFlow React SDK
+# Erghi React SDK
 
-React hooks and components for the [ChatFlow Platform](https://chatflow.com).
+React hooks and components for the [Erghi Platform](https://erghi.com).
 
 ## Installation
 
@@ -17,7 +17,7 @@ function App() {
   return (
     <AIChatProvider
       config={{
-        apiUrl: 'https://api.chatflow.com',
+        apiUrl: 'https://api.erghi.com',
         apiKey: 'your-api-key',
       }}
     >

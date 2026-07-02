@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { SignalRService } from './signalr.service';
 import { AuthService } from './auth.service';
-import { CHATFLOW_CONFIG } from '../chatflow.config';
+import { ERGHI_CONFIG } from '../erghi.config';
 import { HubConnectionState } from '@microsoft/signalr';
 
 describe('SignalRService', () => {
@@ -16,7 +16,7 @@ describe('SignalRService', () => {
       providers: [
         SignalRService,
         { provide: AuthService, useValue: authSpy },
-        { provide: CHATFLOW_CONFIG, useValue: mockConfig }
+        { provide: ERGHI_CONFIG, useValue: mockConfig }
       ]
     });
     
