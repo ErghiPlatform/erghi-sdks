@@ -28,10 +28,10 @@ jobs:
           dotnet-version: '10.0.x'
       
       - name: Restore dependencies
-        run: dotnet restore AIChatSDK/AIChatSDK.csproj
-      
+        run: dotnet restore Erghi.SDK/Erghi.SDK.csproj
+
       - name: Build
-        run: dotnet build AIChatSDK/AIChatSDK.csproj --configuration Release --no-restore
-      
+        run: dotnet build Erghi.SDK/Erghi.SDK.csproj --configuration Release --no-restore
+
       - name: Test
-        run: dotnet test AIChatSDK/AIChatSDK.csproj --configuration Release --no-build --verbosity normal
+        run: dotnet test tests/Erghi.SDK.Tests/Erghi.SDK.Tests.csproj --configuration Release --verbosity normal

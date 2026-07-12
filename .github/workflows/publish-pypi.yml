@@ -36,16 +36,16 @@ jobs:
       - name: Run tests
         run: |
           if [ -d "tests" ]; then
-            pytest tests/ -v --cov=aichat --cov-report=term-missing
+            pytest tests/ -v --cov=erghi --cov-report=term-missing
           else
             echo "No tests directory found, skipping pytest."
           fi
-      
+
       - name: Lint
         run: |
-          black --check aichat/
-          ruff check aichat/
-          mypy aichat/
+          black --check erghi/
+          ruff check erghi/
+          mypy erghi/
       
       - name: Build package
         run: python -m build

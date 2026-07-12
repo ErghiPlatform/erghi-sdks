@@ -11,14 +11,14 @@ Official client SDKs for the [Erghi Platform](https://erghi.com) — AI-powered 
 
 | SDK | Package | Version | Docs |
 |-----|---------|---------|------|
-| [JavaScript / TypeScript](#javascript--typescript) | `@aichat/sdk` | ![npm](https://img.shields.io/npm/v/@aichat/sdk) | [README](./javascript/README.md) |
-| [React](#react) | `@aichat/react` | ![npm](https://img.shields.io/npm/v/@aichat/react) | [README](./react/README.md) |
+| [JavaScript / TypeScript](#javascript--typescript) | `@erghi/sdk` | ![npm](https://img.shields.io/npm/v/@erghi/sdk) | [README](./javascript/README.md) |
+| [React](#react) | `@erghi/react` | ![npm](https://img.shields.io/npm/v/@erghi/react) | [README](./react/README.md) |
 | [Angular](#angular) | `@erghi/angular` | ![npm](https://img.shields.io/npm/v/@erghi/angular) | [README](./angular/README.md) |
 | [Widget (Vanilla JS)](#widget) | `@erghi/widget` | ![npm](https://img.shields.io/npm/v/@erghi/widget) | [README](./widget/README.md) |
 | [.NET / C#](#net--c) | `Erghi.SDK` | ![NuGet](https://img.shields.io/nuget/v/Erghi.SDK) | [README](./dotnet/README.md) |
-| [Python](#python) | `aichat-sdk` | ![PyPI](https://img.shields.io/pypi/v/aichat-sdk) | [README](./python/README.md) |
-| [Flutter / Dart](#flutter--dart) | `aichat_sdk` | ![pub](https://img.shields.io/pub/v/aichat_sdk) | [README](./flutter/README.md) |
-| [Swift](#swift) | `AIChatSDK` (SPM) | — | [README](./swift/README.md) |
+| [Python](#python) | `erghi-sdk` | ![PyPI](https://img.shields.io/pypi/v/erghi-sdk) | [README](./python/README.md) |
+| [Flutter / Dart](#flutter--dart) | `erghi_sdk` | ![pub](https://img.shields.io/pub/v/erghi_sdk) | [README](./flutter/README.md) |
+| [Swift](#swift) | `ErghiSDK` (SPM) | — | [README](./swift/README.md) |
 
 ---
 
@@ -27,13 +27,13 @@ Official client SDKs for the [Erghi Platform](https://erghi.com) — AI-powered 
 ### JavaScript / TypeScript
 
 ```bash
-npm install @aichat/sdk
+npm install @erghi/sdk
 ```
 
 ```typescript
-import AIChatClient from '@aichat/sdk';
+import ErghiClient from '@erghi/sdk';
 
-const client = new AIChatClient({
+const client = new ErghiClient({
   apiUrl: 'https://api.erghi.com',
   apiKey: 'your-api-key',
   workspaceId: 'your-workspace-id',
@@ -50,17 +50,17 @@ client.connect();
 ### React
 
 ```bash
-npm install @aichat/react @aichat/sdk
+npm install @erghi/react @erghi/sdk
 ```
 
 ```tsx
-import { AIChatProvider, useAuth, useChat } from '@aichat/react';
+import { ErghiProvider, useAuth, useChat } from '@erghi/react';
 
 function App() {
   return (
-    <AIChatProvider config={{ apiUrl: 'https://api.erghi.com', apiKey: 'your-api-key' }}>
+    <ErghiProvider config={{ apiUrl: 'https://api.erghi.com', apiKey: 'your-api-key' }}>
       <YourApp />
-    </AIChatProvider>
+    </ErghiProvider>
   );
 }
 ```
@@ -77,14 +77,17 @@ npm install @erghi/angular
 
 ```typescript
 // app.config.ts
-import { provideAIChatConfig } from '@erghi/angular';
+import { ERGHI_CONFIG, ErghiConfig } from '@erghi/angular';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideAIChatConfig({
-      apiUrl: 'https://api.erghi.com',
-      apiKey: 'your-api-key',
-    }),
+    {
+      provide: ERGHI_CONFIG,
+      useValue: <ErghiConfig>{
+        apiUrl: 'https://api.erghi.com',
+        apiKey: 'your-api-key',
+      },
+    },
   ],
 };
 ```
@@ -122,7 +125,7 @@ dotnet add package Erghi.SDK
 ```csharp
 using Erghi.SDK;
 
-await using var client = new AIChatClient(new AIChatConfig
+await using var client = new ErghiClient(new ErghiConfig
 {
     ApiUrl = "https://api.erghi.com",
     ApiKey = "your-api-key",
@@ -139,13 +142,13 @@ await client.ConnectAsync();  // SignalR real-time hub
 ### Python
 
 ```bash
-pip install aichat-sdk
+pip install erghi-sdk
 ```
 
 ```python
-from aichat import AIChatClient
+from erghi import ErghiClient
 
-async with AIChatClient(api_url="https://api.erghi.com", api_key="your-api-key") as client:
+async with ErghiClient(api_url="https://api.erghi.com", api_key="your-api-key") as client:
     await client.auth.login(email="user@example.com", password="password")
     conversation = await client.chat.create_conversation(widget_id="your-widget-id")
     await client.chat.send_message(conversation_id=conversation.id, content="Hello!")
@@ -160,14 +163,14 @@ async with AIChatClient(api_url="https://api.erghi.com", api_key="your-api-key")
 ```yaml
 # pubspec.yaml
 dependencies:
-  aichat_sdk: ^1.0.0
+  erghi_sdk: ^1.0.0
 ```
 
 ```dart
-import 'package:aichat_sdk/aichat_sdk.dart';
+import 'package:erghi_sdk/erghi_sdk.dart';
 
-final client = AIChatClient(
-  config: AIChatConfig(
+final client = ErghiClient(
+  config: ErghiConfig(
     apiUrl: 'https://api.erghi.com',
     apiKey: 'your-api-key',
   ),
@@ -188,9 +191,9 @@ await client.auth.login(email: 'user@example.com', password: 'password');
 ```
 
 ```swift
-import AIChatSDK
+import ErghiSDK
 
-let client = AIChatClient(config: AIChatConfig(
+let client = ErghiClient(config: ErghiConfig(
     apiUrl: "https://api.erghi.com",
     apiKey: "your-api-key"
 ))
