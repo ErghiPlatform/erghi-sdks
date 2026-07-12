@@ -33,6 +33,7 @@ export default class ErghiWidget {
   private shadow: ShadowRoot | null = null;
   private isOpen = false;
   private conversationId: string | null = null;
+  private visitorId: string | null = null;
   private messages: Message[] = [];
   private isTyping = false;
   private knownMessageIds = new Set<string>();
@@ -135,6 +136,35 @@ export default class ErghiWidget {
     }
     if (this.conversationId) {
       void this.syncMetadata();
+    }
+  }
+
+  /**
+   * Authenticate a visitor using a signed JWT from the customer's backend.
+   * This links the widget session to an external user ID.
+   */
+  public async authenticate(jwtToken: string): Promise<void> {
+    try {
+      const res = await fetch(`${this.config.apiUrl}/api/conversations/identity`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          widgetId: this.config.widgetId,
+          jwtToken
+        })
+      });
+
+      if (!res.ok) throw new Error(`Identity API error: ${res.status}`);
+      const data = await res.json();
+      
+      this.visitorId = data.visitorId ?? data.VisitorId;
+      
+      // Optionally merge returned email/name into metadata
+      if (data.email) this.setContext({ email: data.email }, true);
+      if (data.name) this.setContext({ name: data.name }, true);
+      
+    } catch (err) {
+      console.error('[Erghi] Authentication failed:', err);
     }
   }
 
@@ -278,6 +308,7 @@ export default class ErghiWidget {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           widgetId: this.config.widgetId,
+          visitorId: this.visitorId,
           metadata: this.buildMetadata(),
         }),
       });

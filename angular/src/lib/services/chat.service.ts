@@ -4,6 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ERGHI_CONFIG, ErghiConfig } from '../erghi.config';
 import { Conversation, Message, Widget, PaginatedResponse } from '../models';
+import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
@@ -11,6 +12,7 @@ import { Conversation, Message, Widget, PaginatedResponse } from '../models';
 export class ChatService {
   constructor(
     private http: HttpClient,
+    private authService: AuthService,
     @Inject(ERGHI_CONFIG) private config: ErghiConfig
   ) {}
 
@@ -36,10 +38,13 @@ export class ChatService {
   }
 
   createConversation(widgetId: string, metadata?: Record<string, any>): Observable<Conversation> {
-    return this.http.post<Conversation>(`${this.config.apiUrl}/api/conversations`, {
-      widgetId,
-      metadata
-    }).pipe(catchError(this.handleError));
+    const payload: any = { widgetId, metadata };
+    const visitorId = this.authService.getVisitorId();
+    if (visitorId) {
+      payload.visitorId = visitorId;
+    }
+    return this.http.post<Conversation>(`${this.config.apiUrl}/api/conversations`, payload)
+      .pipe(catchError(this.handleError));
   }
 
   closeConversation(id: string): Observable<Conversation> {
