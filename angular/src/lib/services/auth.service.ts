@@ -12,6 +12,7 @@ export class AuthService {
   private readonly TOKEN_KEY = 'erghi_token';
   private readonly REFRESH_TOKEN_KEY = 'erghi_refresh_token';
   private readonly USER_KEY = 'erghi_user';
+  private visitorId: string | null = null;
   
   private currentUserSubject = new BehaviorSubject<User | null>(this.getUserFromStorage());
   public currentUser$ = this.currentUserSubject.asObservable();
@@ -69,6 +70,26 @@ export class AuthService {
         tap(response => this.handleAuthResponse(response)),
         catchError(this.handleError)
       );
+  }
+
+  authenticateVisitor(widgetId: string, jwtToken: string): Observable<string> {
+    return this.http.post<any>(`${this.config.apiUrl}/api/conversations/identity`, {
+      widgetId,
+      jwtToken
+    }).pipe(
+      map(response => {
+        this.visitorId = response.visitorId || response.VisitorId;
+        if (!this.visitorId) {
+          throw new Error('Visitor ID not found in identity response');
+        }
+        return this.visitorId;
+      }),
+      catchError(this.handleError)
+    );
+  }
+
+  getVisitorId(): string | null {
+    return this.visitorId;
   }
 
   logout(): Observable<void> {
