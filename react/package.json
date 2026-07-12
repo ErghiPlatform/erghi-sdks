@@ -30,8 +30,15 @@
     "@erghi/sdk": "file:../javascript"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^5.16.5",
+    "@testing-library/react": "^14.3.1",
+    "@types/jest": "^29.5.11",
     "@types/react": "^18.3.18",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
     "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "ts-jest": "^29.1.1",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

@@ -17,6 +17,12 @@ class ErghiConfig extends Equatable {
   /// Client Secret for M2M authentication
   final String? clientSecret;
 
+  /// Workspace ID
+  final String? workspaceId;
+
+  /// Account ID
+  final String? accountId;
+
   /// Request timeout duration
   final Duration timeout;
 
@@ -29,6 +35,8 @@ class ErghiConfig extends Equatable {
     this.apiKey,
     this.clientId,
     this.clientSecret,
+    this.workspaceId,
+    this.accountId,
     this.timeout = const Duration(seconds: 30),
     this.debug = false,
   });
@@ -48,6 +56,8 @@ class ErghiConfig extends Equatable {
     String? apiKey,
     String? clientId,
     String? clientSecret,
+    String? workspaceId,
+    String? accountId,
     Duration? timeout,
     bool? debug,
   }) {
@@ -57,11 +67,13 @@ class ErghiConfig extends Equatable {
       apiKey: apiKey ?? this.apiKey,
       clientId: clientId ?? this.clientId,
       clientSecret: clientSecret ?? this.clientSecret,
+      workspaceId: workspaceId ?? this.workspaceId,
+      accountId: accountId ?? this.accountId,
       timeout: timeout ?? this.timeout,
       debug: debug ?? this.debug,
     );
   }
 
   @override
-  List<Object?> get props => [apiUrl, wsUrl, apiKey, clientId, clientSecret, timeout, debug];
+  List<Object?> get props => [apiUrl, wsUrl, apiKey, clientId, clientSecret, workspaceId, accountId, timeout, debug];
 }

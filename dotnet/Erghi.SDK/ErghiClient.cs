@@ -22,7 +22,7 @@ public sealed class ErghiClient : IAsyncDisposable
     public AuthResource Auth { get; }
     public ChatResource Chat { get; }
     public WorkspaceResource Workspace { get; }
-    
+
     public string? VisitorId => _config.VisitorId;
 
     // ── Connection state ─────────────────────────────────────────────────────
@@ -80,6 +80,9 @@ public sealed class ErghiClient : IAsyncDisposable
         if (config.WorkspaceId is not null)
             _http.DefaultRequestHeaders.Add("X-Workspace-Id", config.WorkspaceId);
 
+        if (config.AccountId is not null)
+            _http.DefaultRequestHeaders.Add("X-Account-Id", config.AccountId);
+
         if (config.AccessToken is not null)
             SetAccessToken(config.AccessToken);
 
@@ -96,9 +99,9 @@ public sealed class ErghiClient : IAsyncDisposable
     {
         var url = new Uri(_http.BaseAddress!, "api/conversations/identity");
         var payload = new { widgetId, jwtToken };
-        
+
         var response = await _http.PostAsJsonAsync(url, payload, ct);
-        
+
         if (!response.IsSuccessStatusCode)
         {
             var err = await response.Content.ReadAsStringAsync(ct);
@@ -111,7 +114,7 @@ public sealed class ErghiClient : IAsyncDisposable
             _config.VisitorId = vId.GetString();
             return _config.VisitorId!;
         }
-        
+
         throw new AuthenticationException("Visitor ID not found in identity response.");
     }
 
@@ -132,6 +135,12 @@ public sealed class ErghiClient : IAsyncDisposable
             .WithUrl(_config.ResolvedHubUrl, opts =>
             {
                 opts.AccessTokenProvider = () => Task.FromResult<string?>(Auth.AccessToken);
+
+                if (_config.WorkspaceId is not null)
+                    opts.Headers["X-Workspace-Id"] = _config.WorkspaceId;
+
+                if (_config.AccountId is not null)
+                    opts.Headers["X-Account-Id"] = _config.AccountId;
             })
             .WithAutomaticReconnect()
             .Build();

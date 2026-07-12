@@ -35,10 +35,12 @@ public sealed class ErghiConfig
     /// </summary>
     public string? ClientSecret { get; set; }
 
-    /// <summary>
-    /// Workspace ID to include in every request header.
-    /// </summary>
     public string? WorkspaceId { get; set; }
+
+    /// <summary>
+    /// Account ID to include in every request header.
+    /// </summary>
+    public string? AccountId { get; set; }
 
     /// <summary>
     /// Authenticated Visitor ID for widget sessions.

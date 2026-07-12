@@ -74,6 +74,8 @@ export function useAuth() {
     isAuthenticated,
     isLoading: contextLoading || isLoading,
     error,
+    login,
+    register,
     logout,
     authenticateVisitor,
   };

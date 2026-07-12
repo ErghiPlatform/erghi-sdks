@@ -17,6 +17,8 @@ export interface ErghiConfig {
   clientSecret?: string;
   /** Workspace ID */
   workspaceId?: string;
+  /** Account ID */
+  accountId?: string;
   /** Request timeout in milliseconds */
   timeout?: number;
   /** Enable debug logging */

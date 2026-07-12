@@ -13,6 +13,8 @@ export interface ErghiConfig {
   greeting?: string;
   title?: string;
   autoOpen?: boolean;
+  /** Color theme: 'light' (default), 'dark', or 'auto' (follows system preference) */
+  theme?: 'light' | 'dark' | 'auto';
   /** Arbitrary visitor / session context passed to the AI (customerId, claims, etc.) */
   visitorContext?: Record<string, unknown>;
 }
@@ -65,6 +67,7 @@ export default class ErghiWidget {
       greeting: config.greeting || 'Hi! How can we help you today?',
       title: config.title || 'Erghi',
       autoOpen: config.autoOpen ?? false,
+      theme: config.theme ?? 'light',
       visitorContext: { ...(config.visitorContext ?? {}) },
     };
 
