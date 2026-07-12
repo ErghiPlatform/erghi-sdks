@@ -6,11 +6,11 @@ import { HubConnectionState } from '@microsoft/signalr';
 
 describe('SignalRService', () => {
   let service: SignalRService;
-  let authService: jasmine.SpyObj<AuthService>;
+  let authService: jest.Mocked<AuthService>;
   const mockConfig = { apiUrl: 'http://localhost:5000' };
 
   beforeEach(() => {
-    const authSpy = jasmine.createSpyObj('AuthService', ['getToken']);
+    const authSpy = { getToken: jest.fn() };
 
     TestBed.configureTestingModule({
       providers: [
@@ -21,7 +21,7 @@ describe('SignalRService', () => {
     });
     
     service = TestBed.inject(SignalRService);
-    authService = TestBed.inject(AuthService) as jasmine.SpyObj<AuthService>;
+    authService = TestBed.inject(AuthService) as unknown as jest.Mocked<AuthService>;
   });
 
   it('should be created', () => {
@@ -29,9 +29,9 @@ describe('SignalRService', () => {
   });
 
   it('should throw error if no token available on connect', async () => {
-    authService.getToken.and.returnValue(null);
+    authService.getToken.mockReturnValue(null);
 
-    await expect(service.connect('test-signalr-url'))
+    await expect(service.connect())
       .rejects
       .toThrow('No authentication token');
   });
@@ -57,11 +57,11 @@ describe('SignalRService', () => {
     });
 
     // Simulate event emission
-    // Note: Full SignalR testing would require mocking the hub connection
+    (service as any).eventsSubject.next({ type: 'message', data: {} });
   });
 
   it('should disconnect cleanly', async () => {
-    authService.getToken.and.returnValue('mock-token');
+    authService.getToken.mockReturnValue('mock-token');
     
     // Note: This would need proper SignalR mocking for full test
     await service.disconnect();

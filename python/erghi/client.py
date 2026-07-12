@@ -37,6 +37,7 @@ class ErghiClient:
         client_id: Optional[str] = None,
         client_secret: Optional[str] = None,
         workspace_id: Optional[str] = None,
+        account_id: Optional[str] = None,
         timeout: float = 30.0,
         debug: bool = False,
     ) -> None:
@@ -51,6 +52,7 @@ class ErghiClient:
             client_id: Client ID for M2M authentication
             client_secret: Client Secret for M2M authentication
             workspace_id: Workspace ID
+            account_id: Account ID
             timeout: Request timeout in seconds
             debug: Enable debug logging
         """
@@ -61,6 +63,7 @@ class ErghiClient:
         self.client_id = client_id
         self.client_secret = client_secret
         self.workspace_id = workspace_id
+        self.account_id = account_id
         self.visitor_id: Optional[str] = None
         self.timeout = timeout
         self.debug = debug
@@ -168,7 +171,10 @@ class ErghiClient:
             headers["Authorization"] = f"Bearer {self.access_token}"
 
         if self.workspace_id:
-            headers["X-Workspace-ID"] = self.workspace_id
+            headers["X-Workspace-Id"] = self.workspace_id
+
+        if self.account_id:
+            headers["X-Account-Id"] = self.account_id
 
         return headers
 

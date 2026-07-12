@@ -52,6 +52,7 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
       clientId: config.clientId || '',
       clientSecret: config.clientSecret || '',
       workspaceId: config.workspaceId || '',
+      accountId: config.accountId || '',
       timeout: config.timeout || 30000,
       debug: config.debug || false,
     };
@@ -83,7 +84,10 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
         config.headers['Authorization'] = `Bearer ${this.config.accessToken}`;
       }
       if (this.config.workspaceId) {
-        config.headers['X-Workspace-ID'] = this.config.workspaceId;
+        config.headers['X-Workspace-Id'] = this.config.workspaceId;
+      }
+      if (this.config.accountId) {
+        config.headers['X-Account-Id'] = this.config.accountId;
       }
       return config;
     });

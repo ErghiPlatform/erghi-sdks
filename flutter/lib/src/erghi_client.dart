@@ -19,8 +19,8 @@ class ErghiClient {
   bool _isConnected = false;
   String? visitorId;
 
-  ErghiClient({required this.config}) {
-    final innerClient = http.Client();
+  ErghiClient({required this.config, http.Client? httpClient}) {
+    final innerClient = httpClient ?? http.Client();
     final m2mClient = M2MHttpClient(innerClient, config);
     _httpClient = m2mClient;
     auth = AuthResource(config: config, client: _httpClient);
@@ -48,6 +48,14 @@ class ErghiClient {
         headers['X-API-Key'] = config.apiKey!;
       } else if (auth.accessToken != null) {
         headers['Authorization'] = 'Bearer ${auth.accessToken}';
+      }
+
+      if (config.workspaceId != null) {
+        headers['X-Workspace-Id'] = config.workspaceId!;
+      }
+      
+      if (config.accountId != null) {
+        headers['X-Account-Id'] = config.accountId!;
       }
 
       _wsChannel = WebSocketChannel.connect(
@@ -205,6 +213,15 @@ class M2MHttpClient extends http.BaseClient {
         // Auto-auth failed
       }
     }
+
+    if (config.workspaceId != null) {
+      request.headers['X-Workspace-Id'] = config.workspaceId!;
+    }
+    
+    if (config.accountId != null) {
+      request.headers['X-Account-Id'] = config.accountId!;
+    }
+
     return _inner.send(request);
   }
 }

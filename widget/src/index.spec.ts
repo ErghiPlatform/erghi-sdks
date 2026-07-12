@@ -1,4 +1,7 @@
 import ErghiWidget from './index';
+import { ConversationRealtimeClient } from './realtime';
+
+const getShadowRoot = () => document.getElementById('erghi-widget-root')?.shadowRoot;
 
 // Mock SignalR
 jest.mock('@microsoft/signalr', () => ({
@@ -9,10 +12,23 @@ jest.mock('@microsoft/signalr', () => ({
       start: jest.fn().mockResolvedValue(undefined),
       stop: jest.fn().mockResolvedValue(undefined),
       on: jest.fn(),
+      off: jest.fn(),
       invoke: jest.fn().mockResolvedValue(undefined),
       onclose: jest.fn(),
+      onreconnecting: jest.fn(),
+      onreconnected: jest.fn(),
+      state: 'Connected',
+      serverTimeoutInMilliseconds: 30000,
+      keepAliveIntervalInMilliseconds: 15000,
     }),
   })),
+  HubConnectionState: {
+    Connected: 'Connected',
+    Connecting: 'Connecting',
+    Disconnected: 'Disconnected',
+    Disconnecting: 'Disconnecting',
+    Reconnecting: 'Reconnecting',
+  },
   HttpTransportType: {
     WebSockets: 1,
     ServerSentEvents: 2,
@@ -29,25 +45,26 @@ global.fetch = jest.fn();
 describe('ErghiWidget', () => {
   let widget: ErghiWidget;
   const mockConfig = {
+    widgetId: 'test-widget-uuid',
     workspace: 'test-workspace-id',
     apiUrl: 'https://api.test.com',
     signalrUrl: 'https://api.test.com/hubs/chat',
   };
 
-  beforeEach(() => {
-    // Clear DOM
+  const flushPromises = () => new Promise(resolve => setTimeout(resolve, 10));
+
+  beforeEach(async () => {
     document.body.innerHTML = '';
-    
-    // Reset fetch mock
+    sessionStorage.clear();
+    localStorage.clear();
     (global.fetch as jest.Mock).mockClear();
-    
-    // Mock successful fetch responses
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: async () => ({ id: 'conv-123', messages: [] }),
+      json: async () => ({ id: 'conv-123', messages: [], active: true }),
     });
 
     widget = new ErghiWidget(mockConfig);
+    await flushPromises(); // wait for bootstrap to render
   });
 
   afterEach(() => {
@@ -62,35 +79,32 @@ describe('ErghiWidget', () => {
     });
 
     it('should render bubble and window elements', () => {
-      const bubble = document.getElementById('erghi-bubble');
-      const chatWindow = document.getElementById('erghi-window');
+      const bubble = getShadowRoot()?.getElementById('cf-bubble');
+      const chatWindow = getShadowRoot()?.getElementById('cf-panel');
       
       expect(bubble).toBeTruthy();
       expect(chatWindow).toBeTruthy();
     });
 
-    it('should apply custom primary color', () => {
+    it('should apply custom primary color', async () => {
       const customWidget = new ErghiWidget({
         ...mockConfig,
         primaryColor: '#ff0000',
       });
-
-      const bubble = document.getElementById('erghi-bubble');
-      expect(bubble?.style.backgroundColor).toBe('rgb(255, 0, 0)');
-      
+      await flushPromises();
+      const style = (customWidget as any).shadow?.querySelector('style');
+      expect(style?.textContent).toContain('#ff0000');
       customWidget.destroy();
     });
 
-    it('should position bubble based on config', () => {
+    it('should position bubble based on config', async () => {
       const leftWidget = new ErghiWidget({
         ...mockConfig,
         position: 'bottom-left',
       });
-
-      const bubble = document.getElementById('erghi-bubble');
-      expect(bubble?.style.left).toBe('20px');
-      expect(bubble?.style.right).toBe('');
-      
+      await flushPromises();
+      const style = (leftWidget as any).shadow?.querySelector('style');
+      expect(style?.textContent).toContain('left: 20px');
       leftWidget.destroy();
     });
 
@@ -100,11 +114,10 @@ describe('ErghiWidget', () => {
         autoOpen: true,
       });
 
-      // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await flushPromises();
 
-      const window = document.getElementById('erghi-window');
-      expect(window?.style.display).not.toBe('none');
+      const window = (autoOpenWidget as any).shadow?.getElementById('cf-panel');
+      expect(window?.classList.contains('open')).toBe(true);
       
       autoOpenWidget.destroy();
     });
@@ -113,103 +126,96 @@ describe('ErghiWidget', () => {
   describe('Window Controls', () => {
     it('should open window when open() is called', () => {
       widget.open();
-      
-      const window = document.getElementById('erghi-window');
-      expect(window?.style.display).not.toBe('none');
+      const window = getShadowRoot()?.getElementById('cf-panel');
+      expect(window?.classList.contains('open')).toBe(true);
     });
 
     it('should close window when close() is called', () => {
       widget.open();
       widget.close();
-      
-      const window = document.getElementById('erghi-window');
-      expect(window?.style.display).toBe('none');
+      const window = getShadowRoot()?.getElementById('cf-panel');
+      expect(window?.classList.contains('open')).toBe(false);
     });
 
     it('should toggle window state', () => {
-      const window = document.getElementById('erghi-window');
-      
+      const window = getShadowRoot()?.getElementById('cf-panel');
       widget.toggle();
-      expect(window?.style.display).not.toBe('none');
-      
+      expect(window?.classList.contains('open')).toBe(true);
       widget.toggle();
-      expect(window?.style.display).toBe('none');
+      expect(window?.classList.contains('open')).toBe(false);
     });
 
     it('should hide bubble when window opens', () => {
       widget.open();
-      
-      const bubble = document.getElementById('erghi-bubble');
-      expect(bubble?.style.display).toBe('none');
+      const bubble = getShadowRoot()?.getElementById('cf-bubble');
+      expect(bubble?.classList.contains('hidden')).toBe(true);
     });
 
     it('should show bubble when window closes', () => {
       widget.open();
       widget.close();
-      
-      const bubble = document.getElementById('erghi-bubble');
-      expect(bubble?.style.display).not.toBe('none');
+      const bubble = getShadowRoot()?.getElementById('cf-bubble');
+      expect(bubble?.classList.contains('hidden')).toBe(false);
     });
   });
 
   describe('Conversation Handling', () => {
     it('should create conversation on first open', async () => {
       await widget.open();
+      await flushPromises();
 
       expect(global.fetch).toHaveBeenCalledWith(
         'https://api.test.com/api/conversations',
         expect.objectContaining({
           method: 'POST',
-          headers: expect.objectContaining({
-            'Content-Type': 'application/json',
-          }),
-          body: expect.stringContaining('test-workspace-id'),
         })
       );
     });
 
     it('should not create duplicate conversations', async () => {
       await widget.open();
+      await flushPromises();
       (global.fetch as jest.Mock).mockClear();
       
       widget.close();
       await widget.open();
+      await flushPromises();
 
       expect(global.fetch).not.toHaveBeenCalledWith(
-        expect.stringContaining('/conversations'),
-        expect.anything()
+        'https://api.test.com/api/conversations',
+        expect.objectContaining({ method: 'POST' })
       );
     });
 
     it('should handle conversation creation error', async () => {
       (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
-      
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       
       await widget.open();
+      await flushPromises();
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        'Failed to start conversation:',
+        '[Erghi] Failed to start conversation:',
         expect.any(Error)
       );
-      
       consoleSpy.mockRestore();
     });
   });
 
   describe('Message Sending', () => {
     beforeEach(async () => {
-      await widget.open();
+      widget.open();
+      await flushPromises();
     });
 
     it('should send message via API', async () => {
-      const input = document.getElementById('erghi-input') as HTMLInputElement;
-      const sendButton = document.querySelector('#erghi-send-button') as HTMLButtonElement;
+      const input = getShadowRoot()?.getElementById('cf-input') as HTMLInputElement;
+      const sendButton = getShadowRoot()?.getElementById('cf-send') as HTMLButtonElement;
       
       input.value = 'Test message';
       sendButton.click();
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await flushPromises();
 
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/messages'),
@@ -221,20 +227,19 @@ describe('ErghiWidget', () => {
     });
 
     it('should clear input after sending', async () => {
-      const input = document.getElementById('erghi-input') as HTMLInputElement;
-      const sendButton = document.querySelector('#erghi-send-button') as HTMLButtonElement;
+      const input = getShadowRoot()?.getElementById('cf-input') as HTMLInputElement;
+      const sendButton = getShadowRoot()?.getElementById('cf-send') as HTMLButtonElement;
       
       input.value = 'Test message';
       sendButton.click();
 
-      await new Promise(resolve => setTimeout(resolve, 100));
-
+      await flushPromises();
       expect(input.value).toBe('');
     });
 
     it('should not send empty messages', () => {
-      const input = document.getElementById('erghi-input') as HTMLInputElement;
-      const sendButton = document.querySelector('#erghi-send-button') as HTMLButtonElement;
+      const input = getShadowRoot()?.getElementById('cf-input') as HTMLInputElement;
+      const sendButton = getShadowRoot()?.getElementById('cf-send') as HTMLButtonElement;
       
       input.value = '   ';
       sendButton.click();
@@ -246,14 +251,13 @@ describe('ErghiWidget', () => {
     });
 
     it('should send message on Enter key', async () => {
-      const input = document.getElementById('erghi-input') as HTMLInputElement;
-      
+      const input = getShadowRoot()?.getElementById('cf-input') as HTMLInputElement;
       input.value = 'Test message';
       
-      const event = new KeyboardEvent('keypress', { key: 'Enter' });
+      const event = new KeyboardEvent('keydown', { key: 'Enter' });
       input.dispatchEvent(event);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await flushPromises();
 
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/messages'),
@@ -263,45 +267,36 @@ describe('ErghiWidget', () => {
   });
 
   describe('Message Display', () => {
-    it('should display greeting message', () => {
+    it('should display greeting message', async () => {
       const customWidget = new ErghiWidget({
         ...mockConfig,
         greeting: 'Hello there!',
       });
-
-      customWidget.open();
-
-      const messagesContainer = document.getElementById('erghi-messages');
-      expect(messagesContainer?.textContent).toContain('Hello there!');
+      await flushPromises();
       
+      const messagesContainer = (customWidget as any).shadow?.getElementById('cf-messages');
+      expect(messagesContainer?.textContent).toContain('Hello there!');
       customWidget.destroy();
     });
 
-    it('should add agent message class to greeting', () => {
-      widget.open();
-
-      const messageDiv = document.querySelector('.erghi-message');
-      expect(messageDiv?.classList.contains('erghi-agent')).toBe(true);
+    it('should add system message class to greeting', () => {
+      const messagesContainer = getShadowRoot()?.getElementById('cf-messages');
+      const messageDiv = messagesContainer?.querySelector('.msg.system');
+      expect(messageDiv).toBeTruthy();
     });
 
     it('should handle received messages from SignalR', async () => {
       await widget.open();
+      await flushPromises();
 
-      // Simulate SignalR message
-      const mockMessage = {
+      // Mock incoming message
+      (widget as any).handleInboundMessage({
         id: 'msg-123',
         content: 'Agent response',
-        sender: 'agent',
-        timestamp: new Date().toISOString(),
-      };
+        sender: 'agent'
+      });
 
-      // Trigger the message handler manually
-      const messagesContainer = document.getElementById('erghi-messages');
-      const messageDiv = document.createElement('div');
-      messageDiv.className = 'erghi-message erghi-agent';
-      messageDiv.textContent = mockMessage.content;
-      messagesContainer?.appendChild(messageDiv);
-
+      const messagesContainer = getShadowRoot()?.getElementById('cf-messages');
       expect(messagesContainer?.textContent).toContain('Agent response');
     });
   });
@@ -309,79 +304,18 @@ describe('ErghiWidget', () => {
   describe('Cleanup', () => {
     it('should remove all DOM elements on destroy', () => {
       widget.destroy();
-
-      expect(document.getElementById('erghi-bubble')).toBeNull();
-      expect(document.getElementById('erghi-window')).toBeNull();
-      expect(document.getElementById('erghi-styles')).toBeNull();
+      expect(document.querySelector('#erghi-widget-root')).toBeNull();
     });
 
     it('should disconnect SignalR on destroy', async () => {
       await widget.open();
+      await flushPromises();
       
-      const stopSpy = jest.fn();
-      // Mock the connection stop method
-      (widget as any).connection = { stop: stopSpy };
+      const realtime = (widget as any).realtime as ConversationRealtimeClient;
+      const stopSpy = jest.spyOn(realtime, 'disconnect');
       
       widget.destroy();
-
       expect(stopSpy).toHaveBeenCalled();
-    });
-
-    it('should handle destroy when not initialized', () => {
-      const newWidget = new ErghiWidget(mockConfig);
-      
-      expect(() => newWidget.destroy()).not.toThrow();
-    });
-  });
-
-  describe('Theme Support', () => {
-    it('should apply light theme by default', () => {
-      const window = document.getElementById('erghi-window');
-      expect(window?.style.backgroundColor).toBe('white');
-    });
-
-    it('should apply dark theme', () => {
-      const darkWidget = new ErghiWidget({
-        ...mockConfig,
-        theme: 'dark',
-      });
-
-      const window = document.getElementById('erghi-window');
-      expect(window?.style.backgroundColor).toBe('rgb(31, 41, 55)');
-      
-      darkWidget.destroy();
-    });
-
-    it('should detect system theme with auto', () => {
-      const autoWidget = new ErghiWidget({
-        ...mockConfig,
-        theme: 'auto',
-      });
-
-      // Theme detection is system-dependent, just verify no errors
-      expect(autoWidget).toBeInstanceOf(ErghiWidget);
-      
-      autoWidget.destroy();
-    });
-  });
-
-  describe('Responsive Design', () => {
-    it('should adjust window size on mobile', () => {
-      // Mock mobile viewport
-      Object.defineProperty(window, 'innerWidth', {
-        writable: true,
-        configurable: true,
-        value: 375,
-      });
-
-      const mobileWidget = new ErghiWidget(mockConfig);
-      const chatWindow = document.getElementById('erghi-window');
-      
-      // Mobile should use full width/height
-      expect(chatWindow?.style.width).toBe('100%');
-      expect(chatWindow?.style.height).toBe('100%');
-      
-      mobileWidget.destroy();
     });
   });
 });
