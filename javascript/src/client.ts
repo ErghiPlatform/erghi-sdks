@@ -2,12 +2,12 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import EventEmitter from 'eventemitter3';
 import WebSocket from 'ws';
 import {
-  AIChatConfig,
+  ErghiConfig,
   WebSocketMessage,
   WebSocketEventType,
 } from './types';
 import {
-  AIChatError,
+  ErghiError,
   AuthenticationError,
   ValidationError,
   RateLimitError,
@@ -27,20 +27,21 @@ type WebSocketEvents = {
 };
 
 /**
- * Main AI Chat SDK Client
+ * Main Erghi SDK Client
  */
-export class AIChatClient extends EventEmitter<WebSocketEvents> {
-  private config: Required<AIChatConfig>;
+export class ErghiClient extends EventEmitter<WebSocketEvents> {
+  private config: Required<ErghiConfig>;
   private httpClient: AxiosInstance;
   private ws?: WebSocket;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
+  private visitorId: string;
   
   public readonly auth: AuthResource;
   public readonly chat: ChatResource;
   public readonly workspace: WorkspaceResource;
 
-  constructor(config: AIChatConfig = {}) {
+  constructor(config: ErghiConfig = {}) {
     super();
     
     this.config = {
@@ -54,6 +55,8 @@ export class AIChatClient extends EventEmitter<WebSocketEvents> {
       timeout: config.timeout || 30000,
       debug: config.debug || false,
     };
+
+    this.visitorId = '';
 
     // Initialize HTTP client
     this.httpClient = axios.create({
@@ -125,6 +128,28 @@ export class AIChatClient extends EventEmitter<WebSocketEvents> {
   }
 
   /**
+   * Authenticate a visitor using a signed JWT from the customer's backend.
+   * @param widgetId The widget ID
+   * @param jwtToken The JWT token signed by the workspace's WidgetSecretKey
+   * @returns The internal visitorId
+   */
+  public async authenticateVisitor(widgetId: string, jwtToken: string): Promise<string> {
+    try {
+      const response = await axios.post(`${this.config.apiUrl}/api/conversations/identity`, {
+        widgetId,
+        jwtToken
+      }, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      this.visitorId = response.data.visitorId || response.data.VisitorId;
+      return this.visitorId;
+    } catch (error: any) {
+      throw new AuthenticationError(error.response?.data?.error || 'Failed to authenticate visitor');
+    }
+  }
+
+  /**
    * Get the HTTP client instance
    */
   public getHttpClient(): AxiosInstance {
@@ -143,6 +168,13 @@ export class AIChatClient extends EventEmitter<WebSocketEvents> {
    */
   public setWorkspaceId(workspaceId: string): void {
     this.config.workspaceId = workspaceId;
+  }
+
+  /**
+   * Get visitor ID
+   */
+  public getVisitorId(): string {
+    return this.visitorId;
   }
 
   /**
@@ -198,7 +230,7 @@ export class AIChatClient extends EventEmitter<WebSocketEvents> {
    */
   public send(type: string, data: any): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new AIChatError('WebSocket is not connected', 'WS_NOT_CONNECTED');
+      throw new ErghiError('WebSocket is not connected', 'WS_NOT_CONNECTED');
     }
 
     const message: WebSocketMessage = { type, data };
@@ -228,7 +260,7 @@ export class AIChatClient extends EventEmitter<WebSocketEvents> {
     this.emit(message.type as any, message.data);
   }
 
-  private handleError(error: AxiosError): AIChatError {
+  private handleError(error: AxiosError): ErghiError {
     const response = error.response;
 
     if (!response) {
@@ -248,13 +280,13 @@ export class AIChatClient extends EventEmitter<WebSocketEvents> {
       case 429:
         return new RateLimitError(message, parseInt(response.headers['retry-after'] || '60'));
       default:
-        return new AIChatError(message, 'API_ERROR', response.status, data);
+        return new ErghiError(message, 'API_ERROR', response.status, data);
     }
   }
 
   private debug(message: string, ...args: any[]): void {
     if (this.config.debug) {
-      console.log(`[AIChatSDK] ${message}`, ...args);
+      console.log(`[ErghiSDK] ${message}`, ...args);
     }
   }
 }

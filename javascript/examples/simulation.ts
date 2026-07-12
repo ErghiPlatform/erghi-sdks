@@ -8,7 +8,7 @@
  *   npx ts-node examples/simulation.ts
  */
 
-import { AIChatClient } from '../src';
+import { ErghiClient } from '../src';
 
 const TIMESTAMP = Date.now();
 const TEST_EMAIL = `demo_${TIMESTAMP}@erghi.dev`;
@@ -22,7 +22,7 @@ async function main() {
   console.log('=== Erghi JavaScript SDK Simulation ===\n');
 
   // ── 1. Initialise client ─────────────────────────────────────────────────
-  const client = new AIChatClient({
+  const client = new ErghiClient({
     apiUrl: 'http://localhost:5000',
     debug: true,
   });

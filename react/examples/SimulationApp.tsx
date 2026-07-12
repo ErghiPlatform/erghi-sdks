@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
-import { AIChatProvider, useAuth, useChat, useWebSocket } from '../src';
+import { ErghiProvider, useAuth, useChat, useWebSocket } from '../src';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -216,9 +216,9 @@ function SimulationInner() {
 
 export default function SimulationApp() {
   return (
-    <AIChatProvider config={{ apiUrl: 'http://localhost:5000', debug: true }}>
+    <ErghiProvider config={{ apiUrl: 'http://localhost:5000', debug: true }}>
       <SimulationInner />
-    </AIChatProvider>
+    </ErghiProvider>
   );
 }
 

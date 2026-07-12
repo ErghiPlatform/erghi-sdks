@@ -1,8 +1,8 @@
-name: aichat_sdk
-description: Official AI Chat SDK for Flutter - Enable AI-powered chat in your iOS and Android apps
+name: erghi_sdk
+description: Official Erghi SDK for Flutter - Real-time customer support chat in your iOS and Android apps
 version: 1.0.0
-homepage: https://github.com/aichat/flutter-sdk
-repository: https://github.com/aichat/flutter-sdk
+homepage: https://github.com/ErghiPlatform/erghi-sdks
+repository: https://github.com/ErghiPlatform/erghi-sdks
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

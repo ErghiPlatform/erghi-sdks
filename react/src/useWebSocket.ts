@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAIChat } from './context';
-import type { WebSocketEventType } from '@aichat/sdk';
+import { useErghi } from './context';
+import type { WebSocketEventType } from '@erghi/sdk';
 
 export function useWebSocket() {
-  const { client } = useAIChat();
+  const { client } = useErghi();
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {

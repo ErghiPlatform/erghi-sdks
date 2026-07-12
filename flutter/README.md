@@ -2,7 +2,7 @@
 
 Official Flutter SDK for the [Erghi Platform](https://erghi.com) — Build AI-powered chat experiences in your iOS and Android apps.
 
-[![pub package](https://img.shields.io/pub/v/aichat_sdk.svg)](https://pub.dev/packages/aichat_sdk)
+[![pub package](https://img.shields.io/pub/v/erghi_sdk.svg)](https://pub.dev/packages/erghi_sdk)
 [![Flutter](https://img.shields.io/badge/Flutter-3.10+-blue.svg)](https://flutter.dev)
 
 ## Features
@@ -21,7 +21,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  aichat_sdk: ^1.0.0
+  erghi_sdk: ^1.0.0
 ```
 
 Then run:
@@ -35,10 +35,10 @@ flutter pub get
 ### Initialize the Client
 
 ```dart
-import 'package:aichat_sdk/aichat_sdk.dart';
+import 'package:erghi_sdk/erghi_sdk.dart';
 
-final client = AIChatClient(
-  config: AIChatConfig(
+final client = ErghiClient(
+  config: ErghiConfig(
     apiUrl: 'https://api.erghi.com',
     debug: true,
   ),
@@ -130,7 +130,7 @@ client.disconnectWebSocket();
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:aichat_sdk/aichat_sdk.dart';
+import 'package:erghi_sdk/erghi_sdk.dart';
 
 class ChatScreen extends StatefulWidget {
   final String conversationId;
@@ -142,7 +142,7 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  late final AIChatClient _client;
+  late final ErghiClient _client;
   final _messageController = TextEditingController();
   final List<Message> _messages = [];
 
@@ -153,8 +153,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _initializeChat() async {
-    _client = AIChatClient(
-      config: AIChatConfig(
+    _client = ErghiClient(
+      config: ErghiConfig(
         apiUrl: 'https://api.erghi.com',
         debug: true,
       ),
@@ -254,7 +254,7 @@ try {
   print('Auth error: ${e.message}');
 } on NetworkException catch (e) {
   print('Network error: ${e.message}');
-} on AIChatException catch (e) {
+} on ErghiException catch (e) {
   print('Error: ${e.message}');
 }
 ```
@@ -275,7 +275,7 @@ No additional setup required!
 
 ## API Documentation
 
-### AIChatClient
+### ErghiClient
 
 - `auth` - Authentication operations
 - `chat` - Chat operations
@@ -298,7 +298,7 @@ No additional setup required!
 
 ### Exceptions
 
-- `AIChatException` - Base exception
+- `ErghiException` - Base exception
 - `AuthenticationException` - Auth errors
 - `NetworkException` - Network errors
 - `ValidationException` - Validation errors
@@ -332,8 +332,8 @@ MIT License - see [LICENSE](LICENSE) file
 ## Support
 
 - 📧 Email: support@erghi.com
-- 💬 Discord: [Join our community](https://discord.gg/aichat)
-- 📝 Issues: [GitHub Issues](https://github.com/aichat/flutter-sdk/issues)
+- 💬 Discord: [Join our community](https://discord.gg/erghi)
+- 📝 Issues: [GitHub Issues](https://github.com/ErghiPlatform/erghi-sdks/issues)
 
 ---
 

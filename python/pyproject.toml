@@ -3,14 +3,14 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "aichat-sdk"
+name = "erghi-sdk"
 version = "1.0.0"
-description = "Official Python SDK for AI Chat SaaS platform"
+description = "Official Python SDK for the Erghi customer-support platform"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
-    {name = "AI Chat Team", email = "sdk@aichat.com"}
+    {name = "Erghi Team", email = "sdk@erghi.com"}
 ]
 keywords = ["ai", "chat", "chatbot", "sdk", "websocket", "real-time"]
 classifiers = [
@@ -29,6 +29,7 @@ dependencies = [
     "websockets>=12.0",
     "pydantic>=2.10.0",
     "python-dateutil>=2.9.0",
+    "email-validator>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -42,18 +43,18 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://aichat.com"
-Documentation = "https://docs.aichat.com/sdk/python"
-Repository = "https://github.com/aichat/sdk-python"
-Issues = "https://github.com/aichat/sdk-python/issues"
+Homepage = "https://erghi.com"
+Documentation = "https://erghi.com/docs/sdk/python"
+Repository = "https://github.com/ErghiPlatform/erghi-sdks"
+Issues = "https://github.com/ErghiPlatform/erghi-sdks/issues"
 
 [tool.setuptools]
-packages = ["aichat"]
+packages = ["erghi"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-addopts = "--cov=aichat --cov-report=term-missing --cov-report=html"
+addopts = "--cov=erghi --cov-report=term-missing --cov-report=html"
 
 [tool.black]
 line-length = 100

@@ -1,6 +1,6 @@
 <!--
   Erghi .NET SDK — Simulation / Integration Example
-  Console application that exercises AIChatClient against http://localhost:5000
+  Console application that exercises ErghiClient against http://localhost:5000
 
   dotnet run
 -->
@@ -17,7 +17,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../AIChatSDK/Erghi.SDK.csproj" />
+    <ProjectReference Include="../Erghi.SDK/Erghi.SDK.csproj" />
   </ItemGroup>
 
 </Project>

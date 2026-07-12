@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../config/aichat_config.dart';
+import '../config/erghi_config.dart';
 import '../exceptions/exceptions.dart';
 import '../models/models.dart';
 
 class AuthResource {
-  final AIChatConfig config;
+  final ErghiConfig config;
   final http.Client client;
   String? _accessToken;
   String? _refreshToken;
@@ -58,7 +58,7 @@ class AuthResource {
         );
       }
     } catch (e) {
-      if (e is AIChatException) rethrow;
+      if (e is ErghiException) rethrow;
       throw NetworkException('Network error: $e');
     }
   }
@@ -89,7 +89,7 @@ class AuthResource {
         );
       }
     } catch (e) {
-      if (e is AIChatException) rethrow;
+      if (e is ErghiException) rethrow;
       throw NetworkException('Network error: $e');
     }
   }
@@ -124,7 +124,7 @@ class AuthResource {
         );
       }
     } catch (e) {
-      if (e is AIChatException) rethrow;
+      if (e is ErghiException) rethrow;
       throw NetworkException('Network error: $e');
     }
   }
@@ -151,7 +151,7 @@ class AuthResource {
         );
       }
     } catch (e) {
-      if (e is AIChatException) rethrow;
+      if (e is ErghiException) rethrow;
       throw NetworkException('Network error: $e');
     }
   }
@@ -202,7 +202,7 @@ class AuthResource {
         );
       }
     } catch (e) {
-      if (e is AIChatException) rethrow;
+      if (e is ErghiException) rethrow;
       throw NetworkException('Network error: $e');
     }
   }

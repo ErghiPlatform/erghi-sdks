@@ -1,4 +1,4 @@
-import { AIChatClient } from '../client';
+import { ErghiClient } from '../client';
 import {
   User,
   RegisterRequest,
@@ -10,7 +10,7 @@ import {
  * Authentication resource
  */
 export class AuthResource {
-  constructor(private client: AIChatClient) {}
+  constructor(private client: ErghiClient) {}
 
   /**
    * Register a new user

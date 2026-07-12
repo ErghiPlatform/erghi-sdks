@@ -1,23 +1,23 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import AIChatClient from '@aichat/sdk';
-import type { AIChatConfig, User, AuthResponse } from '@aichat/sdk';
+import ErghiClient from '@erghi/sdk';
+import type { ErghiConfig, User, AuthResponse } from '@erghi/sdk';
 
-interface AIChatContextValue {
-  client: AIChatClient;
+interface ErghiContextValue {
+  client: ErghiClient;
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
 
-const AIChatContext = createContext<AIChatContextValue | null>(null);
+const ErghiContext = createContext<ErghiContextValue | null>(null);
 
-interface AIChatProviderProps {
-  config: AIChatConfig;
+interface ErghiProviderProps {
+  config: ErghiConfig;
   children: ReactNode;
 }
 
-export function AIChatProvider({ config, children }: AIChatProviderProps) {
-  const [client] = useState(() => new AIChatClient(config));
+export function ErghiProvider({ config, children }: ErghiProviderProps) {
+  const [client] = useState(() => new ErghiClient(config));
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -37,7 +37,7 @@ export function AIChatProvider({ config, children }: AIChatProviderProps) {
     loadUser();
   }, [client, config.accessToken]);
 
-  const value: AIChatContextValue = {
+  const value: ErghiContextValue = {
     client,
     user,
     isAuthenticated: !!user,
@@ -45,16 +45,16 @@ export function AIChatProvider({ config, children }: AIChatProviderProps) {
   };
 
   return (
-    <AIChatContext.Provider value={value}>
+    <ErghiContext.Provider value={value}>
       {children}
-    </AIChatContext.Provider>
+    </ErghiContext.Provider>
   );
 }
 
-export function useAIChat() {
-  const context = useContext(AIChatContext);
+export function useErghi() {
+  const context = useContext(ErghiContext);
   if (!context) {
-    throw new Error('useAIChat must be used within AIChatProvider');
+    throw new Error('useErghi must be used within ErghiProvider');
   }
   return context;
 }
