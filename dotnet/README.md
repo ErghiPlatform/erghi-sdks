@@ -39,7 +39,7 @@ Install-Package Erghi.SDK
 using Erghi.SDK;
 using Erghi.SDK.Models;
 
-await using var client = new AIChatClient(new AIChatConfig
+await using var client = new ErghiClient(new ErghiConfig
 {
     ApiUrl = "https://api.erghi.com",
     ApiKey = "your-api-key",
@@ -83,7 +83,7 @@ Console.WriteLine($"Sent: {message.Id}");
 ## Configuration
 
 ```csharp
-var config = new AIChatConfig
+var config = new ErghiConfig
 {
     // Base URL of the Erghi API gateway (default: http://localhost:5000)
     ApiUrl = "https://api.erghi.com",
@@ -251,6 +251,41 @@ await client.SendTypingAsync(conversation.Id, isTyping: false);
 await client.DisconnectAsync();
 ```
 
+## Identity Verification & Webhooks
+
+`ErghiHmac` is a static utility for server-side use only — never call it from a browser or mobile
+client, since it requires your workspace's secret key.
+
+```csharp
+using Erghi.SDK;
+
+// On your backend, after the user logs in:
+var identityHash = ErghiHmac.GenerateIdentityHash(currentUser.Id, Environment.GetEnvironmentVariable("ERGHI_WIDGET_SECRET")!);
+// Send `identityHash` and `currentUser.Id` to your frontend so the widget can prove the visitor's identity.
+```
+
+Verifying an incoming webhook:
+
+```csharp
+using Erghi.SDK;
+
+[HttpPost("webhooks/erghi")]
+public async Task<IActionResult> HandleWebhook()
+{
+    using var reader = new StreamReader(Request.Body);
+    var payload = await reader.ReadToEndAsync();
+    var signature = Request.Headers["X-Erghi-Signature"].ToString();
+
+    if (!ErghiHmac.VerifyWebhookSignature(payload, signature, _webhookSecret))
+    {
+        return Unauthorized();
+    }
+
+    // ... process the event
+    return Ok();
+}
+```
+
 ## Workspace Management
 
 ```csharp
@@ -287,7 +322,7 @@ catch (NetworkException ex)
     Console.Error.WriteLine($"Network error: {ex.Message}");
     // ex.InnerException contains the original HttpRequestException
 }
-catch (AIChatException ex)
+catch (ErghiException ex)
 {
     // Base exception for all Erghi SDK errors
     Console.Error.WriteLine($"SDK error [{ex.StatusCode}]: {ex.Message}");
@@ -299,7 +334,7 @@ catch (AIChatException ex)
 | `AuthenticationException` | 401 — invalid credentials or expired token |
 | `ValidationException` | 422 — request failed validation |
 | `NetworkException` | Connection failure or SignalR error |
-| `AIChatException` | Base class — any other API error |
+| `ErghiException` | Base class — any other API error |
 
 ## Dependency Injection
 
@@ -307,14 +342,14 @@ Use the SDK in ASP.NET Core apps with DI:
 
 ```csharp
 // Program.cs
-builder.Services.AddSingleton(new AIChatConfig
+builder.Services.AddSingleton(new ErghiConfig
 {
     ApiUrl = builder.Configuration["Erghi:ApiUrl"]!,
     ApiKey = builder.Configuration["Erghi:ApiKey"],
     WorkspaceId = builder.Configuration["Erghi:WorkspaceId"],
 });
 
-builder.Services.AddScoped<AIChatClient>();
+builder.Services.AddScoped<ErghiClient>();
 ```
 
 ```csharp
@@ -330,7 +365,7 @@ builder.Services.AddScoped<AIChatClient>();
 
 ```csharp
 // MyService.cs
-public class ChatService(AIChatClient client)
+public class ChatService(ErghiClient client)
 {
     public async Task<Message> SendSupportMessageAsync(string conversationId, string text)
     {

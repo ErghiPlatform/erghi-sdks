@@ -1,7 +1,7 @@
 {
-  "name": "@aichat/react",
+  "name": "@erghi/react",
   "version": "1.0.0",
-  "description": "React SDK for AI Chat SaaS platform",
+  "description": "React SDK for the Erghi customer-support platform",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -21,13 +21,13 @@
     "hooks",
     "sdk"
   ],
-  "author": "AI Chat Team",
+  "author": "Erghi Team",
   "license": "MIT",
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0"
   },
   "dependencies": {
-    "@aichat/sdk": "file:../javascript"
+    "@erghi/sdk": "file:../javascript"
   },
   "devDependencies": {
     "@types/react": "^18.3.18",

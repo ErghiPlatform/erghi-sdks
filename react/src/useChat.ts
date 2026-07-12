@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useAIChat } from './context';
-import type { Message, SendMessageRequest, PaginationParams } from '@aichat/sdk';
+import { useErghi } from './context';
+import type { Message, SendMessageRequest, PaginationParams } from '@erghi/sdk';
 
 export function useChat(conversationId: string) {
-  const { client } = useAIChat();
+  const { client } = useErghi();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);

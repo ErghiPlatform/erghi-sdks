@@ -1,7 +1,7 @@
 /**
  * Erghi .NET SDK — Simulation / Integration Example
  *
- * Exercises AIChatClient against a locally running Erghi stack.
+ * Exercises ErghiClient against a locally running Erghi stack.
  *   docker-compose up   →   gateway on http://localhost:5000
  *
  * Run:
@@ -18,7 +18,7 @@ const string TestPassword = "Demo@12345!";
 
 Console.WriteLine("=== Erghi .NET SDK Simulation ===\n");
 
-await using var client = new AIChatClient(new AIChatConfig
+await using var client = new ErghiClient(new ErghiConfig
 {
     ApiUrl = "http://localhost:5000",
     Debug = true,

@@ -5,13 +5,13 @@ Demonstrates the full chat flow against a locally running Erghi stack:
   docker-compose up   ->   gateway on http://localhost:5000
 
 Run:
-  pip install aichat-sdk
+  pip install erghi-sdk
   python examples/simulation.py
 """
 
 import asyncio
 import time
-from aichat import AIChatClient
+from erghi import ErghiClient
 
 TIMESTAMP = int(time.time())
 TEST_EMAIL = f"demo_{TIMESTAMP}@erghi.dev"
@@ -22,7 +22,7 @@ async def main() -> None:
     print("=== Erghi Python SDK Simulation ===\n")
 
     # ── 1. Initialise client ──────────────────────────────────────────────────
-    async with AIChatClient(
+    async with ErghiClient(
         api_url="http://localhost:5000",
         debug=True,
     ) as client:

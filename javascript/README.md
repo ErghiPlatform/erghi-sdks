@@ -5,20 +5,20 @@ Official JavaScript/TypeScript SDK for the [Erghi Platform](https://erghi.com).
 ## Installation
 
 ```bash
-npm install @aichat/sdk
+npm install @erghi/sdk
 # or
-yarn add @aichat/sdk
+yarn add @erghi/sdk
 # or
-pnpm add @aichat/sdk
+pnpm add @erghi/sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import AIChatClient from '@aichat/sdk';
+import ErghiClient from '@erghi/sdk';
 
 // Initialize the client
-const client = new AIChatClient({
+const client = new ErghiClient({
   apiUrl: 'https://api.erghi.com',
   apiKey: 'your-api-key',
   workspaceId: 'your-workspace-id',
@@ -175,6 +175,32 @@ client.chat.sendTyping('conversation-id');
 client.disconnect();
 ```
 
+## Identity Verification & Webhooks (Server-Side)
+
+`generateIdentityHash` and `verifyWebhookSignature` are stateless helpers exported from the
+package root — they don't need an `ErghiClient` instance. Only call them from your backend;
+never ship your widget secret key or webhook secret to the browser.
+
+```typescript
+import { generateIdentityHash, verifyWebhookSignature } from '@erghi/sdk';
+
+// On your server, after the user logs in:
+const identityHash = generateIdentityHash(currentUser.id, process.env.ERGHI_WIDGET_SECRET!);
+// Send `identityHash` and `currentUser.id` to your frontend for use with the widget.
+
+// In your webhook handler (use the raw body, not the parsed JSON):
+app.post('/webhooks/erghi', express.text({ type: '*/*' }), (req, res) => {
+  const signature = req.header('X-Erghi-Signature') ?? '';
+  if (!verifyWebhookSignature(req.body, signature, process.env.ERGHI_WEBHOOK_SECRET!)) {
+    return res.status(401).send('Invalid signature');
+  }
+
+  const event = JSON.parse(req.body);
+  // ... handle event
+  res.sendStatus(200);
+});
+```
+
 ## Workspace Management
 
 ```typescript
@@ -200,7 +226,7 @@ import {
   RateLimitError,
   NetworkError,
   NotFoundError,
-} from '@aichat/sdk';
+} from '@erghi/sdk';
 
 try {
   await client.auth.login({ email: 'invalid', password: 'wrong' });
@@ -230,7 +256,7 @@ import type {
   Conversation,
   AuthResponse,
   PaginatedResponse,
-} from '@aichat/sdk';
+} from '@erghi/sdk';
 
 const user: User = await client.auth.me();
 const messages: PaginatedResponse<Message> = await client.chat.getMessages('conv-id');
@@ -239,7 +265,7 @@ const messages: PaginatedResponse<Message> = await client.chat.getMessages('conv
 ## Configuration
 
 ```typescript
-const client = new AIChatClient({
+const client = new ErghiClient({
   // API base URL (default: http://localhost:5000)
   apiUrl: 'https://api.erghi.com',
   
@@ -268,7 +294,7 @@ const client = new AIChatClient({
 ```html
 <script src="https://cdn.erghi.com/sdk/latest/erghi.min.js"></script>
 <script>
-  const client = new AIChatSDK.default({
+  const client = new ErghiSDK.default({
     apiUrl: 'https://api.erghi.com',
     apiKey: 'your-api-key',
   });
@@ -285,9 +311,9 @@ const client = new AIChatClient({
 ## Node.js Usage
 
 ```javascript
-const AIChatClient = require('@aichat/sdk').default;
+const ErghiClient = require('@erghi/sdk').default;
 
-const client = new AIChatClient({
+const client = new ErghiClient({
   apiUrl: 'https://api.erghi.com',
   apiKey: process.env.ERGHI_API_KEY,
 });

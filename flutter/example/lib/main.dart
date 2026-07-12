@@ -8,10 +8,10 @@
 ///   flutter run -d chrome        # or any connected device
 
 import 'package:flutter/material.dart';
-import 'package:aichat_sdk/src/aichat_client.dart';
-import 'package:aichat_sdk/src/config/aichat_config.dart';
-import 'package:aichat_sdk/src/models/conversation.dart';
-import 'package:aichat_sdk/src/models/user.dart';
+import 'package:erghi_sdk/src/erghi_client.dart';
+import 'package:erghi_sdk/src/config/erghi_config.dart';
+import 'package:erghi_sdk/src/models/conversation.dart';
+import 'package:erghi_sdk/src/models/user.dart';
 
 void main() {
   runApp(const SimulationApp());
@@ -46,8 +46,8 @@ class SimulationPage extends StatefulWidget {
 }
 
 class _SimulationPageState extends State<SimulationPage> {
-  final AIChatClient _client = AIChatClient(
-    config: AIChatConfig(
+  final ErghiClient _client = ErghiClient(
+    config: ErghiConfig(
       apiUrl: 'http://localhost:5000',
       debug: true,
     ),

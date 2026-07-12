@@ -1,14 +1,14 @@
-export { AIChatProvider, useAIChat } from './context';
+export { ErghiProvider, useErghi } from './context';
 export { useAuth } from './useAuth';
 export { useChat } from './useChat';
 export { useWebSocket } from './useWebSocket';
 
 // Re-export types from base SDK
 export type {
-  AIChatConfig,
+  ErghiConfig,
   User,
   AuthResponse,
   Message,
   Conversation,
   Workspace,
-} from '@aichat/sdk';
+} from '@erghi/sdk';

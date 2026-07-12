@@ -1,4 +1,4 @@
-import { AIChatClient } from '../client';
+import { ErghiClient } from '../client';
 import {
   Message,
   Conversation,
@@ -11,7 +11,7 @@ import {
  * Chat resource
  */
 export class ChatResource {
-  constructor(private client: AIChatClient) {}
+  constructor(private client: ErghiClient) {}
 
   /**
    * Get conversation by ID
@@ -38,10 +38,12 @@ export class ChatResource {
    * Create a new conversation
    */
   async createConversation(widgetId: string, metadata?: Record<string, any>): Promise<Conversation> {
-    const response = await this.client.getHttpClient().post<Conversation>('/api/conversations', {
-      widgetId,
-      metadata,
-    });
+    const payload: any = { widgetId, metadata };
+    const visitorId = this.client.getVisitorId();
+    if (visitorId) {
+      payload.visitorId = visitorId;
+    }
+    const response = await this.client.getHttpClient().post<Conversation>('/api/conversations', payload);
     return response.data;
   }
 

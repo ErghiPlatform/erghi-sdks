@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
-import { useAIChat } from './context';
-import type { LoginRequest, RegisterRequest, AuthResponse } from '@aichat/sdk';
+import { useErghi } from './context';
+import type { LoginRequest, RegisterRequest, AuthResponse } from '@erghi/sdk';
 
 export function useAuth() {
-  const { client, user, isAuthenticated, isLoading: contextLoading } = useAIChat();
+  const { client, user, isAuthenticated, isLoading: contextLoading } = useErghi();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -54,13 +54,27 @@ export function useAuth() {
     }
   }, [client]);
 
+  const authenticateVisitor = useCallback(async (widgetId: string, jwtToken: string): Promise<string> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      return await client.authenticateVisitor(widgetId, jwtToken);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Visitor authentication failed');
+      setError(error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [client]);
+
   return {
     user,
     isAuthenticated,
     isLoading: contextLoading || isLoading,
     error,
-    login,
-    register,
     logout,
+    authenticateVisitor,
   };
 }

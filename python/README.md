@@ -5,18 +5,18 @@ Official Python SDK for the [Erghi Platform](https://erghi.com).
 ## Installation
 
 ```bash
-pip install aichat-sdk
+pip install erghi-sdk
 ```
 
 ## Quick Start
 
 ```python
 import asyncio
-from aichat import AIChatClient, RegisterRequest, LoginRequest
+from erghi import ErghiClient, RegisterRequest, LoginRequest
 
 async def main():
     # Initialize the client
-    async with AIChatClient(
+    async with ErghiClient(
         api_url="https://api.erghi.com",
         api_key="your-api-key",
         workspace_id="your-workspace-id",
@@ -74,7 +74,7 @@ if __name__ == "__main__":
 ### Register
 
 ```python
-from aichat import RegisterRequest
+from erghi import RegisterRequest
 
 auth_response = await client.auth.register(
     RegisterRequest(
@@ -89,7 +89,7 @@ auth_response = await client.auth.register(
 ### Login
 
 ```python
-from aichat import LoginRequest
+from erghi import LoginRequest
 
 auth_response = await client.auth.login(
     LoginRequest(
@@ -145,7 +145,7 @@ with open("document.pdf", "rb") as f:
 ### Get Messages
 
 ```python
-from aichat.types import PaginationParams
+from erghi.types import PaginationParams
 
 response = await client.chat.get_messages(
     conversation_id="conversation-id",
@@ -203,10 +203,36 @@ workspace = await client.workspace.create(
 client.workspace.switch_workspace("workspace-id")
 ```
 
+## Identity Verification & Webhooks (Server-Side)
+
+`generate_identity_hash` and `verify_webhook_signature` are stateless module-level functions —
+they don't need an `ErghiClient` instance. Only call them from your backend; never ship your
+widget secret key or webhook secret to the browser.
+
+```python
+from erghi import generate_identity_hash, verify_webhook_signature
+
+# On your server, after the user logs in:
+identity_hash = generate_identity_hash(
+    visitor_id=str(current_user.id),
+    secret_key=settings.ERGHI_WIDGET_SECRET,
+)
+# Send `identity_hash` and `current_user.id` to your frontend for use with the widget.
+
+# In your webhook handler (use the raw body, not the parsed JSON):
+def handle_webhook(request):
+    signature = request.headers.get("X-Erghi-Signature", "")
+    if not verify_webhook_signature(request.body.decode("utf-8"), signature, settings.ERGHI_WEBHOOK_SECRET):
+        return HttpResponseUnauthorized("Invalid signature")
+
+    event = json.loads(request.body)
+    # ... handle event
+```
+
 ## Error Handling
 
 ```python
-from aichat import (
+from erghi import (
     AuthenticationError,
     ValidationError,
     RateLimitError,
@@ -235,7 +261,7 @@ except NotFoundError:
 The SDK is fully typed with Pydantic models:
 
 ```python
-from aichat.types import User, Message, Conversation, AuthResponse
+from erghi.types import User, Message, Conversation, AuthResponse
 
 user: User = await client.auth.me()
 messages: PaginatedResponse = await client.chat.get_messages("conv-id")
@@ -247,7 +273,7 @@ reveal_type(user)  # Revealed type is "User"
 ## Configuration
 
 ```python
-client = AIChatClient(
+client = ErghiClient(
     # API base URL (default: http://localhost:5000)
     api_url="https://api.erghi.com",
     
@@ -276,7 +302,7 @@ client = AIChatClient(
 Use the client as an async context manager for automatic cleanup:
 
 ```python
-async with AIChatClient(api_url="https://api.erghi.com") as client:
+async with ErghiClient(api_url="https://api.erghi.com") as client:
     user = await client.auth.me()
     # Connections automatically closed on exit
 ```
@@ -332,25 +358,25 @@ pytest
 ### Run tests with coverage
 
 ```bash
-pytest --cov=aichat --cov-report=html
+pytest --cov=erghi --cov-report=html
 ```
 
 ### Format code
 
 ```bash
-black aichat tests
+black erghi tests
 ```
 
 ### Lint code
 
 ```bash
-ruff check aichat tests
+ruff check erghi tests
 ```
 
 ### Type checking
 
 ```bash
-mypy aichat
+mypy erghi
 ```
 
 ## License

@@ -1,11 +1,11 @@
-import { AIChatClient } from '../client';
+import { ErghiClient } from '../client';
 import { Workspace, CreateWorkspaceRequest } from '../types';
 
 /**
  * Workspace resource
  */
 export class WorkspaceResource {
-  constructor(private client: AIChatClient) {}
+  constructor(private client: ErghiClient) {}
 
   /**
    * Get workspace by ID

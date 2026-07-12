@@ -1,19 +1,21 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../config/aichat_config.dart';
+import '../config/erghi_config.dart';
 import '../exceptions/exceptions.dart';
 import '../models/models.dart';
 import 'auth_resource.dart';
 
 class ChatResource {
-  final AIChatConfig config;
+  final ErghiConfig config;
   final http.Client client;
   final AuthResource auth;
+  final String? Function()? getVisitorId;
 
   ChatResource({
     required this.config,
     required this.client,
     required this.auth,
+    this.getVisitorId,
   });
 
   Map<String, String> get _headers {
@@ -47,14 +49,14 @@ class ChatResource {
         throw NotFoundException('Conversation not found');
       } else {
         final error = jsonDecode(response.body);
-        throw AIChatException(
+        throw ErghiException(
           error['message'] ?? 'Failed to get conversation',
           statusCode: response.statusCode,
           details: error,
         );
       }
     } catch (e) {
-      if (e is AIChatException) rethrow;
+      if (e is ErghiException) rethrow;
       throw NetworkException('Network error: $e');
     }
   }
@@ -65,14 +67,21 @@ class ChatResource {
     Map<String, dynamic>? metadata,
   }) async {
     try {
+      final payload = <String, dynamic>{
+        'widgetId': widgetId,
+        'metadata': metadata,
+      };
+      
+      final vId = getVisitorId?.call();
+      if (vId != null) {
+        payload['visitorId'] = vId;
+      }
+
       final response = await client
           .post(
             Uri.parse('${config.apiUrl}/api/conversations'),
             headers: _headers,
-            body: jsonEncode({
-              'widgetId': widgetId,
-              'metadata': metadata,
-            }),
+            body: jsonEncode(payload),
           )
           .timeout(config.timeout);
 
@@ -81,14 +90,14 @@ class ChatResource {
         return Conversation.fromJson(data);
       } else {
         final error = jsonDecode(response.body);
-        throw AIChatException(
+        throw ErghiException(
           error['message'] ?? 'Failed to create conversation',
           statusCode: response.statusCode,
           details: error,
         );
       }
     } catch (e) {
-      if (e is AIChatException) rethrow;
+      if (e is ErghiException) rethrow;
       throw NetworkException('Network error: $e');
     }
   }
@@ -119,14 +128,14 @@ class ChatResource {
         );
       } else {
         final error = jsonDecode(response.body);
-        throw AIChatException(
+        throw ErghiException(
           error['message'] ?? 'Failed to get messages',
           statusCode: response.statusCode,
           details: error,
         );
       }
     } catch (e) {
-      if (e is AIChatException) rethrow;
+      if (e is ErghiException) rethrow;
       throw NetworkException('Network error: $e');
     }
   }
@@ -152,14 +161,14 @@ class ChatResource {
         return Message.fromJson(data);
       } else {
         final error = jsonDecode(response.body);
-        throw AIChatException(
+        throw ErghiException(
           error['message'] ?? 'Failed to send message',
           statusCode: response.statusCode,
           details: error,
         );
       }
     } catch (e) {
-      if (e is AIChatException) rethrow;
+      if (e is ErghiException) rethrow;
       throw NetworkException('Network error: $e');
     }
   }

@@ -1,8 +1,8 @@
 /**
- * Type definitions for AI Chat SDK
+ * Type definitions for Erghi SDK
  */
 
-export interface AIChatConfig {
+export interface ErghiConfig {
   /** API base URL */
   apiUrl?: string;
   /** WebSocket URL */
