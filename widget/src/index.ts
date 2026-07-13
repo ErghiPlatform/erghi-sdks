@@ -1,6 +1,7 @@
 import { buildStyles, ICON_CHAT, ICON_SEND } from './styles';
 import { ConversationRealtimeClient } from './realtime';
 import { playMessageNotification } from './notification';
+import { bundledTranslations, interpolate, isRtlLocale, WidgetDirection } from './locale';
 
 export interface ErghiConfig {
   /** Widget UUID from admin portal */
@@ -15,6 +16,11 @@ export interface ErghiConfig {
   autoOpen?: boolean;
   /** Color theme: 'light' (default), 'dark', or 'auto' (follows system preference) */
   theme?: 'light' | 'dark' | 'auto';
+  /**
+   * Layout direction: 'auto' (default — follows the detected locale, e.g. RTL for Arabic),
+   * or force 'ltr' / 'rtl'.
+   */
+  direction?: WidgetDirection;
   /** Arbitrary visitor / session context passed to the AI (customerId, claims, etc.) */
   visitorContext?: Record<string, unknown>;
 }
@@ -27,8 +33,9 @@ interface Message {
 }
 
 export default class ErghiWidget {
-  private config: Required<Omit<ErghiConfig, 'workspace' | 'visitorContext'>> & {
+  private config: Required<Omit<ErghiConfig, 'workspace' | 'visitorContext' | 'greeting'>> & {
     workspace?: string;
+    greeting?: string;
     visitorContext: Record<string, unknown>;
   };
   private host: HTMLElement | null = null;
@@ -47,8 +54,9 @@ export default class ErghiWidget {
   private pendingFile: File | null = null;
   private translations: Record<string, string> = {};
   private locale = 'en';
+  // Empty names fall back to localized defaults in senderLabel() at render time.
   private displayConfig = {
-    aiAssistantName: 'AI Assistant',
+    aiAssistantName: '',
     showAiLabel: true,
     showAgentName: true,
     assignedAgentName: '',
@@ -64,14 +72,28 @@ export default class ErghiWidget {
       apiUrl: config.apiUrl || 'http://localhost:5080',
       position: config.position || 'bottom-right',
       primaryColor: config.primaryColor || '#0066FF',
-      greeting: config.greeting || 'Hi! How can we help you today?',
+      greeting: config.greeting,
       title: config.title || 'Erghi',
       autoOpen: config.autoOpen ?? false,
       theme: config.theme ?? 'light',
+      direction: config.direction ?? 'auto',
       visitorContext: { ...(config.visitorContext ?? {}) },
     };
 
     this.bootstrap();
+  }
+
+  /** Configured greeting, falling back to the localized default. */
+  private greetingText(): string {
+    return this.config.greeting || this.tr('widget.greeting', 'Hi! How can we help you today?');
+  }
+
+  /** Effective layout direction, resolving 'auto' from the detected locale. */
+  private resolvedDirection(): 'ltr' | 'rtl' {
+    if (this.config.direction === 'ltr' || this.config.direction === 'rtl') {
+      return this.config.direction;
+    }
+    return isRtlLocale(this.locale) ? 'rtl' : 'ltr';
   }
 
   private async bootstrap(): Promise<void> {
@@ -95,13 +117,24 @@ export default class ErghiWidget {
     return this.translations[key] || fallback;
   }
 
+  /** Translate with `{token}` interpolation, e.g. trf('widget.queue.position', '…#{position}…', { position: 3 }). */
+  private trf(key: string, fallback: string, params: Record<string, string | number>): string {
+    return interpolate(this.tr(key, fallback), params);
+  }
+
   private async loadTranslations(): Promise<void> {
     this.locale = this.detectLocale();
+    // Bundled EN/AR/ES strings first, so the widget is localized even offline;
+    // server-managed translations override them when available.
+    this.translations = bundledTranslations(this.locale);
     try {
       const res = await fetch(
         `${this.config.apiUrl}/api/v1/i18n/translations?language=${encodeURIComponent(this.locale)}&context=widget`
       );
-      if (res.ok) this.translations = await res.json();
+      if (res.ok) {
+        const remote = await res.json();
+        this.translations = { ...this.translations, ...remote };
+      }
     } catch { /* optional */ }
   }
 
@@ -114,7 +147,7 @@ export default class ErghiWidget {
       if (data.welcomeMessage) this.config.greeting = data.welcomeMessage;
       if (data.companyName) this.config.title = data.companyName;
       this.displayConfig = {
-        aiAssistantName: data.aiAssistantName ?? data.AiAssistantName ?? 'AI Assistant',
+        aiAssistantName: data.aiAssistantName ?? data.AiAssistantName ?? '',
         showAiLabel: data.showAiLabel ?? data.ShowAiLabel ?? true,
         showAgentName: data.showAgentName ?? data.ShowAgentName ?? true,
         assignedAgentName: this.displayConfig.assignedAgentName,
@@ -188,31 +221,33 @@ export default class ErghiWidget {
 
     const root = document.createElement('div');
     root.className = 'root';
+    root.setAttribute('dir', this.resolvedDirection());
+    root.setAttribute('lang', this.locale);
     root.innerHTML = `
       <div class="panel" id="cf-panel" role="dialog" aria-label="Chat">
         <div class="header">
           <div>
             <p class="header-title">${escapeHtml(this.config.title)}</p>
-            <p class="header-sub">We typically reply in minutes</p>
+            <p class="header-sub">${escapeHtml(this.tr('widget.header.subtitle', 'We typically reply in minutes'))}</p>
           </div>
-          <button type="button" class="icon-btn" id="cf-close" aria-label="Close chat">&times;</button>
+          <button type="button" class="icon-btn" id="cf-close" aria-label="${escapeHtml(this.tr('widget.aria.close', 'Close chat'))}">&times;</button>
         </div>
         <div class="messages" id="cf-messages"></div>
         <div class="typing" id="cf-typing"><span></span><span></span><span></span></div>
         <div class="composer">
           <input type="file" id="cf-file" accept="image/*,.pdf,.txt" hidden />
-          <button type="button" class="attach-btn" id="cf-attach" aria-label="Attach file">📎</button>
+          <button type="button" class="attach-btn" id="cf-attach" aria-label="${escapeHtml(this.tr('widget.aria.attach', 'Attach file'))}">📎</button>
           <input type="text" id="cf-input" placeholder="${escapeHtml(this.tr('widget.input.placeholder', 'Type a message…'))}" autocomplete="off" maxlength="4000" />
-          <button type="button" class="send-btn" id="cf-send" aria-label="Send">${ICON_SEND}</button>
+          <button type="button" class="send-btn" id="cf-send" aria-label="${escapeHtml(this.tr('widget.aria.send', 'Send'))}">${ICON_SEND}</button>
         </div>
       </div>
-      <button type="button" class="bubble" id="cf-bubble" aria-label="Open chat">${ICON_CHAT}</button>
+      <button type="button" class="bubble" id="cf-bubble" aria-label="${escapeHtml(this.tr('widget.aria.open', 'Open chat'))}">${ICON_CHAT}</button>
     `;
     this.shadow.appendChild(root);
 
     document.body.appendChild(this.host);
     this.bindEvents();
-    this.addSystemMessage(this.config.greeting);
+    this.addSystemMessage(this.greetingText());
     void this.tryRestoreSession();
 
     if (this.config.autoOpen) this.open();
@@ -324,7 +359,7 @@ export default class ErghiWidget {
       this.startHeartbeat();
     } catch (err) {
       console.error('[Erghi] Failed to start conversation:', err);
-      this.addSystemMessage('Unable to connect. Please try again.');
+      this.addSystemMessage(this.tr('widget.error.connect', 'Unable to connect. Please try again.'));
     }
   }
 
@@ -383,7 +418,7 @@ export default class ErghiWidget {
     } catch (err) {
       console.error('[Erghi] Send failed:', err);
       this.setTyping(false);
-      this.addSystemMessage('Message failed to send.');
+      this.addSystemMessage(this.tr('widget.error.send', 'Message failed to send.'));
     }
   }
 
@@ -415,7 +450,7 @@ export default class ErghiWidget {
       if (!res.ok) return;
       const data = await res.json();
       this.displayConfig = {
-        aiAssistantName: data.aiAssistantName ?? data.AiAssistantName ?? 'AI Assistant',
+        aiAssistantName: data.aiAssistantName ?? data.AiAssistantName ?? '',
         showAiLabel: data.showAiLabel ?? data.ShowAiLabel ?? true,
         showAgentName: data.showAgentName ?? data.ShowAgentName ?? true,
         assignedAgentName: this.displayConfig.assignedAgentName,
@@ -434,12 +469,20 @@ export default class ErghiWidget {
         onClosed: () => this.handleSessionEnded(),
         onEscalated: (payload) => {
           if (payload.queuePosition > 1) {
-            this.addSystemMessage(`You're #${payload.queuePosition} in the queue. An agent will join shortly.`);
+            this.addSystemMessage(this.trf(
+              'widget.queue.position',
+              "You're #{position} in the queue. An agent will join shortly.",
+              { position: payload.queuePosition }
+            ));
           }
         },
         onAssigned: (payload) => {
           this.displayConfig.assignedAgentName = payload.agentName;
-          this.addSystemMessage(`You're connected with ${payload.agentName}.`);
+          this.addSystemMessage(this.trf(
+            'widget.agent.connected',
+            "You're connected with {name}.",
+            { name: payload.agentName }
+          ));
           this.awaitingReply = false;
           this.setTyping(false);
         },
@@ -452,9 +495,11 @@ export default class ErghiWidget {
         },
         onInactivityWarning: (payload) => {
           const mins = Math.max(1, Math.ceil(payload.secondsUntilClose / 60));
-          this.addSystemMessage(
-            `This chat will close in about ${mins} minute${mins === 1 ? '' : 's'} due to inactivity. Send a message to stay connected.`
-          );
+          this.addSystemMessage(this.trf(
+            'widget.inactivity.warning',
+            'This chat will close in about {minutes} min due to inactivity. Send a message to stay connected.',
+            { minutes: mins }
+          ));
         },
       });
     } catch (err) {
@@ -548,9 +593,11 @@ export default class ErghiWidget {
         if (now - this.lastInactivityWarningAt > 120_000) {
           this.lastInactivityWarningAt = now;
           const mins = Math.max(1, Math.ceil(data.secondsUntilClose / 60));
-          this.addSystemMessage(
-            `Still there? This chat will close in about ${mins} minute${mins === 1 ? '' : 's'} unless you reply.`
-          );
+          this.addSystemMessage(this.trf(
+            'widget.inactivity.stillThere',
+            'Still there? This chat will close in about {minutes} min unless you reply.',
+            { minutes: mins }
+          ));
         }
       }
     } catch {
@@ -605,6 +652,8 @@ export default class ErghiWidget {
 
     const textEl = document.createElement('div');
     textEl.className = 'msg-text';
+    // Per-message direction so mixed Arabic/English threads each render correctly.
+    textEl.setAttribute('dir', 'auto');
     textEl.textContent = msg.content;
     el.appendChild(textEl);
     box.appendChild(el);
@@ -649,7 +698,7 @@ export default class ErghiWidget {
   }
 
   private handleSessionEnded(): void {
-    this.addSystemMessage('This conversation has ended. Start a new chat if you need more help.');
+    this.addSystemMessage(this.tr('widget.session.ended', 'This conversation has ended. Start a new chat if you need more help.'));
     this.conversationId = null;
     this.clearSession();
     void this.realtime.disconnect();
@@ -721,19 +770,19 @@ export default class ErghiWidget {
         this.knownMessageIds.add(id);
         this.appendMessageEl({ id, content, sender });
       }
-      if (sorted.length === 0) this.addSystemMessage(this.config.greeting);
+      if (sorted.length === 0) this.addSystemMessage(this.greetingText());
       this.scrollMessages(true);
     } catch {
-      this.addSystemMessage(this.config.greeting);
+      this.addSystemMessage(this.greetingText());
     }
   }
 
   private senderLabel(sender: string): string {
     const s = sender.toLowerCase();
     if (s === 'bot' && this.displayConfig.showAiLabel)
-      return this.displayConfig.aiAssistantName;
+      return this.displayConfig.aiAssistantName || this.tr('widget.label.ai', 'AI Assistant');
     if (s === 'agent' && this.displayConfig.showAgentName)
-      return this.displayConfig.assignedAgentName || 'Support Agent';
+      return this.displayConfig.assignedAgentName || this.tr('widget.label.agent', 'Support Agent');
     return '';
   }
 }
@@ -774,6 +823,7 @@ function autoInit(): void {
     position: (script.getAttribute('data-position') as 'bottom-left' | 'bottom-right') ?? undefined,
     title: script.getAttribute('data-title') ?? undefined,
     greeting: script.getAttribute('data-greeting') ?? undefined,
+    direction: (script.getAttribute('data-direction') as 'auto' | 'ltr' | 'rtl') ?? undefined,
     visitorContext,
   });
 

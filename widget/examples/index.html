@@ -79,7 +79,8 @@
   <p>
     This page embeds the Erghi chat widget via a single
     <code>&lt;script&gt;</code> tag. Use the buttons below to interact with the
-    widget API and observe real-time events.
+    widget API. Point <code>data-api-url</code> at a running Erghi stack for a
+    live conversation; without one the widget still renders and localizes.
   </p>
 
   <!-- ── Embed code ──────────────────────────────────────────────────────── -->
@@ -87,9 +88,10 @@
     <h2>Widget Embed Snippet</h2>
     <code>
 &lt;script<br>
-&nbsp;&nbsp;src="http://localhost:5000/widget/erghi.js"<br>
-&nbsp;&nbsp;data-erghi="YOUR_WORKSPACE_ID"<br>
-&nbsp;&nbsp;data-api-url="http://localhost:5000"<br>
+&nbsp;&nbsp;src="https://chat.erghi.ai/widget.js"<br>
+&nbsp;&nbsp;data-widget-id="YOUR_WIDGET_ID"<br>
+&nbsp;&nbsp;data-api-url="https://api.erghi.ai"<br>
+&nbsp;&nbsp;data-direction="auto" &lt;!-- 'auto' | 'ltr' | 'rtl' — auto mirrors for Arabic --&gt;<br>
 &nbsp;&nbsp;defer<br>
 &gt;&lt;/script&gt;
     </code>
@@ -99,51 +101,27 @@
   <div class="card">
     <h2>Widget API Controls</h2>
     <div class="btn-row">
-      <button class="btn-primary" onclick="openWidget()">Open Widget</button>
-      <button class="btn-neutral" onclick="closeWidget()">Close Widget</button>
-      <button class="btn-success" onclick="toggleWidget()">Toggle</button>
-      <button class="btn-warning" onclick="sendAutoMessage()">Send Auto Message</button>
-      <button class="btn-danger"  onclick="destroyWidget()">Destroy Widget</button>
+      <button class="btn-primary" onclick="withWidget(w => { w.open(); log('▶ open() called'); })">Open Widget</button>
+      <button class="btn-neutral" onclick="withWidget(w => { w.close(); log('▶ close() called'); })">Close Widget</button>
+      <button class="btn-success" onclick="withWidget(w => { w.toggle(); log('▶ toggle() called'); })">Toggle</button>
+      <button class="btn-warning" onclick="withWidget(w => { w.identify({ email: 'demo@example.com', plan: 'starter' }); log('▶ identify() called'); })">Identify Visitor</button>
+      <button class="btn-primary" onclick="switchLocale('ar')">عربي (RTL)</button>
+      <button class="btn-neutral" onclick="switchLocale('en')">English</button>
+      <button class="btn-danger" onclick="withWidget(w => { w.destroy(); delete window.erghiWidget; log('▶ destroy() called — reload to reinitialise'); })">Destroy Widget</button>
     </div>
     <div id="log">&gt; Widget event log will appear here…</div>
   </div>
 
-  <!-- ── Erghi widget config ──────────────────────────────────────────── -->
-  <script>
-    window.chatFlowConfig = {
-      workspaceId: 'YOUR_WORKSPACE_ID',
-      apiUrl:      'http://localhost:5000',
-      theme: {
-        primaryColor: '#6366f1',
-        position:     'bottom-right',
-      },
-      greeting: 'Hi! How can we help you today?',
-      onLoad: function () {
-        log('▶ Widget loaded');
-      },
-      onOpen: function () {
-        log('✓ Widget opened');
-      },
-      onClose: function () {
-        log('✓ Widget closed');
-      },
-      onMessage: function (msg) {
-        log('📨 Received: ' + (msg.content ?? JSON.stringify(msg)));
-      },
-      onError: function (err) {
-        log('❌ Error: ' + (err.message ?? err));
-      },
-    };
-  </script>
-
   <!--
-    The widget script is loaded from your locally running Erghi stack.
-    If the stack is not running, the widget will not appear — that is expected.
+    Loads the locally built bundle (run `npm run build` first).
+    In production use https://chat.erghi.ai/widget.js instead.
   -->
   <script
-    src="http://localhost:5000/widget/erghi.js"
-    data-erghi="YOUR_WORKSPACE_ID"
-    data-api-url="http://localhost:5000"
+    src="../dist/widget.js"
+    data-widget-id="YOUR_WIDGET_ID"
+    data-api-url="http://localhost:5080"
+    data-primary-color="#6366f1"
+    data-title="Erghi"
     defer
   ></script>
 
@@ -158,51 +136,22 @@
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    function getWidget() {
-      return window.ErghiWidget ?? null;
-    }
-
-    function openWidget() {
-      const w = getWidget();
+    // autoInit() exposes the instance as window.erghiWidget
+    function withWidget(fn) {
+      const w = window.erghiWidget;
       if (!w) { log('⚠ Widget not loaded yet'); return; }
-      w.open();
-      log('▶ open() called');
+      fn(w);
     }
 
-    function closeWidget() {
-      const w = getWidget();
-      if (!w) { log('⚠ Widget not loaded yet'); return; }
-      w.close();
-      log('▶ close() called');
+    function switchLocale(locale) {
+      localStorage.setItem('erghi:locale', locale);
+      log('▶ locale set to "' + locale + '" — reloading');
+      setTimeout(() => location.reload(), 300);
     }
 
-    function toggleWidget() {
-      const w = getWidget();
-      if (!w) { log('⚠ Widget not loaded yet'); return; }
-      w.toggle();
-      log('▶ toggle() called');
-    }
-
-    function sendAutoMessage() {
-      const w = getWidget();
-      if (!w) { log('⚠ Widget not loaded yet'); return; }
-      w.sendMessage('Hello from the host page!');
-      log('▶ sendMessage() called');
-    }
-
-    function destroyWidget() {
-      const w = getWidget();
-      if (!w) { log('⚠ Widget not loaded yet'); return; }
-      w.destroy();
-      delete window.ErghiWidget;
-      log('▶ destroy() called — reload the page to reinitialise');
-    }
-
-    // Listen for cross-frame events dispatched on window
-    window.addEventListener('erghi:ready',   () => log('🟢 erghi:ready event'));
-    window.addEventListener('erghi:message', (e) => log('📨 erghi:message event: ' + JSON.stringify(e.detail)));
-    window.addEventListener('erghi:open',    () => log('🔓 erghi:open event'));
-    window.addEventListener('erghi:close',   () => log('🔒 erghi:close event'));
+    window.addEventListener('load', () => {
+      log(window.erghiWidget ? '🟢 Widget initialised (window.erghiWidget)' : '⚠ Widget failed to initialise');
+    });
   </script>
 
 </body>

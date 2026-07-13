@@ -1,5 +1,8 @@
 /** Injected into Shadow DOM — isolated from host page CSS */
 export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bottom-right'): string {
+  // Bubble/panel anchoring is a physical placement choice (viewport corner), independent
+  // of text direction. Everything inside the panel uses logical properties so the
+  // layout mirrors automatically when the root carries dir="rtl".
   const anchor = position === 'bottom-right' ? 'right: 20px;' : 'left: 20px;';
   return `
     :host, * { box-sizing: border-box; }
@@ -13,6 +16,9 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
       line-height: 1.5;
       color: #1a1d29;
       -webkit-font-smoothing: antialiased;
+    }
+    .root[dir="rtl"] {
+      font-family: Inter, -apple-system, 'Segoe UI', Tahoma, Roboto, sans-serif;
     }
     .panel {
       display: none;
@@ -75,14 +81,14 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
       align-self: flex-end;
       background: ${primaryColor};
       color: #fff;
-      border-bottom-right-radius: 4px;
+      border-end-end-radius: 4px;
     }
     .msg.bot, .msg.agent {
       align-self: flex-start;
       background: #fff;
       color: #1a1d29;
       border: 1px solid #e8eaef;
-      border-bottom-left-radius: 4px;
+      border-end-start-radius: 4px;
     }
     .msg.system {
       align-self: center;
@@ -108,7 +114,7 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
       background: #fff;
       border: 1px solid #e8eaef;
       border-radius: 14px;
-      border-bottom-left-radius: 4px;
+      border-end-start-radius: 4px;
     }
     .typing.visible { display: flex; }
     .typing span {
@@ -159,6 +165,7 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
       flex-shrink: 0;
     }
     .send-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .root[dir="rtl"] .send-btn svg { transform: scaleX(-1); }
     .bubble {
       width: 56px; height: 56px;
       border-radius: 50%;
@@ -207,7 +214,7 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
         margin: 0;
         border-radius: 0;
       }
-      .bubble { margin: 16px; margin-left: auto; }
+      .bubble { margin: 16px; ${position === 'bottom-right' ? 'margin-left: auto;' : 'margin-right: auto;'} }
       .bubble.hidden { display: none; }
     }
   `;

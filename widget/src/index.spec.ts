@@ -301,6 +301,75 @@ describe('ErghiWidget', () => {
     });
   });
 
+  describe('Localization & RTL', () => {
+    it('should default to LTR for English locale', () => {
+      const root = getShadowRoot()?.querySelector('.root');
+      expect(root?.getAttribute('dir')).toBe('ltr');
+    });
+
+    it('should render RTL layout and Arabic strings when locale is Arabic', async () => {
+      localStorage.setItem('erghi:locale', 'ar');
+      const arWidget = new ErghiWidget(mockConfig);
+      await flushPromises();
+
+      const shadow = (arWidget as any).shadow as ShadowRoot;
+      const root = shadow.querySelector('.root');
+      expect(root?.getAttribute('dir')).toBe('rtl');
+      expect(root?.getAttribute('lang')).toBe('ar');
+
+      const input = shadow.getElementById('cf-input') as HTMLInputElement;
+      expect(input.placeholder).toBe('اكتب رسالتك…');
+
+      const messages = shadow.getElementById('cf-messages');
+      expect(messages?.textContent).toContain('أهلاً');
+
+      arWidget.destroy();
+      localStorage.clear();
+    });
+
+    it('should honor an explicit direction override', async () => {
+      const rtlWidget = new ErghiWidget({ ...mockConfig, direction: 'rtl' });
+      await flushPromises();
+
+      const root = (rtlWidget as any).shadow?.querySelector('.root');
+      expect(root?.getAttribute('dir')).toBe('rtl');
+      rtlWidget.destroy();
+    });
+
+    it('should set dir="auto" on each message for mixed-direction threads', async () => {
+      await widget.open();
+      await flushPromises();
+
+      (widget as any).handleInboundMessage({
+        id: 'msg-rtl',
+        content: 'مرحبا بك',
+        sender: 'agent',
+      });
+
+      const textEl = getShadowRoot()?.querySelector('[data-id="msg-rtl"] .msg-text');
+      expect(textEl?.getAttribute('dir')).toBe('auto');
+    });
+
+    it('should prefer server translations over bundled strings', async () => {
+      localStorage.setItem('erghi:locale', 'ar');
+      (global.fetch as jest.Mock).mockImplementation(async (url: string) => {
+        if (String(url).includes('/api/v1/i18n/translations')) {
+          return { ok: true, json: async () => ({ 'widget.greeting': 'أهلاً من السيرفر' }) };
+        }
+        return { ok: true, json: async () => ({ id: 'conv-123', messages: [], active: true }) };
+      });
+
+      const arWidget = new ErghiWidget(mockConfig);
+      await flushPromises();
+
+      const messages = ((arWidget as any).shadow as ShadowRoot).getElementById('cf-messages');
+      expect(messages?.textContent).toContain('أهلاً من السيرفر');
+
+      arWidget.destroy();
+      localStorage.clear();
+    });
+  });
+
   describe('Cleanup', () => {
     it('should remove all DOM elements on destroy', () => {
       widget.destroy();

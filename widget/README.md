@@ -7,7 +7,7 @@ Embeddable chat widget for websites - No dependencies, pure Vanilla JavaScript w
 ### Option 1: CDN (Easiest)
 
 ```html
-<script src="https://cdn.erghi.com/widget.min.js" data-erghi="YOUR_WORKSPACE_ID"></script>
+<script src="https://cdn.erghi.ai/widget.min.js" data-erghi="YOUR_WORKSPACE_ID"></script>
 ```
 
 ### Option 2: npm
@@ -43,16 +43,27 @@ new ErghiWidget({
   workspace: 'ws_xxxxx',
 
   // Optional
-  apiUrl: 'https://api.erghi.com',  // Custom API URL
-  signalrUrl: 'https://api.erghi.com/hubs/chat',  // Custom SignalR URL
+  apiUrl: 'https://api.erghi.ai',  // Custom API URL
+  signalrUrl: 'https://api.erghi.ai/hubs/chat',  // Custom SignalR URL
   theme: 'light',  // 'light' | 'dark' | 'auto'
   position: 'bottom-right',  // 'bottom-left' | 'bottom-right'
   primaryColor: '#007bff',  // Brand color
   greeting: 'Hi! How can we help?',  // Initial message
   avatar: 'https://example.com/avatar.png',  // Support avatar
-  autoOpen: false  // Auto-open on load
+  autoOpen: false,  // Auto-open on load
+  direction: 'auto'  // 'auto' | 'ltr' | 'rtl' — 'auto' follows the visitor's locale (RTL for Arabic)
 });
 ```
+
+### Localization & RTL
+
+The widget ships with built-in English, Arabic, and Spanish UI strings and full
+right-to-left layout. With `direction: 'auto'` (the default) it detects the
+visitor's locale from `localStorage('erghi:locale')`, `<html lang>`, or the
+browser language — Arabic visitors automatically get a mirrored RTL layout with
+Arabic system messages. Force a direction with `direction: 'rtl'` or the
+`data-direction="rtl"` script attribute. Server-managed translations
+(`/api/v1/i18n/translations?context=widget`) override the bundled strings.
 
 ## API Methods
 
@@ -86,7 +97,7 @@ widget.destroy();
   <h1>Welcome!</h1>
   
   <!-- Erghi Widget -->
-  <script src="https://cdn.erghi.com/widget.min.js"></script>
+  <script src="https://cdn.erghi.ai/widget.min.js"></script>
   <script>
     new ErghiWidget({
       workspace: 'ws_abc123',
