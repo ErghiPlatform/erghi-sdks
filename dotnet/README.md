@@ -1,6 +1,6 @@
 # Erghi .NET SDK
 
-Official .NET 10 SDK for [Erghi](https://erghi.com) — Real-time customer chat with SignalR integration.
+Official .NET 10 SDK for [Erghi](https://erghi.ai) — Real-time customer chat with SignalR integration.
 
 [![NuGet](https://img.shields.io/nuget/v/Erghi.SDK.svg)](https://www.nuget.org/packages/Erghi.SDK)
 [![.NET](https://img.shields.io/badge/.NET-10.0-purple.svg)](https://dotnet.microsoft.com)
@@ -41,7 +41,7 @@ using Erghi.SDK.Models;
 
 await using var client = new ErghiClient(new ErghiConfig
 {
-    ApiUrl = "https://api.erghi.com",
+    ApiUrl = "https://api.erghi.ai",
     ApiKey = "your-api-key",
     Debug = true,
 });
@@ -86,11 +86,11 @@ Console.WriteLine($"Sent: {message.Id}");
 var config = new ErghiConfig
 {
     // Base URL of the Erghi API gateway (default: http://localhost:5000)
-    ApiUrl = "https://api.erghi.com",
+    ApiUrl = "https://api.erghi.ai",
 
     // Optional: override SignalR hub URL (derived from ApiUrl when not set)
     // Default: {ApiUrl}/hubs/chat
-    HubUrl = "https://api.erghi.com/hubs/chat",
+    HubUrl = "https://api.erghi.ai/hubs/chat",
 
     // API key for widget/server-side authentication
     ApiKey = "your-api-key",
@@ -356,7 +356,7 @@ builder.Services.AddScoped<ErghiClient>();
 // appsettings.json
 {
   "Erghi": {
-    "ApiUrl": "https://api.erghi.com",
+    "ApiUrl": "https://api.erghi.ai",
     "ApiKey": "your-api-key",
     "WorkspaceId": "your-workspace-id"
   }

@@ -1,6 +1,6 @@
 # Erghi React SDK
 
-React hooks and components for the [Erghi Platform](https://erghi.com).
+React hooks and components for the [Erghi Platform](https://erghi.ai).
 
 ## Installation
 
@@ -17,7 +17,7 @@ function App() {
   return (
     <ErghiProvider
       config={{
-        apiUrl: 'https://api.erghi.com',
+        apiUrl: 'https://api.erghi.ai',
         apiKey: 'your-api-key',
       }}
     >

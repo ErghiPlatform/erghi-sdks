@@ -1,0 +1,82 @@
+name: Release npm packages
+
+# Publishes @erghi/sdk and/or @erghi/widget to npm with provenance.
+# Trigger manually (choose which package) or by pushing a tag:
+#   sdk-v1.0.0    → publishes @erghi/sdk
+#   widget-v1.0.0 → publishes @erghi/widget
+# Requires the NPM_TOKEN repository secret (granular token, publish rights on @erghi).
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Which package to publish
+        required: true
+        type: choice
+        options: [sdk, widget, both]
+  push:
+    tags:
+      - 'sdk-v*'
+      - 'widget-v*'
+
+permissions:
+  contents: read
+  id-token: write # npm provenance attestation
+
+jobs:
+  publish-sdk:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && (inputs.package == 'sdk' || inputs.package == 'both')) ||
+      startsWith(github.ref_name, 'sdk-v')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./javascript
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npx vitest run --passWithNoTests
+
+      - name: Publish @erghi/sdk
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-widget:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && (inputs.package == 'widget' || inputs.package == 'both')) ||
+      startsWith(github.ref_name, 'widget-v')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./widget
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npx jest
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish @erghi/widget
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
