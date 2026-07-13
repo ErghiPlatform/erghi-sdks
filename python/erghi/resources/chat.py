@@ -46,7 +46,7 @@ class ChatResource:
         payload = {"widgetId": widget_id, "metadata": metadata}
         if getattr(self.client, "visitor_id", None):
             payload["visitorId"] = self.client.visitor_id
-            
+
         response = await self.client.request(
             "POST",
             "/api/conversations",

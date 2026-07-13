@@ -1,18 +1,19 @@
+import { vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useChat } from '../useChat';
 import { useErghi } from '../context';
 
-jest.mock('../context');
+vi.mock('../context');
 
 describe('useChat', () => {
-  const mockGetMessages = jest.fn();
-  const mockSendMessage = jest.fn();
-  const mockMarkAsRead = jest.fn();
-  const mockConnect = jest.fn();
-  const mockDisconnect = jest.fn();
-  const mockOn = jest.fn();
-  const mockOff = jest.fn();
-  const mockSendTypingEvent = jest.fn();
+  const mockGetMessages = vi.fn();
+  const mockSendMessage = vi.fn();
+  const mockMarkAsRead = vi.fn();
+  const mockConnect = vi.fn();
+  const mockDisconnect = vi.fn();
+  const mockOn = vi.fn();
+  const mockOff = vi.fn();
+  const mockSendTypingEvent = vi.fn();
 
   const mockClient = {
     chat: {
@@ -28,8 +29,8 @@ describe('useChat', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    (useErghi as jest.Mock).mockReturnValue({ client: mockClient });
+    vi.clearAllMocks();
+    (useErghi as vi.Mock).mockReturnValue({ client: mockClient });
   });
 
   it('loads initial messages on mount', async () => {

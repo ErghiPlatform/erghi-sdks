@@ -1,9 +1,16 @@
+import { vi } from 'vitest';
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { ErghiProvider, useErghi } from '../context';
 import ErghiClient from '@erghi/sdk';
 
-jest.mock('@erghi/sdk');
+vi.mock('@erghi/sdk', () => {
+  const mockClient = vi.fn();
+  return {
+    default: mockClient,
+    ErghiClient: mockClient,
+  };
+});
 
 const TestComponent = () => {
   const { client, user, isAuthenticated, isLoading } = useErghi();
@@ -20,12 +27,12 @@ describe('ErghiProvider', () => {
   const mockConfig = { apiUrl: 'http://test.local', widgetId: 'test-widget' };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('throws error when useErghi is used outside provider', () => {
     const originalError = console.error;
-    console.error = jest.fn(); // Suppress React error boundary log
+    console.error = vi.fn(); // Suppress React error boundary log
     expect(() => render(<TestComponent />)).toThrow('useErghi must be used within ErghiProvider');
     console.error = originalError;
   });
@@ -45,8 +52,8 @@ describe('ErghiProvider', () => {
   it('provides authenticated state when user is fetched successfully', async () => {
     const mockUser = { id: 'usr-123', email: 'test@test.com' };
     
-    const mockMe = jest.fn().mockResolvedValue(mockUser);
-    (ErghiClient as unknown as jest.Mock).mockImplementation(() => ({
+    const mockMe = vi.fn().mockResolvedValue(mockUser);
+    (ErghiClient as unknown as vi.Mock).mockImplementation(() => ({
       auth: { me: mockMe }
     }));
 
@@ -68,13 +75,13 @@ describe('ErghiProvider', () => {
   });
 
   it('handles auth fetch failure gracefully', async () => {
-    const mockMe = jest.fn().mockRejectedValue(new Error('Invalid token'));
-    (ErghiClient as unknown as jest.Mock).mockImplementation(() => ({
+    const mockMe = vi.fn().mockRejectedValue(new Error('Invalid token'));
+    (ErghiClient as unknown as vi.Mock).mockImplementation(() => ({
       auth: { me: mockMe }
     }));
 
     const originalError = console.error;
-    console.error = jest.fn();
+    console.error = vi.fn();
 
     render(
       <ErghiProvider config={{ ...mockConfig, accessToken: 'invalid-token' }}>
