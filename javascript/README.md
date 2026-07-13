@@ -1,6 +1,6 @@
 # Erghi JavaScript/TypeScript SDK
 
-Official JavaScript/TypeScript SDK for the [Erghi Platform](https://erghi.com).
+Official JavaScript/TypeScript SDK for the [Erghi Platform](https://erghi.ai).
 
 ## Installation
 
@@ -19,7 +19,7 @@ import ErghiClient from '@erghi/sdk';
 
 // Initialize the client
 const client = new ErghiClient({
-  apiUrl: 'https://api.erghi.com',
+  apiUrl: 'https://api.erghi.ai',
   apiKey: 'your-api-key',
   workspaceId: 'your-workspace-id',
 });
@@ -267,10 +267,10 @@ const messages: PaginatedResponse<Message> = await client.chat.getMessages('conv
 ```typescript
 const client = new ErghiClient({
   // API base URL (default: http://localhost:5000)
-  apiUrl: 'https://api.erghi.com',
+  apiUrl: 'https://api.erghi.ai',
   
   // WebSocket URL (default: ws://localhost:5002)
-  wsUrl: 'wss://ws.erghi.com',
+  wsUrl: 'wss://ws.erghi.ai',
   
   // API Key for authentication
   apiKey: 'your-api-key',
@@ -292,10 +292,10 @@ const client = new ErghiClient({
 ## Browser Usage
 
 ```html
-<script src="https://cdn.erghi.com/sdk/latest/erghi.min.js"></script>
+<script src="https://cdn.erghi.ai/sdk/latest/erghi.min.js"></script>
 <script>
   const client = new ErghiSDK.default({
-    apiUrl: 'https://api.erghi.com',
+    apiUrl: 'https://api.erghi.ai',
     apiKey: 'your-api-key',
   });
 
@@ -314,7 +314,7 @@ const client = new ErghiClient({
 const ErghiClient = require('@erghi/sdk').default;
 
 const client = new ErghiClient({
-  apiUrl: 'https://api.erghi.com',
+  apiUrl: 'https://api.erghi.ai',
   apiKey: process.env.ERGHI_API_KEY,
 });
 ```

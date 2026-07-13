@@ -242,7 +242,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     {
       provide: ERGHI_CONFIG,
-      useValue: <ErghiConfig>{ apiUrl: 'https://api.erghi.com', apiKey: 'your-api-key' },
+      useValue: <ErghiConfig>{ apiUrl: 'https://api.erghi.ai', apiKey: 'your-api-key' },
     },
   ],
 };
@@ -259,7 +259,7 @@ npm install @erghi/sdk
 ```typescript
 import ErghiClient from '@erghi/sdk';
 
-const client = new ErghiClient({ apiUrl: 'https://api.erghi.com', apiKey: 'your-api-key' });
+const client = new ErghiClient({ apiUrl: 'https://api.erghi.ai', apiKey: 'your-api-key' });
 await client.auth.login({ email: 'user@example.com', password: 'password' });
 ```
 
@@ -274,7 +274,7 @@ import { ErghiProvider, useChat } from '@erghi/react';
 
 function App() {
   return (
-    <ErghiProvider config={{ apiUrl: 'https://api.erghi.com', apiKey: 'your-api-key' }}>
+    <ErghiProvider config={{ apiUrl: 'https://api.erghi.ai', apiKey: 'your-api-key' }}>
       <YourChatUI />
     </ErghiProvider>
   );
@@ -303,10 +303,10 @@ Full SDK documentation is available for:
 
 | Plan | Price/mo | Agents | Conversations/mo | AI Responses |
 |------|----------|--------|-----------------|--------------|
-| **Free** | $0 | 1 | 100 | 0 |
-| **Starter** | $29 | 3 | 1,000 | 500 |
-| **Growth** | $79 | 10 | 5,000 | 2,000 |
-| **Scale** | $199 | Unlimited | Unlimited | 10,000 |
+| **Free** | $0 | 1 | 50 | 100 |
+| **Starter** | $39 | 3 | 1,000 | 2,000 |
+| **Growth** | $89 | 10 | 5,000 | 8,000 |
+| **Enterprise** | Custom | Unlimited | Unlimited | Unlimited |
 
 ### Adding Agent Seats
 

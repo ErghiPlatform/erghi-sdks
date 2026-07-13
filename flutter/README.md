@@ -1,6 +1,6 @@
 # Erghi Flutter SDK
 
-Official Flutter SDK for the [Erghi Platform](https://erghi.com) — Build AI-powered chat experiences in your iOS and Android apps.
+Official Flutter SDK for the [Erghi Platform](https://erghi.ai) — Build AI-powered chat experiences in your iOS and Android apps.
 
 [![pub package](https://img.shields.io/pub/v/erghi_sdk.svg)](https://pub.dev/packages/erghi_sdk)
 [![Flutter](https://img.shields.io/badge/Flutter-3.10+-blue.svg)](https://flutter.dev)
@@ -39,7 +39,7 @@ import 'package:erghi_sdk/erghi_sdk.dart';
 
 final client = ErghiClient(
   config: ErghiConfig(
-    apiUrl: 'https://api.erghi.com',
+    apiUrl: 'https://api.erghi.ai',
     debug: true,
   ),
 );
@@ -155,7 +155,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _initializeChat() async {
     _client = ErghiClient(
       config: ErghiConfig(
-        apiUrl: 'https://api.erghi.com',
+        apiUrl: 'https://api.erghi.ai',
         debug: true,
       ),
     );
@@ -331,7 +331,7 @@ MIT License - see [LICENSE](LICENSE) file
 
 ## Support
 
-- 📧 Email: support@erghi.com
+- 📧 Email: support@erghi.ai
 - 💬 Discord: [Join our community](https://discord.gg/erghi)
 - 📝 Issues: [GitHub Issues](https://github.com/ErghiPlatform/erghi-sdks/issues)
 

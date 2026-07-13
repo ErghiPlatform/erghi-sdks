@@ -1,6 +1,6 @@
 # Erghi SDKs
 
-Official client SDKs for the [Erghi Platform](https://erghi.com) — AI-powered customer engagement with real-time messaging, smart responses, and seamless integrations.
+Official client SDKs for the [Erghi Platform](https://erghi.ai) — AI-powered customer engagement with real-time messaging, smart responses, and seamless integrations.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![GitHub repo](https://img.shields.io/badge/GitHub-ErghiPlatform%2Ferghi--sdks-blue.svg)](https://github.com/ErghiPlatform/erghi-sdks)
@@ -9,16 +9,18 @@ Official client SDKs for the [Erghi Platform](https://erghi.com) — AI-powered 
 
 ## Available SDKs
 
-| SDK | Package | Version | Docs |
-|-----|---------|---------|------|
-| [JavaScript / TypeScript](#javascript--typescript) | `@erghi/sdk` | ![npm](https://img.shields.io/npm/v/@erghi/sdk) | [README](./javascript/README.md) |
-| [React](#react) | `@erghi/react` | ![npm](https://img.shields.io/npm/v/@erghi/react) | [README](./react/README.md) |
-| [Angular](#angular) | `@erghi/angular` | ![npm](https://img.shields.io/npm/v/@erghi/angular) | [README](./angular/README.md) |
+| SDK | Package | Status | Docs |
+|-----|---------|--------|------|
 | [Widget (Vanilla JS)](#widget) | `@erghi/widget` | ![npm](https://img.shields.io/npm/v/@erghi/widget) | [README](./widget/README.md) |
-| [.NET / C#](#net--c) | `Erghi.SDK` | ![NuGet](https://img.shields.io/nuget/v/Erghi.SDK) | [README](./dotnet/README.md) |
-| [Python](#python) | `erghi-sdk` | ![PyPI](https://img.shields.io/pypi/v/erghi-sdk) | [README](./python/README.md) |
-| [Flutter / Dart](#flutter--dart) | `erghi_sdk` | ![pub](https://img.shields.io/pub/v/erghi_sdk) | [README](./flutter/README.md) |
-| [Swift](#swift) | `ErghiSDK` (SPM) | — | [README](./swift/README.md) |
+| [JavaScript / TypeScript](#javascript--typescript) | `@erghi/sdk` | ![npm](https://img.shields.io/npm/v/@erghi/sdk) | [README](./javascript/README.md) |
+| [React](#react) | `@erghi/react` | Source-available¹ | [README](./react/README.md) |
+| [Angular](#angular) | `@erghi/angular` | Source-available¹ | [README](./angular/README.md) |
+| [.NET / C#](#net--c) | `Erghi.SDK` | Source-available¹ | [README](./dotnet/README.md) |
+| [Python](#python) | `erghi-sdk` | Source-available¹ | [README](./python/README.md) |
+| [Flutter / Dart](#flutter--dart) | `erghi_sdk` | Source-available¹ | [README](./flutter/README.md) |
+| [Swift](#swift) | `ErghiSDK` (SPM) | Source-available¹ | [README](./swift/README.md) |
+
+¹ Build from source for now — registry publishing is planned. [Open an issue](https://github.com/ErghiPlatform/erghi-sdks/issues) if you need a published package and we'll prioritize it.
 
 ---
 
@@ -34,7 +36,7 @@ npm install @erghi/sdk
 import ErghiClient from '@erghi/sdk';
 
 const client = new ErghiClient({
-  apiUrl: 'https://api.erghi.com',
+  apiUrl: 'https://api.erghi.ai',
   apiKey: 'your-api-key',
   workspaceId: 'your-workspace-id',
 });
@@ -58,7 +60,7 @@ import { ErghiProvider, useAuth, useChat } from '@erghi/react';
 
 function App() {
   return (
-    <ErghiProvider config={{ apiUrl: 'https://api.erghi.com', apiKey: 'your-api-key' }}>
+    <ErghiProvider config={{ apiUrl: 'https://api.erghi.ai', apiKey: 'your-api-key' }}>
       <YourApp />
     </ErghiProvider>
   );
@@ -84,7 +86,7 @@ export const appConfig: ApplicationConfig = {
     {
       provide: ERGHI_CONFIG,
       useValue: <ErghiConfig>{
-        apiUrl: 'https://api.erghi.com',
+        apiUrl: 'https://api.erghi.ai',
         apiKey: 'your-api-key',
       },
     },
@@ -103,11 +105,11 @@ npm install @erghi/widget
 ```
 
 ```html
-<script src="https://cdn.erghi.com/widget/latest/widget.min.js"></script>
+<script src="https://cdn.erghi.ai/widget/latest/widget.min.js"></script>
 <script>
   ErghiWidget.init({
     widgetId: 'your-widget-id',
-    apiUrl: 'https://api.erghi.com',
+    apiUrl: 'https://api.erghi.ai',
   });
 </script>
 ```
@@ -127,7 +129,7 @@ using Erghi.SDK;
 
 await using var client = new ErghiClient(new ErghiConfig
 {
-    ApiUrl = "https://api.erghi.com",
+    ApiUrl = "https://api.erghi.ai",
     ApiKey = "your-api-key",
 });
 
@@ -148,7 +150,7 @@ pip install erghi-sdk
 ```python
 from erghi import ErghiClient
 
-async with ErghiClient(api_url="https://api.erghi.com", api_key="your-api-key") as client:
+async with ErghiClient(api_url="https://api.erghi.ai", api_key="your-api-key") as client:
     await client.auth.login(email="user@example.com", password="password")
     conversation = await client.chat.create_conversation(widget_id="your-widget-id")
     await client.chat.send_message(conversation_id=conversation.id, content="Hello!")
@@ -171,7 +173,7 @@ import 'package:erghi_sdk/erghi_sdk.dart';
 
 final client = ErghiClient(
   config: ErghiConfig(
-    apiUrl: 'https://api.erghi.com',
+    apiUrl: 'https://api.erghi.ai',
     apiKey: 'your-api-key',
   ),
 );
@@ -194,7 +196,7 @@ await client.auth.login(email: 'user@example.com', password: 'password');
 import ErghiSDK
 
 let client = ErghiClient(config: ErghiConfig(
-    apiUrl: "https://api.erghi.com",
+    apiUrl: "https://api.erghi.ai",
     apiKey: "your-api-key"
 ))
 
@@ -246,8 +248,8 @@ Client → WS   /hubs/chat      → ?access_token=<accessToken>
 
 | Environment | Gateway URL |
 |-------------|-------------|
-| Production  | `https://api.erghi.com` |
-| Staging     | `https://staging-api.erghi.com` |
+| Production  | `https://api.erghi.ai` |
+| Staging     | `https://staging-api.erghi.ai` |
 | Local dev   | `http://localhost:5000` |
 
 ## Running Locally

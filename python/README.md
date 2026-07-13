@@ -1,6 +1,6 @@
 # Erghi Python SDK
 
-Official Python SDK for the [Erghi Platform](https://erghi.com).
+Official Python SDK for the [Erghi Platform](https://erghi.ai).
 
 ## Installation
 
@@ -17,7 +17,7 @@ from erghi import ErghiClient, RegisterRequest, LoginRequest
 async def main():
     # Initialize the client
     async with ErghiClient(
-        api_url="https://api.erghi.com",
+        api_url="https://api.erghi.ai",
         api_key="your-api-key",
         workspace_id="your-workspace-id",
     ) as client:
@@ -275,10 +275,10 @@ reveal_type(user)  # Revealed type is "User"
 ```python
 client = ErghiClient(
     # API base URL (default: http://localhost:5000)
-    api_url="https://api.erghi.com",
+    api_url="https://api.erghi.ai",
     
     # WebSocket URL (default: ws://localhost:5002)
-    ws_url="wss://ws.erghi.com",
+    ws_url="wss://ws.erghi.ai",
     
     # API Key for authentication
     api_key="your-api-key",
@@ -302,7 +302,7 @@ client = ErghiClient(
 Use the client as an async context manager for automatic cleanup:
 
 ```python
-async with ErghiClient(api_url="https://api.erghi.com") as client:
+async with ErghiClient(api_url="https://api.erghi.ai") as client:
     user = await client.auth.me()
     # Connections automatically closed on exit
 ```

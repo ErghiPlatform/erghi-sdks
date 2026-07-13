@@ -48,5 +48,12 @@
   },
   "dependencies": {
     "@microsoft/signalr": "^8.0.7"
+  },
+  "homepage": "https://erghi.ai",
+  "bugs": {
+    "url": "https://github.com/ErghiPlatform/erghi-sdks/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
