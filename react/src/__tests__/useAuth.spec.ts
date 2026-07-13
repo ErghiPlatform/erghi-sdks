@@ -1,14 +1,15 @@
+import { vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useAuth } from '../useAuth';
 import { useErghi } from '../context';
 
-jest.mock('../context');
+vi.mock('../context');
 
 describe('useAuth', () => {
-  const mockLogin = jest.fn();
-  const mockRegister = jest.fn();
-  const mockLogout = jest.fn();
-  const mockAuthenticateVisitor = jest.fn();
+  const mockLogin = vi.fn();
+  const mockRegister = vi.fn();
+  const mockLogout = vi.fn();
+  const mockAuthenticateVisitor = vi.fn();
 
   const mockClient = {
     auth: {
@@ -20,8 +21,8 @@ describe('useAuth', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    (useErghi as jest.Mock).mockReturnValue({
+    vi.clearAllMocks();
+    (useErghi as vi.Mock).mockReturnValue({
       client: mockClient,
       user: null,
       isAuthenticated: false,
