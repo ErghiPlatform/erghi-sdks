@@ -106,6 +106,61 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
       margin-bottom: 4px;
     }
     .msg-text { white-space: pre-wrap; }
+    .msg-sources {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #e8eaef;
+    }
+    .msg-source-chip {
+      font-size: 11px;
+      line-height: 1.3;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: #f1f3f6;
+      color: #4b5568;
+      text-decoration: none;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .msg-source-chip:hover {
+      background: #e8eaef;
+      text-decoration: underline;
+    }
+    .msg-feedback {
+      display: flex;
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .msg-feedback-btn {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+      padding: 3px 5px;
+      border-radius: 6px;
+      opacity: 0.5;
+      transition: opacity 0.15s, background 0.15s;
+    }
+    .msg-feedback-btn:hover:not(:disabled) {
+      opacity: 1;
+      background: #f1f3f6;
+    }
+    .msg-feedback-btn.active {
+      opacity: 1;
+      background: #f1f3f6;
+    }
+    .msg-feedback-btn:disabled {
+      cursor: default;
+    }
+    .msg-feedback-btn:disabled:not(.active) {
+      opacity: 0.25;
+    }
     .typing {
       align-self: flex-start;
       display: none;

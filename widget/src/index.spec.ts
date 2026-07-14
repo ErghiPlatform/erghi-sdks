@@ -301,6 +301,186 @@ describe('ErghiWidget', () => {
     });
   });
 
+  describe('Citations', () => {
+    it('should render a citation chip for a bot reply with sources', async () => {
+      await widget.open();
+      await flushPromises();
+
+      (widget as any).handleInboundMessage({
+        id: 'msg-cite-1',
+        content: 'You can get a refund within 30 days.',
+        sender: 'bot',
+        sources: [{ url: 'https://example.com/faq', title: 'Refund FAQ' }],
+      });
+
+      const messagesContainer = getShadowRoot()?.getElementById('cf-messages');
+      const chip = messagesContainer?.querySelector('.msg-source-chip') as HTMLAnchorElement | null;
+      expect(chip).toBeTruthy();
+      expect(chip?.href).toBe('https://example.com/faq');
+      expect(chip?.textContent).toBe('Refund FAQ');
+      expect(chip?.target).toBe('_blank');
+      expect(chip?.rel).toBe('noopener noreferrer');
+    });
+
+    it('should fall back to "Source N" label when a citation has no title', async () => {
+      await widget.open();
+      await flushPromises();
+
+      (widget as any).handleInboundMessage({
+        id: 'msg-cite-2',
+        content: 'Here is the policy.',
+        sender: 'bot',
+        sources: [{ url: 'https://example.com/policy', title: null }],
+      });
+
+      const chip = getShadowRoot()?.querySelector('.msg-source-chip');
+      expect(chip?.textContent).toBe('Source 1');
+    });
+
+    it('should render multiple citation chips for multiple sources', async () => {
+      await widget.open();
+      await flushPromises();
+
+      (widget as any).handleInboundMessage({
+        id: 'msg-cite-3',
+        content: 'Combined answer.',
+        sender: 'bot',
+        sources: [
+          { url: 'https://example.com/a', title: 'Doc A' },
+          { url: 'https://example.com/b', title: 'Doc B' },
+        ],
+      });
+
+      const chips = getShadowRoot()?.querySelectorAll('.msg-source-chip');
+      expect(chips?.length).toBe(2);
+    });
+
+    it('should skip sources with no url', async () => {
+      await widget.open();
+      await flushPromises();
+
+      (widget as any).handleInboundMessage({
+        id: 'msg-cite-4',
+        content: 'Answer without a real source.',
+        sender: 'bot',
+        sources: [{ url: null, title: 'Untitled' }],
+      });
+
+      const chips = getShadowRoot()?.querySelectorAll('.msg-source-chip');
+      expect(chips?.length).toBe(0);
+    });
+
+    it('should not render a sources block when a bot message has no sources', async () => {
+      await widget.open();
+      await flushPromises();
+
+      (widget as any).handleInboundMessage({
+        id: 'msg-cite-5',
+        content: 'No citation needed.',
+        sender: 'bot',
+      });
+
+      const sourcesBlock = getShadowRoot()?.querySelector('.msg-sources');
+      expect(sourcesBlock).toBeFalsy();
+    });
+
+    it('should render citation chips regardless of sender role (gated on sources, not role)', async () => {
+      await widget.open();
+      await flushPromises();
+
+      (widget as any).handleInboundMessage({
+        id: 'msg-cite-6',
+        content: 'A human reply citing a doc',
+        sender: 'agent',
+        sources: [{ url: 'https://example.com/doc', title: 'Doc' }],
+      });
+
+      const chips = getShadowRoot()?.querySelectorAll('.msg-source-chip');
+      expect(chips?.length).toBe(1);
+    });
+  });
+
+  describe('Message Feedback', () => {
+    it('should render thumbs up/down buttons on bot messages', async () => {
+      await widget.open();
+      await flushPromises();
+
+      (widget as any).handleInboundMessage({ id: 'msg-fb-1', content: 'Bot reply', sender: 'bot' });
+
+      const buttons = getShadowRoot()?.querySelectorAll('.msg-feedback-btn');
+      expect(buttons?.length).toBe(2);
+    });
+
+    it('should not render feedback buttons on agent or visitor messages', async () => {
+      await widget.open();
+      await flushPromises();
+
+      (widget as any).handleInboundMessage({ id: 'msg-fb-2', content: 'Agent reply', sender: 'agent' });
+
+      const buttons = getShadowRoot()?.querySelectorAll('.msg-feedback-btn');
+      expect(buttons?.length).toBe(0);
+    });
+
+    it('should POST the rating to the feedback endpoint when thumbs up is clicked', async () => {
+      (widget as any).conversationId = 'conv-123';
+      await widget.open();
+      await flushPromises();
+      (global.fetch as jest.Mock).mockClear();
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: true });
+
+      (widget as any).handleInboundMessage({ id: 'msg-fb-3', content: 'Bot reply', sender: 'bot' });
+      const upBtn = getShadowRoot()?.querySelector('.msg-feedback-btn') as HTMLButtonElement;
+      upBtn.click();
+      await flushPromises();
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/conversations/conv-123/messages/msg-fb-3/feedback'),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ rating: 'Up' }),
+        })
+      );
+    });
+
+    it('should disable both buttons and mark the clicked one active after rating', async () => {
+      (widget as any).conversationId = 'conv-123';
+      await widget.open();
+      await flushPromises();
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: true });
+
+      (widget as any).handleInboundMessage({ id: 'msg-fb-4', content: 'Bot reply', sender: 'bot' });
+      const [upBtn, downBtn] = Array.from(
+        getShadowRoot()?.querySelectorAll('.msg-feedback-btn') ?? []
+      ) as HTMLButtonElement[];
+
+      downBtn.click();
+      await flushPromises();
+
+      expect(downBtn.disabled).toBe(true);
+      expect(upBtn.disabled).toBe(true);
+      expect(downBtn.classList.contains('active')).toBe(true);
+      expect(upBtn.classList.contains('active')).toBe(false);
+    });
+
+    it('should not send a second rating once a message has already been rated', async () => {
+      (widget as any).conversationId = 'conv-123';
+      await widget.open();
+      await flushPromises();
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: true });
+
+      (widget as any).handleInboundMessage({ id: 'msg-fb-5', content: 'Bot reply', sender: 'bot' });
+      const upBtn = getShadowRoot()?.querySelector('.msg-feedback-btn') as HTMLButtonElement;
+
+      upBtn.click();
+      await flushPromises();
+      const callsAfterFirstClick = (global.fetch as jest.Mock).mock.calls.length;
+      upBtn.click(); // disabled, but simulate a stray event anyway
+      await flushPromises();
+
+      expect((global.fetch as jest.Mock).mock.calls.length).toBe(callsAfterFirstClick);
+    });
+  });
+
   describe('Localization & RTL', () => {
     it('should default to LTR for English locale', () => {
       const root = getShadowRoot()?.querySelector('.root');
