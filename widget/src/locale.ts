@@ -30,6 +30,9 @@ const EN: Record<string, string> = {
   'widget.session.ended': 'This conversation has ended. Start a new chat if you need more help.',
   'widget.label.ai': 'AI Assistant',
   'widget.label.agent': 'Support Agent',
+  'widget.source.label': 'Source',
+  'widget.feedback.up': 'Helpful',
+  'widget.feedback.down': 'Not helpful',
 };
 
 const AR: Record<string, string> = {
@@ -49,6 +52,9 @@ const AR: Record<string, string> = {
   'widget.session.ended': 'انتهت هذه المحادثة. ابدأ محادثة جديدة إذا احتجت مساعدة إضافية.',
   'widget.label.ai': 'المساعد الذكي',
   'widget.label.agent': 'ممثل الدعم',
+  'widget.source.label': 'المصدر',
+  'widget.feedback.up': 'مفيد',
+  'widget.feedback.down': 'غير مفيد',
 };
 
 const ES: Record<string, string> = {
@@ -68,6 +74,9 @@ const ES: Record<string, string> = {
   'widget.session.ended': 'Esta conversación ha terminado. Inicia un nuevo chat si necesitas más ayuda.',
   'widget.label.ai': 'Asistente IA',
   'widget.label.agent': 'Agente de soporte',
+  'widget.source.label': 'Fuente',
+  'widget.feedback.up': 'Útil',
+  'widget.feedback.down': 'No útil',
 };
 
 const BUNDLED: Record<string, Record<string, string>> = { en: EN, ar: AR, es: ES };

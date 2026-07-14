@@ -1,11 +1,17 @@
 import * as signalR from '@microsoft/signalr';
 
+export type RealtimeMessageSource = {
+  url: string | null;
+  title: string | null;
+};
+
 export type RealtimeMessage = {
   id: string;
   content: string;
   sender: string;
   createdAt?: string;
   isAI?: boolean;
+  sources?: RealtimeMessageSource[];
 };
 
 export type RealtimeHandlers = {
@@ -86,6 +92,22 @@ export class ConversationRealtimeClient {
   }
 }
 
+function normalizeSources(raw: unknown): RealtimeMessageSource[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const sources = raw
+    .map((s): RealtimeMessageSource | null => {
+      if (!s || typeof s !== 'object') return null;
+      const rec = s as Record<string, unknown>;
+      const url = rec['url'] ?? rec['Url'];
+      const title = rec['title'] ?? rec['Title'];
+      return typeof url === 'string' && url
+        ? { url, title: typeof title === 'string' ? title : null }
+        : null;
+    })
+    .filter((s): s is RealtimeMessageSource => s !== null);
+  return sources.length > 0 ? sources : undefined;
+}
+
 function normalizeMessage(raw: Record<string, unknown>): RealtimeMessage | null {
   const id = String(raw['id'] ?? raw['Id'] ?? '');
   const content = String(raw['content'] ?? raw['Content'] ?? '');
@@ -97,5 +119,6 @@ function normalizeMessage(raw: Record<string, unknown>): RealtimeMessage | null 
     sender,
     createdAt: String(raw['createdAt'] ?? raw['CreatedAt'] ?? ''),
     isAI: Boolean(raw['isAI'] ?? raw['IsAI'] ?? false),
+    sources: normalizeSources(raw['sources'] ?? raw['Sources']),
   };
 }

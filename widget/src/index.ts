@@ -25,11 +25,17 @@ export interface ErghiConfig {
   visitorContext?: Record<string, unknown>;
 }
 
+interface MessageSource {
+  url: string | null;
+  title: string | null;
+}
+
 interface Message {
   id: string;
   content: string;
   sender: string;
   createdAt?: string;
+  sources?: MessageSource[];
 }
 
 export default class ErghiWidget {
@@ -46,6 +52,7 @@ export default class ErghiWidget {
   private messages: Message[] = [];
   private isTyping = false;
   private knownMessageIds = new Set<string>();
+  private ratedMessageIds = new Set<string>();
   private realtime = new ConversationRealtimeClient();
   private fallbackPollTimer: ReturnType<typeof setTimeout> | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
@@ -508,7 +515,7 @@ export default class ErghiWidget {
     }
   }
 
-  private handleInboundMessage(msg: { id: string; content: string; sender: string }): void {
+  private handleInboundMessage(msg: { id: string; content: string; sender: string; sources?: MessageSource[] }): void {
     const sender = msg.sender.toLowerCase();
     if (sender === 'system') {
       if (this.knownMessageIds.has(msg.id)) return;
@@ -524,7 +531,7 @@ export default class ErghiWidget {
     }
     if (this.knownMessageIds.has(msg.id)) return;
     this.knownMessageIds.add(msg.id);
-    this.appendMessageEl({ id: msg.id, content: msg.content, sender: msg.sender });
+    this.appendMessageEl({ id: msg.id, content: msg.content, sender: msg.sender, sources: msg.sources });
     this.awaitingReply = false;
     this.setTyping(false);
     if (!this.isOpen) {
@@ -656,8 +663,83 @@ export default class ErghiWidget {
     textEl.setAttribute('dir', 'auto');
     textEl.textContent = msg.content;
     el.appendChild(textEl);
+
+    if (msg.sources && msg.sources.length > 0) {
+      el.appendChild(this.buildSourcesEl(msg.sources));
+    }
+
+    if (role === 'bot') {
+      el.appendChild(this.buildFeedbackEl(msg.id));
+    }
+
     box.appendChild(el);
     this.scrollMessages(true);
+  }
+
+  private buildFeedbackEl(messageId: string): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg-feedback';
+
+    const rate = (rating: 'Up' | 'Down', upBtn: HTMLButtonElement, downBtn: HTMLButtonElement) => {
+      if (this.ratedMessageIds.has(messageId)) return;
+      this.ratedMessageIds.add(messageId);
+      upBtn.classList.toggle('active', rating === 'Up');
+      downBtn.classList.toggle('active', rating === 'Down');
+      upBtn.disabled = true;
+      downBtn.disabled = true;
+      void this.sendFeedback(messageId, rating);
+    };
+
+    const upBtn = document.createElement('button');
+    upBtn.type = 'button';
+    upBtn.className = 'msg-feedback-btn';
+    upBtn.setAttribute('aria-label', this.tr('widget.feedback.up', 'Helpful'));
+    upBtn.textContent = '👍';
+
+    const downBtn = document.createElement('button');
+    downBtn.type = 'button';
+    downBtn.className = 'msg-feedback-btn';
+    downBtn.setAttribute('aria-label', this.tr('widget.feedback.down', 'Not helpful'));
+    downBtn.textContent = '👎';
+
+    upBtn.addEventListener('click', () => rate('Up', upBtn, downBtn));
+    downBtn.addEventListener('click', () => rate('Down', upBtn, downBtn));
+
+    wrap.appendChild(upBtn);
+    wrap.appendChild(downBtn);
+    return wrap;
+  }
+
+  private async sendFeedback(messageId: string, rating: 'Up' | 'Down'): Promise<void> {
+    if (!this.conversationId) return;
+    try {
+      await fetch(
+        `${this.config.apiUrl}/api/conversations/${this.conversationId}/messages/${messageId}/feedback`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rating }),
+        }
+      );
+    } catch {
+      // best-effort — feedback is a nice-to-have, never block the chat UI on it
+    }
+  }
+
+  private buildSourcesEl(sources: MessageSource[]): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg-sources';
+    sources.forEach((source, i) => {
+      if (!source.url) return;
+      const chip = document.createElement('a');
+      chip.className = 'msg-source-chip';
+      chip.href = source.url;
+      chip.target = '_blank';
+      chip.rel = 'noopener noreferrer';
+      chip.textContent = source.title?.trim() || `${this.tr('widget.source.label', 'Source')} ${i + 1}`;
+      wrap.appendChild(chip);
+    });
+    return wrap;
   }
 
   private scrollMessages(force = false): void {
