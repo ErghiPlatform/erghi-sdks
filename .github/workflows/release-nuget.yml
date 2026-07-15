@@ -1,0 +1,42 @@
+name: Release NuGet package
+
+# Publishes Erghi.SDK to nuget.org.
+# Trigger manually or by pushing a tag: dotnet-v1.0.0
+# Requires the NUGET_API_KEY repository secret (nuget.org API key with push
+# rights on the Erghi.SDK package ID).
+#
+# Until NUGET_API_KEY is set, this job will fail at the `dotnet nuget push`
+# step with a clear auth error rather than silently no-op -- that's
+# intentional, it's the signal that credentials still need to be added.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'dotnet-v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./dotnet
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore Erghi.SDK/Erghi.SDK.csproj
+
+      - name: Test
+        run: dotnet test tests/Erghi.SDK.Tests/Erghi.SDK.Tests.csproj --configuration Release --verbosity normal
+
+      - name: Pack
+        run: dotnet pack Erghi.SDK/Erghi.SDK.csproj --configuration Release --output ./nupkg
+
+      - name: Push to nuget.org
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate

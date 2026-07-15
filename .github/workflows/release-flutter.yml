@@ -1,0 +1,59 @@
+name: Release Flutter package
+
+# Publishes erghi_sdk to pub.dev.
+# Trigger manually or by pushing a tag: flutter-v1.0.0
+# Requires the PUB_CREDENTIALS repository secret -- the JSON contents of
+# ~/.config/dart/pub-credentials.json from a `dart pub login` run under the
+# publishing account (see https://dart.dev/tools/pub/automated-publishing).
+#
+# Until PUB_CREDENTIALS is set, this job will fail at the `flutter pub
+# publish` step with a clear auth error rather than silently no-op --
+# that's intentional, it's the signal that credentials still need to be added.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'flutter-v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./flutter
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Generate JSON serialization code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: |
+          if [ -d "test" ]; then
+            flutter test
+          else
+            echo "No test directory found, skipping flutter test."
+          fi
+
+      - name: Configure pub.dev credentials
+        run: |
+          mkdir -p ~/.config/dart
+          echo "$PUB_CREDENTIALS" > ~/.config/dart/pub-credentials.json
+        env:
+          PUB_CREDENTIALS: ${{ secrets.PUB_CREDENTIALS }}
+
+      - name: Publish to pub.dev
+        run: dart pub publish --force
