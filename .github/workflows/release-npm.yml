@@ -1,9 +1,12 @@
 name: Release npm packages
 
-# Publishes @erghi/sdk and/or @erghi/widget to npm with provenance.
-# Trigger manually (choose which package) or by pushing a tag:
-#   sdk-v1.0.0    → publishes @erghi/sdk
-#   widget-v1.0.0 → publishes @erghi/widget
+# Publishes @erghi/sdk, @erghi/widget, @erghi/react, and/or @erghi/angular to
+# npm with provenance. Trigger manually (choose which package) or by pushing
+# a tag:
+#   sdk-v1.0.0     → publishes @erghi/sdk
+#   widget-v1.0.0  → publishes @erghi/widget
+#   react-v1.0.0   → publishes @erghi/react
+#   angular-v1.0.0 → publishes @erghi/angular
 # Requires the NPM_TOKEN repository secret (granular token, publish rights on @erghi).
 
 on:
@@ -13,11 +16,13 @@ on:
         description: Which package to publish
         required: true
         type: choice
-        options: [sdk, widget, both]
+        options: [sdk, widget, react, angular, all]
   push:
     tags:
       - 'sdk-v*'
       - 'widget-v*'
+      - 'react-v*'
+      - 'angular-v*'
 
 permissions:
   contents: read
@@ -26,7 +31,7 @@ permissions:
 jobs:
   publish-sdk:
     if: >-
-      (github.event_name == 'workflow_dispatch' && (inputs.package == 'sdk' || inputs.package == 'both')) ||
+      (github.event_name == 'workflow_dispatch' && (inputs.package == 'sdk' || inputs.package == 'all')) ||
       startsWith(github.ref_name, 'sdk-v')
     runs-on: ubuntu-latest
     defaults:
@@ -53,7 +58,7 @@ jobs:
 
   publish-widget:
     if: >-
-      (github.event_name == 'workflow_dispatch' && (inputs.package == 'widget' || inputs.package == 'both')) ||
+      (github.event_name == 'workflow_dispatch' && (inputs.package == 'widget' || inputs.package == 'all')) ||
       startsWith(github.ref_name, 'widget-v')
     runs-on: ubuntu-latest
     defaults:
@@ -77,6 +82,77 @@ jobs:
         run: npm run build
 
       - name: Publish @erghi/widget
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-react:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && (inputs.package == 'react' || inputs.package == 'all')) ||
+      startsWith(github.ref_name, 'react-v')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./react
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      # @erghi/react depends on @erghi/sdk as a local file: reference -- build it first.
+      - name: Build local @erghi/sdk dependency
+        run: |
+          cd ../javascript
+          npm install
+          npm run build
+          cd ../react
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npx vitest run --passWithNoTests
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish @erghi/react
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-angular:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && (inputs.package == 'angular' || inputs.package == 'all')) ||
+      startsWith(github.ref_name, 'angular-v')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./angular
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test -- --browsers=ChromeHeadlessNoSandbox
+
+      - name: Build
+        run: npm run build
+
+      # ng-packagr builds the publishable package into ./dist (its own
+      # package.json lives there, distinct from the source root's).
+      - name: Publish @erghi/angular
+        working-directory: ./angular/dist
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
