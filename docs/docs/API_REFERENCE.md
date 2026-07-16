@@ -127,7 +127,7 @@ List all conversations in the authenticated workspace (agents and admins).
 
 ---
 
-### GET /api/conversations/{id} — Public
+### GET `/api/conversations/{id}` — Public
 
 Get a conversation by ID. Used by the widget to resume a session.
 
@@ -135,7 +135,7 @@ Get a conversation by ID. Used by the widget to resume a session.
 
 ---
 
-### POST /api/conversations/{id}/close — Auth Required
+### POST `/api/conversations/{id}/close` — Auth Required
 
 Close a conversation and mark it as resolved.
 
@@ -143,7 +143,7 @@ Close a conversation and mark it as resolved.
 
 ---
 
-### POST /api/conversations/{id}/assign — Auth Required
+### POST `/api/conversations/{id}/assign` — Auth Required
 
 Assign a conversation to a specific agent.
 
@@ -160,7 +160,7 @@ Assign a conversation to a specific agent.
 
 ## Messages
 
-### POST /api/conversations/{id}/messages — Public / Auth Required
+### POST `/api/conversations/{id}/messages` — Public / Auth Required
 
 Send a message in a conversation. Called by both visitors (no auth) and agents (auth required).
 
@@ -190,7 +190,7 @@ Send a message in a conversation. Called by both visitors (no auth) and agents (
 
 ---
 
-### GET /api/conversations/{id}/messages — Public
+### GET `/api/conversations/{id}/messages` — Public
 
 Get all messages in a conversation (paginated, chronological).
 
@@ -223,7 +223,7 @@ Get all messages in a conversation (paginated, chronological).
 
 ---
 
-### POST /api/conversations/{conversationId}/messages/{messageId}/read — Auth Required
+### POST `/api/conversations/{conversationId}/messages/{messageId}/read` — Auth Required
 
 Mark a specific message as read (for read receipt tracking).
 
@@ -275,7 +275,7 @@ List all widgets in the workspace.
 
 ---
 
-### GET /api/widgets/{id} — Auth Required
+### GET `/api/widgets/{id}` — Auth Required
 
 Get a single widget's configuration.
 
@@ -283,7 +283,7 @@ Get a single widget's configuration.
 
 ---
 
-### PUT /api/widgets/{id} — Auth Required (Admin)
+### PUT `/api/widgets/{id}` — Auth Required (Admin)
 
 Update widget settings.
 
