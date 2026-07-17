@@ -12,7 +12,7 @@ type FeatureItem = {
 const FeatureList: FeatureItem[] = [
   {
     title: 'Cross-Platform SDKs',
-    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
+    Svg: require('@site/static/img/feature-sdks.svg').default,
     description: (
       <>
         We provide native SDKs for JavaScript, React, Angular, Python, .NET, Flutter, and Swift.
@@ -21,7 +21,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: 'Real-Time Messaging',
-    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
+    Svg: require('@site/static/img/feature-messaging.svg').default,
     description: (
       <>
         Build real-time chat interfaces instantly without managing WebSockets or retry logic.
@@ -30,7 +30,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: 'AI Native',
-    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+    Svg: require('@site/static/img/feature-ai.svg').default,
     description: (
       <>
         Seamlessly hook into Erghi's AI assistants to automate customer support interactions.
