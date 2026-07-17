@@ -1,0 +1,73 @@
+# Deploys the Docusaurus docs site (in docs/) to Cloudflare Pages, matching
+# the deploy pattern used by erghi-landing/erghi-admin-portal/erghi-user-portal
+# in the Erghi repo (see Erghi/.github/workflows/reusable-cloudflare-pages-deploy.yml).
+# Implemented directly here (not as a cross-repo reusable-workflow call) since
+# this repo is separate from Erghi and cross-repo `uses:` references need extra
+# org-level Actions permissions plus duplicated Cloudflare secrets anyway.
+#
+# This replaces the previous docs.yml, which deployed to GitHub Pages at
+# https://erghi-sdks.github.io/erghi-sdks/ -- disconnected from docs.erghi.ai.
+#
+# Setup required before first deploy:
+#   1. Create a Cloudflare Pages project named "erghi-docs" in the dashboard.
+#   2. Add a custom domain "docs.erghi.ai" to the project (same Cloudflare
+#      account/zone as erghi.ai -- this also creates the DNS record for you).
+#   3. Set these repository secrets on THIS repo (erghi-sdks), separately from
+#      the Erghi repo's copies of the same names:
+#        CLOUDFLARE_API_TOKEN  — API token with Cloudflare Pages:Edit permission
+#        CLOUDFLARE_ACCOUNT_ID — your Cloudflare account ID
+#
+# Cloudflare Pages URL (before custom domain):
+#   https://erghi-docs.pages.dev
+
+name: Deploy Docs to Cloudflare Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual deploy'
+        required: false
+        default: 'Manual deploy'
+
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+
+concurrency:
+  group: deploy-erghi-docs
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build & Deploy erghi-docs
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy docs/build --project-name=erghi-docs --branch=main

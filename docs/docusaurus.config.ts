@@ -14,16 +14,17 @@ const config: Config = {
     v4: true, // Improve compatibility with the upcoming Docusaurus v4
   },
 
-  // Set the production url of your site here
-  url: 'https://erghi-sdks.github.io',
-  // Set the /<baseUrl>/ pathname under which your site is served
-  // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/erghi-sdks/',
+  // Deployed to Cloudflare Pages (project "erghi-docs") with a custom domain,
+  // not GitHub Pages -- see .github/workflows/deploy-docs.yml.
+  url: 'https://docs.erghi.ai',
+  baseUrl: '/',
 
-  // GitHub pages deployment config.
-  // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'ErghiPlatform', // Usually your GitHub org/user name.
-  projectName: 'erghi-sdks', // Usually your repo name.
+  // Only used if someone runs the legacy `npm run deploy` (docusaurus deploy)
+  // script, which pushes to a gh-pages branch -- not part of the actual CI
+  // pipeline, which deploys via Cloudflare Pages instead. Left set so that
+  // fallback script doesn't error out if ever run manually.
+  organizationName: 'ErghiPlatform',
+  projectName: 'erghi-sdks',
 
   onBrokenLinks: 'throw',
 
@@ -75,9 +76,9 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'My Site',
+      title: 'Erghi Docs',
       logo: {
-        alt: 'My Site Logo',
+        alt: 'Erghi Logo',
         src: 'img/logo.svg',
       },
       items: [
