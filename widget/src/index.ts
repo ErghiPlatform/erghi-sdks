@@ -231,7 +231,7 @@ export default class ErghiWidget {
     root.setAttribute('dir', this.resolvedDirection());
     root.setAttribute('lang', this.locale);
     root.innerHTML = `
-      <div class="panel" id="cf-panel" role="dialog" aria-label="Chat">
+      <div class="panel" id="cf-panel" role="dialog" aria-label="${escapeHtml(this.tr('widget.aria.dialog', 'Chat'))}">
         <div class="header">
           <div>
             <p class="header-title">${escapeHtml(this.config.title)}</p>
