@@ -78,7 +78,7 @@ export default class ErghiWidget {
       workspace: config.workspace,
       apiUrl: config.apiUrl || 'http://localhost:5080',
       position: config.position || 'bottom-right',
-      primaryColor: config.primaryColor || '#0066FF',
+      primaryColor: config.primaryColor || '#3b82f6',
       greeting: config.greeting,
       title: config.title || 'Erghi',
       autoOpen: config.autoOpen ?? false,
