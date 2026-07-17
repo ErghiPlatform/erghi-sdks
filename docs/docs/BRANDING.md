@@ -22,19 +22,12 @@
 - **Open** - Multi-platform SDKs and extensible architecture
 
 ### Visual Identity
-- **Primary Color**: `#0066FF` (Electric Blue) - Trust, technology, innovation
-- **Secondary Color**: `#00D4AA` (Teal) - Growth, communication, clarity
-- **Accent Color**: `#FF6B35` (Coral) - Energy, warmth, action
-- **Neutral**: `#1A1D29` (Dark) / `#F7F9FC` (Light)
+- **Primary Color**: `#3b82f6` (Blue) - Trust, technology, innovation
+- **Secondary Color**: `#8b5cf6` (Purple) - Used in gradients alongside the primary blue (hero headings, CTAs, "Why Erghi" section)
+- **Neutral**: `#0f172a` (Dark) / `#ffffff` (Light)
 
 ### Logo Concept
-```
-    ╭━━━━━━━╮
-    │ ⚡ CF │  Erghi
-    ╰━━━━━━━╯
-```
-- CF monogram with lightning bolt symbolizing instant, intelligent communication
-- Rounded corners suggesting friendly, approachable technology
+The shipped mark (see `ChatIcon.tsx` in erghi-landing, `icon.svg`/`logo.svg` across every app): a blue (`#3b82f6`) rounded square (8px corner radius on a 32x32 viewBox) containing a white speech-bubble shape with three small blue dots inside, suggesting an active conversation.
 
 ---
 
@@ -125,59 +118,47 @@
 ## Color Palette (Extended)
 
 ```css
-/* Primary */
---cf-primary-50: #E6F0FF;
---cf-primary-100: #CCE1FF;
---cf-primary-200: #99C3FF;
---cf-primary-300: #66A5FF;
---cf-primary-400: #3387FF;
---cf-primary-500: #0066FF; /* Main */
---cf-primary-600: #0052CC;
---cf-primary-700: #003D99;
---cf-primary-800: #002966;
---cf-primary-900: #001433;
+/* Primary (blue) */
+--erghi-primary-50: #eff6ff;
+--erghi-primary-100: #dbeafe;
+--erghi-primary-200: #bfdbfe;
+--erghi-primary-300: #93c5fd;
+--erghi-primary-400: #60a5fa;
+--erghi-primary-500: #3b82f6; /* Main */
+--erghi-primary-600: #2563eb;
+--erghi-primary-700: #1d4ed8;
+--erghi-primary-800: #1e40af;
+--erghi-primary-900: #1e3a8a;
 
-/* Secondary */
---cf-secondary-50: #E6FAF5;
---cf-secondary-100: #CCF5EB;
---cf-secondary-200: #99EBD7;
---cf-secondary-300: #66E1C3;
---cf-secondary-400: #33D7AF;
---cf-secondary-500: #00D4AA; /* Main */
---cf-secondary-600: #00AA88;
---cf-secondary-700: #007F66;
---cf-secondary-800: #005544;
---cf-secondary-900: #002A22;
-
-/* Accent */
---cf-accent-50: #FFE9E3;
---cf-accent-100: #FFD3C7;
---cf-accent-200: #FFA78F;
---cf-accent-300: #FF7B57;
---cf-accent-400: #FF4F1F;
---cf-accent-500: #FF6B35; /* Main */
---cf-accent-600: #CC562A;
---cf-accent-700: #99401F;
---cf-accent-800: #662B15;
---cf-accent-900: #33150A;
+/* Secondary (purple) */
+--erghi-secondary-50: #f5f3ff;
+--erghi-secondary-100: #ede9fe;
+--erghi-secondary-200: #ddd6fe;
+--erghi-secondary-300: #c4b5fd;
+--erghi-secondary-400: #a78bfa;
+--erghi-secondary-500: #8b5cf6; /* Main */
+--erghi-secondary-600: #7c3aed;
+--erghi-secondary-700: #6d28d9;
+--erghi-secondary-800: #5b21b6;
+--erghi-secondary-900: #4c1d95;
 
 /* Neutrals */
---cf-gray-50: #F7F9FC;
---cf-gray-100: #EDF1F7;
---cf-gray-200: #E1E8F0;
---cf-gray-300: #C7D2E0;
---cf-gray-400: #A0AEC0;
---cf-gray-500: #718096;
---cf-gray-600: #4A5568;
---cf-gray-700: #2D3748;
---cf-gray-800: #1A202C;
---cf-gray-900: #1A1D29;
+--erghi-gray-50: #f8fafc;
+--erghi-gray-100: #f1f5f9;
+--erghi-gray-200: #e2e8f0;
+--erghi-gray-300: #cbd5e1;
+--erghi-gray-400: #94a3b8;
+--erghi-gray-500: #64748b;
+--erghi-gray-600: #475569;
+--erghi-gray-700: #334155;
+--erghi-gray-800: #1e293b;
+--erghi-gray-900: #0f172a;
 
 /* Semantic */
---cf-success: #10B981;
---cf-warning: #F59E0B;
---cf-error: #EF4444;
---cf-info: #3B82F6;
+--erghi-success: #10B981;
+--erghi-warning: #F59E0B;
+--erghi-error: #EF4444;
+--erghi-info: #3b82f6;
 ```
 
 ---
