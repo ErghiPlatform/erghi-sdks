@@ -8,6 +8,19 @@
 [Ll]ogs/
 .idea/
 
+# Node.js (javascript/, react/, angular/, widget/, docs/ all use npm)
+node_modules/
+dist/
+build/
+.angular/
+.next/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# Serena / IDE tool caches
+.serena/
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
