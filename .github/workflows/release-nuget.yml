@@ -1,13 +1,11 @@
 name: Release NuGet package
 
-# Publishes Erghi.SDK to nuget.org.
+# Publishes Erghi.SDK to nuget.org via Trusted Publishing (OIDC) - nuget.org
+# is configured (Package owner: erghi.ai, Publisher: GitHubActions,
+# Repository: ErghiPlatform/Erghi-sdks, Workflow: release-nuget.yml) to trade
+# this workflow's GitHub-issued OIDC token for a short-lived (~1hr) NuGet API
+# key, so no long-lived NUGET_API_KEY secret is stored or rotated.
 # Trigger manually or by pushing a tag: dotnet-v1.0.0
-# Requires the NUGET_API_KEY repository secret (nuget.org API key with push
-# rights on the Erghi.SDK package ID).
-#
-# Until NUGET_API_KEY is set, this job will fail at the `dotnet nuget push`
-# step with a clear auth error rather than silently no-op -- that's
-# intentional, it's the signal that credentials still need to be added.
 
 on:
   workflow_dispatch:
@@ -18,6 +16,9 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     defaults:
       run:
         working-directory: ./dotnet
@@ -38,5 +39,11 @@ jobs:
       - name: Pack
         run: dotnet pack Erghi.SDK/Erghi.SDK.csproj --configuration Release --output ./nupkg
 
+      - name: NuGet login (OIDC -> short-lived API key)
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: erghi.ai
+
       - name: Push to nuget.org
-        run: dotnet nuget push ./nupkg/*.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
