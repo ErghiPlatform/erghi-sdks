@@ -1,10 +1,13 @@
 name: Release NuGet package
 
 # Publishes Erghi.SDK to nuget.org via Trusted Publishing (OIDC) - nuget.org
-# is configured (Package owner: erghi.ai, Publisher: GitHubActions,
-# Repository: ErghiPlatform/Erghi-sdks, Workflow: release-nuget.yml) to trade
+# has a policy owned by the erghi.ai organization (Publisher: GitHubActions,
+# Repository: ErghiPlatform/erghi-sdks, Workflow: release-nuget.yml) to trade
 # this workflow's GitHub-issued OIDC token for a short-lived (~1hr) NuGet API
-# key, so no long-lived NUGET_API_KEY secret is stored or rotated.
+# key, so no long-lived NUGET_API_KEY secret is stored or rotated. The `user:`
+# below must be the nuget.org *username of the policy creator* (a person),
+# not the org/package-owner name -- nuget.org rejects the token exchange
+# otherwise ("No matching trust policy owned by user '<org>' was found").
 # Trigger manually or by pushing a tag: dotnet-v1.0.0
 
 on:
@@ -43,7 +46,7 @@ jobs:
         uses: NuGet/login@v1
         id: nuget-login
         with:
-          user: erghi.ai
+          user: ${{ secrets.NUGET_USER }}
 
       - name: Push to nuget.org
         run: dotnet nuget push ./nupkg/*.nupkg --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
