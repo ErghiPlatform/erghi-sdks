@@ -13,7 +13,7 @@ Official client SDKs for the [Erghi Platform](https://erghi.ai) — AI-powered c
 |-----|---------|--------|------|
 | [Widget (Vanilla JS)](#widget) | `@erghi-ai/widget` | Source-available¹ | [README](./widget/README.md) |
 | [JavaScript / TypeScript](#javascript--typescript) | `@erghi-ai/sdk` | ![npm](https://img.shields.io/npm/v/@erghi-ai/sdk) | [README](./javascript/README.md) |
-| [React](#react) | `@erghi-ai/react` | Ready — publishing shortly² | [README](./react/README.md) |
+| [React](#react) | `@erghi-ai/react` | ![npm](https://img.shields.io/npm/v/@erghi-ai/react) | [README](./react/README.md) |
 | [Angular](#angular) | `@erghi-ai/angular` | Source-available¹ | [README](./angular/README.md) |
 | [.NET / C#](#net--c) | `Erghi.SDK` | Ready — publishing shortly² | [README](./dotnet/README.md) |
 | [Python](#python) | `erghi-sdk` | ![PyPI](https://img.shields.io/pypi/v/erghi-sdk) | [README](./python/README.md) |
