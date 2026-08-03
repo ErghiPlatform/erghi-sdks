@@ -1,6 +1,6 @@
 # Erghi Widget
 
-Embeddable chat widget for websites - No dependencies, pure Vanilla JavaScript with TypeScript.
+Embeddable chat widget for websites - vanilla TypeScript (no UI framework), using the official `@microsoft/signalr` client for real-time delivery.
 
 ## Installation
 
@@ -43,13 +43,12 @@ new ErghiWidget({
   workspace: 'ws_xxxxx',
 
   // Optional
-  apiUrl: 'https://api.erghi.ai',  // Custom API URL
-  signalrUrl: 'https://api.erghi.ai/hubs/chat',  // Custom SignalR URL
+  apiUrl: 'https://api.erghi.ai',  // Custom API URL (the hub URL is derived from this, not separately configurable)
   theme: 'light',  // 'light' | 'dark' | 'auto'
   position: 'bottom-right',  // 'bottom-left' | 'bottom-right'
   primaryColor: '#007bff',  // Brand color
   greeting: 'Hi! How can we help?',  // Initial message
-  avatar: 'https://example.com/avatar.png',  // Support avatar
+  title: 'Support',  // Panel header title
   autoOpen: false,  // Auto-open on load
   direction: 'auto'  // 'auto' | 'ltr' | 'rtl' — 'auto' follows the visitor's locale (RTL for Arabic)
 });
@@ -117,8 +116,7 @@ new ErghiWidget({
   workspace: 'ws_abc123',
   theme: 'dark',
   primaryColor: '#8b5cf6',
-  position: 'bottom-left',
-  avatar: '/img/support-avatar.png'
+  position: 'bottom-left'
 });
 ```
 
@@ -167,8 +165,8 @@ useEffect(() => {
 
 ## Features
 
-✅ **Zero Dependencies** - Pure Vanilla JS, no libraries required  
-✅ **Lightweight** - < 50KB gzipped  
+✅ **Vanilla TypeScript** - No UI framework, bundles `@microsoft/signalr` for real-time delivery  
+✅ **Lightweight** - ~23KB gzipped  
 ✅ **Real-time** - SignalR WebSocket connection  
 ✅ **Responsive** - Mobile-friendly design  
 ✅ **Customizable** - Match your brand colors  

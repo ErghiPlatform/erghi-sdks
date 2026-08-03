@@ -62,3 +62,12 @@ class NotFoundError(ErghiError):
 
     def __init__(self, message: str = "Resource not found") -> None:
         super().__init__(message, "NOT_FOUND", 404)
+
+
+class HubException(ErghiError):
+    """The real-time hub rejected an invocation (a SignalR Completion message with an
+    error) -- for example ConversationOwnershipHubFilter denying JoinConversation/
+    SendMessage/etc. for a conversation outside the caller's own workspace."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message, "HUB_EXCEPTION")

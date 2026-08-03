@@ -1,9 +1,8 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import EventEmitter from 'eventemitter3';
-import WebSocket from 'ws';
+import * as signalR from '@microsoft/signalr';
 import {
   ErghiConfig,
-  WebSocketMessage,
   WebSocketEventType,
 } from './types';
 import {
@@ -32,9 +31,7 @@ type WebSocketEvents = {
 export class ErghiClient extends EventEmitter<WebSocketEvents> {
   private config: Required<ErghiConfig>;
   private httpClient: AxiosInstance;
-  private ws?: WebSocket;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
+  private hub?: signalR.HubConnection;
   private visitorId: string;
   
   public readonly auth: AuthResource;
@@ -182,87 +179,115 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
   }
 
   /**
-   * Connect to WebSocket
+   * Connect to the real-time hub. Was a raw `ws` WebSocket speaking a hand-rolled
+   * {type, data} envelope directly at /hubs/chat -- that never completes the SignalR
+   * negotiate/handshake a real ASP.NET Core SignalR hub requires, so it could not actually
+   * receive events from the real backend. Uses the official @microsoft/signalr client instead
+   * (same one the widget SDK, Angular SDK, and admin portal already use successfully against
+   * this exact hub), with SignalR's own automatic-reconnect in place of the previous
+   * hand-rolled exponential backoff.
    */
   public connect(): void {
-    if (this.ws?.readyState === WebSocket.OPEN) {
+    if (this.hub && this.hub.state !== signalR.HubConnectionState.Disconnected) {
       return;
     }
 
-    const wsUrl = `${this.config.wsUrl}/hubs/chat?access_token=${this.config.accessToken}`;
-    this.ws = new WebSocket(wsUrl);
+    this.hub = new signalR.HubConnectionBuilder()
+      .withUrl(`${this.config.wsUrl}/hubs/chat`, {
+        accessTokenFactory: () => this.config.accessToken,
+        // No explicit WebSocket implementation needed: @microsoft/signalr detects Node at
+        // runtime and require()s the `ws` package itself (kept as a dependency for exactly
+        // this) when no global `WebSocket` exists; browsers use the native global.
+      })
+      .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+      .build();
 
-    this.ws.on('open', () => {
-      this.debug('WebSocket connected');
-      this.reconnectAttempts = 0;
+    this.hub.on('MessageReceived', (data) => this.emit('message.received', data));
+    this.hub.on('MessageRead', (data) => this.emit('message.read', data));
+    this.hub.on('UserTyping', (data) => this.emit('user.typing', data));
+    this.hub.on('ConversationClosed', (data) => this.emit('conversation.closed', data));
+    this.hub.on('ConversationAssigned', (data) => this.emit('conversation.assigned', data));
+
+    this.hub.onreconnecting((error) => {
+      this.debug('Hub reconnecting', error);
+      this.emit('disconnected');
+    });
+    this.hub.onreconnected(() => {
+      this.debug('Hub reconnected');
       this.emit('connected');
     });
-
-    this.ws.on('message', (data: Buffer) => {
-      try {
-        const message: WebSocketMessage = JSON.parse(data.toString());
-        this.handleWebSocketMessage(message);
-      } catch (error) {
-        this.debug('Failed to parse WebSocket message', error);
+    this.hub.onclose((error) => {
+      this.debug('Hub closed', error);
+      this.emit('disconnected');
+      if (error) {
+        this.emit('error', error);
       }
     });
 
-    this.ws.on('close', () => {
-      this.debug('WebSocket closed');
-      this.emit('disconnected');
-      this.reconnect();
-    });
-
-    this.ws.on('error', (error) => {
-      this.debug('WebSocket error', error);
-      this.emit('error', error);
-    });
+    this.hub
+      .start()
+      .then(() => {
+        this.debug('Hub connected');
+        this.emit('connected');
+      })
+      .catch((error) => {
+        this.debug('Hub connection failed', error);
+        this.emit('error', error);
+      });
   }
 
   /**
-   * Disconnect from WebSocket
+   * Disconnect from the real-time hub.
    */
   public disconnect(): void {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = undefined;
+    if (this.hub) {
+      // stop() resolves once the connection is fully closed, but the public API is
+      // fire-and-forget (matching the previous synchronous ws.close() call) -- onclose above
+      // still fires 'disconnected' when it actually completes.
+      void this.hub.stop();
+      this.hub = undefined;
     }
   }
 
   /**
-   * Send message over WebSocket
+   * Invoke a hub method. Only the type strings with a real server-side hub method behind them
+   * are supported -- unlike the previous raw-WebSocket transport, which would silently accept
+   * (and send into the void, since the server never understood the envelope) any arbitrary
+   * type string.
    */
   public send(type: string, data: any): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new ErghiError('WebSocket is not connected', 'WS_NOT_CONNECTED');
+    if (!this.hub || this.hub.state !== signalR.HubConnectionState.Connected) {
+      throw new ErghiError('Hub is not connected', 'WS_NOT_CONNECTED');
     }
 
-    const message: WebSocketMessage = { type, data };
-    this.ws.send(JSON.stringify(message));
+    switch (type) {
+      case 'user.typing':
+        void this.hub.invoke('SendTyping', data?.conversationId);
+        break;
+      default:
+        throw new ErghiError(`Unsupported real-time event type: ${type}`, 'UNSUPPORTED_EVENT_TYPE');
+    }
+  }
+
+  /**
+   * Join a conversation's real-time group -- required before UserTyping/MessageRead events
+   * for that conversation will be delivered to this connection.
+   */
+  public joinConversation(conversationId: string): Promise<void> {
+    if (!this.hub || this.hub.state !== signalR.HubConnectionState.Connected) {
+      throw new ErghiError('Hub is not connected', 'WS_NOT_CONNECTED');
+    }
+    return this.hub.invoke('JoinConversation', conversationId);
+  }
+
+  public leaveConversation(conversationId: string): Promise<void> {
+    if (!this.hub || this.hub.state !== signalR.HubConnectionState.Connected) {
+      throw new ErghiError('Hub is not connected', 'WS_NOT_CONNECTED');
+    }
+    return this.hub.invoke('LeaveConversation', conversationId);
   }
 
   // Inherits typed 'on' from EventEmitter<WebSocketEvents>
-
-  private reconnect(): void {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      this.debug('Max reconnect attempts reached');
-      return;
-    }
-
-    this.reconnectAttempts++;
-    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
-    
-    this.debug(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
-    
-    setTimeout(() => {
-      this.connect();
-    }, delay);
-  }
-
-  private handleWebSocketMessage(message: WebSocketMessage): void {
-    this.debug('WebSocket message received', message);
-    this.emit(message.type as any, message.data);
-  }
 
   private handleError(error: AxiosError): ErghiError {
     const response = error.response;

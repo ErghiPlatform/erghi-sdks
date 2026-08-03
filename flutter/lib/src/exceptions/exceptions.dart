@@ -44,3 +44,10 @@ class WebSocketException extends ErghiException {
   WebSocketException(String message, {dynamic details})
       : super(message, details: details);
 }
+
+/// The real-time hub rejected an invocation (a SignalR Completion message with an error) --
+/// for example ConversationOwnershipHubFilter denying JoinConversation/SendMessage/etc. for a
+/// conversation outside the caller's own workspace.
+class HubException extends ErghiException {
+  HubException(String message) : super(message);
+}

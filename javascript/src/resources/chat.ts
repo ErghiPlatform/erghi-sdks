@@ -5,6 +5,8 @@ import {
   SendMessageRequest,
   PaginationParams,
   PaginatedResponse,
+  Widget,
+  CreateWidgetRequest,
 } from '../types';
 
 /**
@@ -31,6 +33,14 @@ export class ChatResource {
       '/api/conversations',
       { params }
     );
+    return response.data;
+  }
+
+  /**
+   * Create a widget for the authenticated workspace (POST /api/widgets).
+   */
+  async createWidget(data: CreateWidgetRequest): Promise<Widget> {
+    const response = await this.client.getHttpClient().post<Widget>('/api/widgets', data);
     return response.data;
   }
 

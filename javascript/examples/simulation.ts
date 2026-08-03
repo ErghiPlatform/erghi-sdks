@@ -64,16 +64,14 @@ async function main() {
 
   // ── 6. Create conversation ────────────────────────────────────────────────
   console.log('\n▶ Creating conversation…');
-  const conversation = await client.chat.createConversation({
-    widgetId: widget.id,
-    metadata: { source: 'simulation' },
-  });
+  const conversation = await client.chat.createConversation(widget.id, { source: 'simulation' });
   console.log('✓ Conversation created:', conversation.id, '/ status:', conversation.status);
 
-  // ── 7. Connect WebSocket ──────────────────────────────────────────────────
-  console.log('\n▶ Connecting WebSocket…');
-  await client.connect();
-  console.log('✓ WebSocket connected');
+  // ── 7. Connect to the real-time hub ───────────────────────────────────────
+  console.log('\n▶ Connecting to the real-time hub…');
+  client.connect();
+  await new Promise<void>((resolve) => client.on('connected', () => resolve()));
+  console.log('✓ Hub connected');
 
   // Register real-time event handlers
   client.on('message.received', (msg: any) => {
@@ -81,7 +79,7 @@ async function main() {
   });
 
   client.on('user.typing', (evt: any) => {
-    console.log(`  ✍️  [REALTIME] User ${evt.userId} typing: ${evt.isTyping}`);
+    console.log(`  ✍️  [REALTIME] User ${evt.userId} is typing`);
   });
 
   // ── 8. Join conversation room ─────────────────────────────────────────────
@@ -97,7 +95,7 @@ async function main() {
 
   console.log('\n▶ Sending messages…');
   for (const content of messages) {
-    const msg = await client.chat.sendMessage(conversation.id, { content });
+    const msg = await client.chat.sendMessage({ conversationId: conversation.id, content });
     console.log(`  ✓ Sent [${msg.id}]: "${msg.content}"`);
     await sleep(300);
   }
@@ -109,15 +107,13 @@ async function main() {
 
   // ── 11. Typing indicator ──────────────────────────────────────────────────
   console.log('\n▶ Sending typing indicator…');
-  await client.sendTyping(conversation.id, true);
-  await sleep(500);
-  await client.sendTyping(conversation.id, false);
-  console.log('  ✓ Typing indicators sent');
+  await client.chat.sendTyping(conversation.id);
+  console.log('  ✓ Typing indicator sent');
 
   // ── 12. Close conversation ────────────────────────────────────────────────
   console.log('\n▶ Closing conversation…');
-  const closed = await client.chat.closeConversation(conversation.id);
-  console.log('  ✓ Conversation status:', closed.status);
+  await client.chat.closeConversation(conversation.id);
+  console.log('  ✓ Conversation closed');
 
   // ── 13. Disconnect ────────────────────────────────────────────────────────
   await client.disconnect();

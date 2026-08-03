@@ -94,6 +94,23 @@ export interface Conversation {
   metadata?: Record<string, any>;
 }
 
+export interface Widget {
+  id: string;
+  workspaceId: string;
+  name: string;
+  slug: string;
+  isActive: boolean;
+  configuration?: Record<string, any>;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CreateWidgetRequest {
+  name: string;
+  slug: string;
+  configuration?: Record<string, any>;
+}
+
 export interface SendMessageRequest {
   conversationId: string;
   content: string;

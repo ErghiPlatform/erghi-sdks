@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "build": "webpack --mode production",
-    "build:portal": "npm run build && cp dist/widget.js ../../Erghi/erghi-user-portal/public/widget.js",
+    "build:portal": "npm run build && cp dist/widget.js ../../Erghi/erghi-widget-host/public/widget.js",
     "dev": "webpack --mode development --watch",
     "test": "jest --coverage",
     "test:watch": "jest --watch",

@@ -1,5 +1,5 @@
 # Deploys the Docusaurus docs site (in docs/) to Cloudflare Pages, matching
-# the deploy pattern used by erghi-landing/erghi-admin-portal/erghi-user-portal
+# the deploy pattern used by erghi-landing/erghi-admin-portal/erghi-widget-host
 # in the Erghi repo (see Erghi/.github/workflows/reusable-cloudflare-pages-deploy.yml).
 # Implemented directly here (not as a cross-repo reusable-workflow call) since
 # this repo is separate from Erghi and cross-repo `uses:` references need extra

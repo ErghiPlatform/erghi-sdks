@@ -216,7 +216,7 @@ Erghi Platform
 ├── erghi-conversation-api — Real-time chat with SignalR hub
 ├── erghi-ai-service      — AI response generation
 ├── erghi-admin-portal    — Agent & admin dashboard (Angular)
-└── erghi-user-portal     — Public-facing landing page (Angular)
+└── erghi-widget-host     — Public-facing landing page (Angular)
 
 erghi-sdks (this repo)
 ├── javascript/   — Core JS/TS SDK

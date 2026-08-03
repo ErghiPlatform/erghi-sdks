@@ -8,6 +8,7 @@ from .errors import (
     RateLimitError,
     NetworkError,
     NotFoundError,
+    HubException,
 )
 from .hmac import generate_identity_hash, verify_webhook_signature
 from .types import (
@@ -29,6 +30,7 @@ __all__ = [
     "RateLimitError",
     "NetworkError",
     "NotFoundError",
+    "HubException",
     "User",
     "RegisterRequest",
     "LoginRequest",
