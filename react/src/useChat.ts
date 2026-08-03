@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useErghi } from './context';
-import type { Message, SendMessageRequest, PaginationParams } from '@erghi/sdk';
+import type { Message, SendMessageRequest, PaginationParams } from '@erghi-ai/sdk';
 
 export function useChat(conversationId: string) {
   const { client } = useErghi();

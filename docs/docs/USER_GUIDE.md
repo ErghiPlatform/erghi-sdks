@@ -229,14 +229,14 @@ The widget reads its config from `data-*` attributes on the `<script>` tag itsel
 Install the SDK:
 
 ```bash
-npm install @erghi/angular
+npm install @erghi-ai/angular
 ```
 
 Provide the config via the `ERGHI_CONFIG` injection token in your app's providers (no `NgModule.forRoot`):
 
 ```typescript
 // app.config.ts
-import { ERGHI_CONFIG, ErghiConfig } from '@erghi/angular';
+import { ERGHI_CONFIG, ErghiConfig } from '@erghi-ai/angular';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -253,11 +253,11 @@ Then inject the provided `AuthService`/`ChatService`/`SignalrService` where need
 ### JavaScript / TypeScript
 
 ```bash
-npm install @erghi/sdk
+npm install @erghi-ai/sdk
 ```
 
 ```typescript
-import ErghiClient from '@erghi/sdk';
+import ErghiClient from '@erghi-ai/sdk';
 
 const client = new ErghiClient({ apiUrl: 'https://api.erghi.ai', apiKey: 'your-api-key' });
 await client.auth.login({ email: 'user@example.com', password: 'password' });
@@ -266,11 +266,11 @@ await client.auth.login({ email: 'user@example.com', password: 'password' });
 ### React (see `erghi-sdks/react` for full details)
 
 ```bash
-npm install @erghi/react @erghi/sdk
+npm install @erghi-ai/react @erghi-ai/sdk
 ```
 
 ```tsx
-import { ErghiProvider, useChat } from '@erghi/react';
+import { ErghiProvider, useChat } from '@erghi-ai/react';
 
 function App() {
   return (
@@ -344,7 +344,7 @@ All Erghi SDKs share the same interface. See `erghi-sdks/` for language-specific
 | `getContext()` | Read the current visitor context |
 | `destroy()` | Tear down the widget instance |
 
-The client SDKs (`@erghi/sdk`, `Erghi.SDK`, `erghi-sdk`, etc.) expose a different, resource-oriented API (`client.auth`, `client.chat`, `client.workspace`) for building custom integrations rather than embedding the pre-built widget — see the SDK-specific quick starts above.
+The client SDKs (`@erghi-ai/sdk`, `Erghi.SDK`, `erghi-sdk`, etc.) expose a different, resource-oriented API (`client.auth`, `client.chat`, `client.workspace`) for building custom integrations rather than embedding the pre-built widget — see the SDK-specific quick starts above.
 
 ---
 

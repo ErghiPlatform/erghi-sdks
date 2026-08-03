@@ -5,7 +5,7 @@ Official Angular 19+ SDK for Erghi - Real-time chat with SignalR integration.
 ## Installation
 
 ```bash
-npm install @erghi/angular @microsoft/signalr
+npm install @erghi-ai/angular @microsoft/signalr
 ```
 
 ## Setup
@@ -15,7 +15,7 @@ npm install @erghi/angular @microsoft/signalr
 ```typescript
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { ERGHI_CONFIG, authInterceptor, errorInterceptor } from '@erghi/angular';
+import { ERGHI_CONFIG, authInterceptor, errorInterceptor } from '@erghi-ai/angular';
 
 bootstrapApplication(AppComponent, {
   providers: [
@@ -39,7 +39,7 @@ bootstrapApplication(AppComponent, {
 
 ```typescript
 import { Component, inject } from '@angular/core';
-import { AuthService } from '@erghi/angular';
+import { AuthService } from '@erghi-ai/angular';
 
 @Component({
   selector: 'app-login',
@@ -72,7 +72,7 @@ export class LoginComponent {
 
 ```typescript
 import { Component, inject, OnInit } from '@angular/core';
-import { ChatService, Message } from '@erghi/angular';
+import { ChatService, Message } from '@erghi-ai/angular';
 
 @Component({
   selector: 'app-chat',
@@ -116,7 +116,7 @@ export class ChatComponent implements OnInit {
 
 ```typescript
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
-import { SignalRService, Message } from '@erghi/angular';
+import { SignalRService, Message } from '@erghi-ai/angular';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -175,7 +175,7 @@ export class RealtimeChatComponent implements OnInit, OnDestroy {
 
 ```typescript
 import { Component, inject } from '@angular/core';
-import { ChatService, Widget } from '@erghi/angular';
+import { ChatService, Widget } from '@erghi-ai/angular';
 
 @Component({
   selector: 'app-widgets',

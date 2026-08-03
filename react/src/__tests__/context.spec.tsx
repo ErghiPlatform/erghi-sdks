@@ -2,9 +2,9 @@ import { vi } from 'vitest';
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { ErghiProvider, useErghi } from '../context';
-import ErghiClient from '@erghi/sdk';
+import ErghiClient from '@erghi-ai/sdk';
 
-vi.mock('@erghi/sdk', () => {
+vi.mock('@erghi-ai/sdk', () => {
   const mockClient = vi.fn();
   return {
     default: mockClient,

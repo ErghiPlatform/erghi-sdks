@@ -7,7 +7,7 @@
  * Add it to any Angular 17+ app that imports the Erghi Angular SDK:
  *
  *   // app.config.ts
- *   import { provideErghi } from '@erghi/angular-sdk';
+ *   import { provideErghi } from '@erghi-ai/angular-sdk';
  *   providers: [provideErghi({ apiUrl: 'http://localhost:5000' })]
  *
  * Then use <app-simulation /> in your template.

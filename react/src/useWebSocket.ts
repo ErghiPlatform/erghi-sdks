@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useErghi } from './context';
-import type { WebSocketEventType } from '@erghi/sdk';
+import type { WebSocketEventType } from '@erghi-ai/sdk';
 
 export function useWebSocket() {
   const { client } = useErghi();

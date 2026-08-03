@@ -11,4 +11,4 @@ export type {
   Message,
   Conversation,
   Workspace,
-} from '@erghi/sdk';
+} from '@erghi-ai/sdk';

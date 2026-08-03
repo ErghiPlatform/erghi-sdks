@@ -1,5 +1,5 @@
 {
-  "name": "@erghi/widget",
+  "name": "@erghi-ai/widget",
   "version": "1.0.0",
   "description": "Embeddable chat widget for websites - Vanilla JS, no dependencies",
   "main": "dist/widget.js",

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import ErghiClient from '@erghi/sdk';
-import type { ErghiConfig, User, AuthResponse } from '@erghi/sdk';
+import ErghiClient from '@erghi-ai/sdk';
+import type { ErghiConfig, User, AuthResponse } from '@erghi-ai/sdk';
 
 interface ErghiContextValue {
   client: ErghiClient;

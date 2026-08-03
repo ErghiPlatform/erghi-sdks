@@ -1,5 +1,5 @@
 {
-  "name": "@erghi/sdk",
+  "name": "@erghi-ai/sdk",
   "version": "1.0.0",
   "description": "Official JavaScript/TypeScript SDK for the Erghi customer-support platform",
   "main": "dist/index.js",

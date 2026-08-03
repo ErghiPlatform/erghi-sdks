@@ -1,5 +1,5 @@
 {
-  "name": "@erghi/angular",
+  "name": "@erghi-ai/angular",
   "version": "1.0.0",
   "description": "Official Angular SDK for Erghi - Real-time chat with SignalR",
   "main": "dist/index.js",

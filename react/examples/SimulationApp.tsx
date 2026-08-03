@@ -5,7 +5,7 @@
  * a locally running Erghi stack (http://localhost:5000).
  *
  * Add this component to a Create-React-App or Vite project that has the
- * @erghi/react-sdk package installed (or use the local source via path alias).
+ * @erghi-ai/react-sdk package installed (or use the local source via path alias).
  */
 
 import React, { useState, useEffect, useRef, FormEvent } from 'react';

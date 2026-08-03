@@ -5,13 +5,13 @@ React hooks and components for the [Erghi Platform](https://erghi.ai).
 ## Installation
 
 ```bash
-npm install @erghi/react @erghi/sdk
+npm install @erghi-ai/react @erghi-ai/sdk
 ```
 
 ## Quick Start
 
 ```tsx
-import { ErghiProvider, useAuth, useChat } from '@erghi/react';
+import { ErghiProvider, useAuth, useChat } from '@erghi-ai/react';
 
 function App() {
   return (
@@ -146,7 +146,7 @@ useEffect(() => {
 Fully typed with TypeScript:
 
 ```tsx
-import type { User, Message, Conversation } from '@erghi/react';
+import type { User, Message, Conversation } from '@erghi-ai/react';
 
 const user: User = useAuth().user!;
 const messages: Message[] = useChat('conv-id').messages;

@@ -5,17 +5,17 @@ Official JavaScript/TypeScript SDK for the [Erghi Platform](https://erghi.ai).
 ## Installation
 
 ```bash
-npm install @erghi/sdk
+npm install @erghi-ai/sdk
 # or
-yarn add @erghi/sdk
+yarn add @erghi-ai/sdk
 # or
-pnpm add @erghi/sdk
+pnpm add @erghi-ai/sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import ErghiClient from '@erghi/sdk';
+import ErghiClient from '@erghi-ai/sdk';
 
 // Initialize the client
 const client = new ErghiClient({
@@ -182,7 +182,7 @@ package root — they don't need an `ErghiClient` instance. Only call them from 
 never ship your widget secret key or webhook secret to the browser.
 
 ```typescript
-import { generateIdentityHash, verifyWebhookSignature } from '@erghi/sdk';
+import { generateIdentityHash, verifyWebhookSignature } from '@erghi-ai/sdk';
 
 // On your server, after the user logs in:
 const identityHash = generateIdentityHash(currentUser.id, process.env.ERGHI_WIDGET_SECRET!);
@@ -226,7 +226,7 @@ import {
   RateLimitError,
   NetworkError,
   NotFoundError,
-} from '@erghi/sdk';
+} from '@erghi-ai/sdk';
 
 try {
   await client.auth.login({ email: 'invalid', password: 'wrong' });
@@ -256,7 +256,7 @@ import type {
   Conversation,
   AuthResponse,
   PaginatedResponse,
-} from '@erghi/sdk';
+} from '@erghi-ai/sdk';
 
 const user: User = await client.auth.me();
 const messages: PaginatedResponse<Message> = await client.chat.getMessages('conv-id');
@@ -311,7 +311,7 @@ const client = new ErghiClient({
 ## Node.js Usage
 
 ```javascript
-const ErghiClient = require('@erghi/sdk').default;
+const ErghiClient = require('@erghi-ai/sdk').default;
 
 const client = new ErghiClient({
   apiUrl: 'https://api.erghi.ai',

@@ -46,9 +46,9 @@ The shipped mark (see `ChatIcon.tsx` in erghi-landing, `icon.svg`/`logo.svg` acr
 - **Gateway Service** (formerly API Gateway)
 
 ### SDK Packages
-- **@erghi/sdk** - JavaScript/TypeScript
+- **@erghi-ai/sdk** - JavaScript/TypeScript
 - **erghi-sdk** - Python
-- **@erghi/react** - React
+- **@erghi-ai/react** - React
 - **erghi_sdk** - Flutter
 - **ErghiSDK** - Swift
 - **erghi-sdk** - Kotlin

@@ -11,10 +11,10 @@ Official client SDKs for the [Erghi Platform](https://erghi.ai) — AI-powered c
 
 | SDK | Package | Status | Docs |
 |-----|---------|--------|------|
-| [Widget (Vanilla JS)](#widget) | `@erghi/widget` | ![npm](https://img.shields.io/npm/v/@erghi/widget) | [README](./widget/README.md) |
-| [JavaScript / TypeScript](#javascript--typescript) | `@erghi/sdk` | ![npm](https://img.shields.io/npm/v/@erghi/sdk) | [README](./javascript/README.md) |
-| [React](#react) | `@erghi/react` | Source-available¹ | [README](./react/README.md) |
-| [Angular](#angular) | `@erghi/angular` | Source-available¹ | [README](./angular/README.md) |
+| [Widget (Vanilla JS)](#widget) | `@erghi-ai/widget` | ![npm](https://img.shields.io/npm/v/@erghi-ai/widget) | [README](./widget/README.md) |
+| [JavaScript / TypeScript](#javascript--typescript) | `@erghi-ai/sdk` | ![npm](https://img.shields.io/npm/v/@erghi-ai/sdk) | [README](./javascript/README.md) |
+| [React](#react) | `@erghi-ai/react` | Source-available¹ | [README](./react/README.md) |
+| [Angular](#angular) | `@erghi-ai/angular` | Source-available¹ | [README](./angular/README.md) |
 | [.NET / C#](#net--c) | `Erghi.SDK` | Source-available¹ | [README](./dotnet/README.md) |
 | [Python](#python) | `erghi-sdk` | Source-available¹ | [README](./python/README.md) |
 | [Flutter / Dart](#flutter--dart) | `erghi_sdk` | Source-available¹ | [README](./flutter/README.md) |
@@ -29,11 +29,11 @@ Official client SDKs for the [Erghi Platform](https://erghi.ai) — AI-powered c
 ### JavaScript / TypeScript
 
 ```bash
-npm install @erghi/sdk
+npm install @erghi-ai/sdk
 ```
 
 ```typescript
-import ErghiClient from '@erghi/sdk';
+import ErghiClient from '@erghi-ai/sdk';
 
 const client = new ErghiClient({
   apiUrl: 'https://api.erghi.ai',
@@ -52,11 +52,11 @@ client.connect();
 ### React
 
 ```bash
-npm install @erghi/react @erghi/sdk
+npm install @erghi-ai/react @erghi-ai/sdk
 ```
 
 ```tsx
-import { ErghiProvider, useAuth, useChat } from '@erghi/react';
+import { ErghiProvider, useAuth, useChat } from '@erghi-ai/react';
 
 function App() {
   return (
@@ -74,12 +74,12 @@ function App() {
 ### Angular
 
 ```bash
-npm install @erghi/angular
+npm install @erghi-ai/angular
 ```
 
 ```typescript
 // app.config.ts
-import { ERGHI_CONFIG, ErghiConfig } from '@erghi/angular';
+import { ERGHI_CONFIG, ErghiConfig } from '@erghi-ai/angular';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -101,7 +101,7 @@ export const appConfig: ApplicationConfig = {
 ### Widget (Vanilla JS — Embeddable)
 
 ```bash
-npm install @erghi/widget
+npm install @erghi-ai/widget
 ```
 
 ```html

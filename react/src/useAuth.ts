@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useErghi } from './context';
-import type { LoginRequest, RegisterRequest, AuthResponse } from '@erghi/sdk';
+import type { LoginRequest, RegisterRequest, AuthResponse } from '@erghi-ai/sdk';
 
 export function useAuth() {
   const { client, user, isAuthenticated, isLoading: contextLoading } = useErghi();

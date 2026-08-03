@@ -13,11 +13,11 @@ Embeddable chat widget for websites - vanilla TypeScript (no UI framework), usin
 ### Option 2: npm
 
 ```bash
-npm install @erghi/widget
+npm install @erghi-ai/widget
 ```
 
 ```javascript
-import ErghiWidget from '@erghi/widget';
+import ErghiWidget from '@erghi-ai/widget';
 
 new ErghiWidget({
   workspace: 'YOUR_WORKSPACE_ID'
