@@ -221,6 +221,22 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
     }
     .send-btn:disabled { opacity: .45; cursor: not-allowed; }
     .root[dir="rtl"] .send-btn svg { transform: scaleX(-1); }
+    .footer {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px 10px;
+      background: #fff;
+      flex-shrink: 0;
+      font-size: 11px;
+    }
+    .footer a {
+      color: #9095a1;
+      text-decoration: none;
+    }
+    .footer a:hover { color: #6b7280; text-decoration: underline; }
+    .footer-sep { color: #d1d5db; }
     .bubble {
       width: 56px; height: 56px;
       border-radius: 50%;

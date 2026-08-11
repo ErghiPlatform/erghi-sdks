@@ -34,6 +34,9 @@ const EN: Record<string, string> = {
   'widget.source.label': 'Source',
   'widget.feedback.up': 'Helpful',
   'widget.feedback.down': 'Not helpful',
+  'widget.footer.terms': 'Terms',
+  'widget.footer.privacy': 'Privacy',
+  'widget.footer.support': 'Support',
 };
 
 const AR: Record<string, string> = {
@@ -57,6 +60,9 @@ const AR: Record<string, string> = {
   'widget.source.label': 'المصدر',
   'widget.feedback.up': 'مفيد',
   'widget.feedback.down': 'غير مفيد',
+  'widget.footer.terms': 'الشروط',
+  'widget.footer.privacy': 'الخصوصية',
+  'widget.footer.support': 'الدعم',
 };
 
 const ES: Record<string, string> = {
@@ -80,6 +86,9 @@ const ES: Record<string, string> = {
   'widget.source.label': 'Fuente',
   'widget.feedback.up': 'Útil',
   'widget.feedback.down': 'No útil',
+  'widget.footer.terms': 'Términos',
+  'widget.footer.privacy': 'Privacidad',
+  'widget.footer.support': 'Soporte',
 };
 
 const BUNDLED: Record<string, Record<string, string>> = { en: EN, ar: AR, es: ES };

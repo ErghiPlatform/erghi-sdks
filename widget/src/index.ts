@@ -68,6 +68,14 @@ export default class ErghiWidget {
     showAgentName: true,
     assignedAgentName: '',
   };
+  // Populated from WidgetEmbedConfigDto's TermsUrl/PrivacyUrl/SupportUrl (workspace branding
+  // settings, admin portal's "Contact & Legal" card) — empty string means "not configured",
+  // in which case that link is simply omitted from the footer, not rendered blank.
+  private footerLinks = {
+    termsUrl: '',
+    privacyUrl: '',
+    supportUrl: '',
+  };
 
   constructor(config: ErghiConfig) {
     const widgetId = config.widgetId || config.workspace;
@@ -159,7 +167,30 @@ export default class ErghiWidget {
         showAgentName: data.showAgentName ?? data.ShowAgentName ?? true,
         assignedAgentName: this.displayConfig.assignedAgentName,
       };
+      this.footerLinks = {
+        termsUrl: safeHttpsUrl(data.termsUrl ?? data.TermsUrl),
+        privacyUrl: safeHttpsUrl(data.privacyUrl ?? data.PrivacyUrl),
+        supportUrl: safeHttpsUrl(data.supportUrl ?? data.SupportUrl),
+      };
     } catch { /* optional */ }
+  }
+
+  /** True if footerLinks has at least one configured link — controls whether the footer
+   * element is rendered at all. */
+  private hasFooterLinks(): boolean {
+    return !!(this.footerLinks.termsUrl || this.footerLinks.privacyUrl || this.footerLinks.supportUrl);
+  }
+
+  private buildFooterHtml(): string {
+    if (!this.hasFooterLinks()) return '';
+    const links: string[] = [];
+    if (this.footerLinks.termsUrl)
+      links.push(`<a href="${escapeHtml(this.footerLinks.termsUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(this.tr('widget.footer.terms', 'Terms'))}</a>`);
+    if (this.footerLinks.privacyUrl)
+      links.push(`<a href="${escapeHtml(this.footerLinks.privacyUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(this.tr('widget.footer.privacy', 'Privacy'))}</a>`);
+    if (this.footerLinks.supportUrl)
+      links.push(`<a href="${escapeHtml(this.footerLinks.supportUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(this.tr('widget.footer.support', 'Support'))}</a>`);
+    return `<div class="footer">${links.join('<span class="footer-sep">·</span>')}</div>`;
   }
 
   /**
@@ -247,6 +278,7 @@ export default class ErghiWidget {
           <input type="text" id="cf-input" placeholder="${escapeHtml(this.tr('widget.input.placeholder', 'Type a message…'))}" autocomplete="off" maxlength="4000" />
           <button type="button" class="send-btn" id="cf-send" aria-label="${escapeHtml(this.tr('widget.aria.send', 'Send'))}">${ICON_SEND}</button>
         </div>
+        ${this.buildFooterHtml()}
       </div>
       <button type="button" class="bubble" id="cf-bubble" aria-label="${escapeHtml(this.tr('widget.aria.open', 'Open chat'))}">${ICON_CHAT}</button>
     `;
@@ -869,8 +901,34 @@ export default class ErghiWidget {
   }
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+/** Returns the URL unchanged if it's a well-formed https:// URL, else ''. The backend already
+ * validates these as HTTPS-only at save time (UpdateBrandingRequestValidator), but the widget
+ * embeds on arbitrary third-party sites, so it re-validates here rather than trusting a
+ * `javascript:`/`data:` scheme could never reach this code path some other way. */
+function safeHttpsUrl(value: unknown): string {
+  if (typeof value !== 'string' || !value) return '';
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'https:' ? value : '';
+  } catch {
+    return '';
+  }
+}
+
+export function escapeHtml(s: string): string {
+  // Quotes matter here, not just for general-purpose HTML escaping: every current caller
+  // interpolates this into double-quoted attribute positions inside a template-literal
+  // innerHTML (e.g. aria-label="${escapeHtml(...)}"), sourced from remote i18n translation
+  // strings (see fetchTranslations()) -- an unescaped `"` in that value closes the attribute
+  // early and lets the rest of the string inject arbitrary attributes/event handlers,
+  // running in the security context of every third-party site that embeds this widget
+  // (2026-08-08 security audit).
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function parseJsonAttr(raw: string | null): Record<string, unknown> | undefined {
