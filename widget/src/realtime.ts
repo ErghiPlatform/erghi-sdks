@@ -27,11 +27,22 @@ export class ConversationRealtimeClient {
   private hub: signalR.HubConnection | null = null;
   private handlers: RealtimeHandlers | null = null;
 
-  async connect(apiUrl: string, conversationId: string, handlers: RealtimeHandlers): Promise<void> {
+  async connect(
+    apiUrl: string,
+    conversationId: string,
+    visitorToken: string | null,
+    handlers: RealtimeHandlers
+  ): Promise<void> {
     this.handlers = handlers;
     await this.disconnect();
 
-    const hubUrl = `${apiUrl.replace(/\/$/, '')}/hubs/visitor?conversationId=${encodeURIComponent(conversationId)}`;
+    // The hub has no workspace_id claim to authorize an anonymous connection against, so it
+    // gates on this per-conversation token instead (Erghi.Conversation's VisitorChatHub,
+    // P1-3/P1-4 fix) -- a missing/invalid token gets the connection aborted server-side.
+    let hubUrl = `${apiUrl.replace(/\/$/, '')}/hubs/visitor?conversationId=${encodeURIComponent(conversationId)}`;
+    if (visitorToken) {
+      hubUrl += `&visitorToken=${encodeURIComponent(visitorToken)}`;
+    }
     this.hub = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl)
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])

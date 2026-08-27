@@ -4,9 +4,11 @@ type SignalRCallback = (payload: unknown) => void;
 
 const registeredHandlers = new Map<string, SignalRCallback>();
 
+const withUrlSpy = jest.fn().mockReturnThis();
+
 jest.mock('@microsoft/signalr', () => ({
   HubConnectionBuilder: jest.fn().mockImplementation(() => ({
-    withUrl: jest.fn().mockReturnThis(),
+    withUrl: withUrlSpy,
     withAutomaticReconnect: jest.fn().mockReturnThis(),
     build: jest.fn().mockReturnValue({
       start: jest.fn().mockResolvedValue(undefined),
@@ -31,9 +33,10 @@ describe('ConversationRealtimeClient', () => {
 
   beforeEach(async () => {
     registeredHandlers.clear();
+    withUrlSpy.mockClear();
     received = [];
     client = new ConversationRealtimeClient();
-    await client.connect('https://api.test.com', 'conv-1', {
+    await client.connect('https://api.test.com', 'conv-1', 'visitor-token-abc', {
       onMessage: (msg) => received.push(msg),
     });
   });
@@ -113,5 +116,38 @@ describe('ConversationRealtimeClient', () => {
     emitMessageReceived({ sender: 'bot' });
 
     expect(received).toHaveLength(0);
+  });
+
+  describe('visitor token on the hub URL', () => {
+    // VisitorChatHub (Erghi.Conversation P1-3/P1-4 fix) authorizes an anonymous connection
+    // solely on this query param -- without it the server aborts the connection.
+    it('appends the visitor token as a query parameter on connect', () => {
+      const url = withUrlSpy.mock.calls[0][0] as string;
+      expect(url).toBe('https://api.test.com/hubs/visitor?conversationId=conv-1&visitorToken=visitor-token-abc');
+    });
+
+    it('omits the visitorToken param when no token is available', async () => {
+      withUrlSpy.mockClear();
+      const noTokenClient = new ConversationRealtimeClient();
+      await noTokenClient.connect('https://api.test.com', 'conv-2', null, {
+        onMessage: () => undefined,
+      });
+
+      const url = withUrlSpy.mock.calls[0][0] as string;
+      expect(url).toBe('https://api.test.com/hubs/visitor?conversationId=conv-2');
+      await noTokenClient.disconnect();
+    });
+
+    it('URL-encodes a token containing special characters', async () => {
+      withUrlSpy.mockClear();
+      const specialClient = new ConversationRealtimeClient();
+      await specialClient.connect('https://api.test.com', 'conv-3', 'a+b/c=d', {
+        onMessage: () => undefined,
+      });
+
+      const url = withUrlSpy.mock.calls[0][0] as string;
+      expect(url).toBe('https://api.test.com/hubs/visitor?conversationId=conv-3&visitorToken=a%2Bb%2Fc%3Dd');
+      await specialClient.disconnect();
+    });
   });
 });

@@ -48,6 +48,12 @@ export default class ErghiWidget {
   private shadow: ShadowRoot | null = null;
   private isOpen = false;
   private conversationId: string | null = null;
+  // Per-conversation credential minted by POST /api/conversations (VisitorToken field,
+  // Erghi.Conversation P1-3/P1-4 fix). Required on every subsequent anonymous call for this
+  // conversation -- as the X-Visitor-Token header on REST calls, and as a ?visitorToken=
+  // query param on the /hubs/visitor SignalR connection. Persisted alongside conversationId
+  // so a restored session can keep using it.
+  private visitorToken: string | null = null;
   private visitorId: string | null = null;
   private messages: Message[] = [];
   private isTyping = false;
@@ -362,6 +368,13 @@ export default class ErghiWidget {
     return { ...this.config.visitorContext, locale: this.locale };
   }
 
+  /** Merges the current visitor token (if any) into a headers object as X-Visitor-Token.
+   * Every REST call scoped to this.conversationId must go through this — the server now
+   * rejects anonymous conversation access without it (Erghi.Conversation P1-3/P1-4 fix). */
+  private visitorHeaders(base: Record<string, string> = {}): Record<string, string> {
+    return this.visitorToken ? { ...base, 'X-Visitor-Token': this.visitorToken } : base;
+  }
+
   private async syncMetadata(): Promise<void> {
     if (!this.conversationId) return;
     const metadata = this.buildMetadata();
@@ -370,7 +383,7 @@ export default class ErghiWidget {
     try {
       await fetch(`${this.config.apiUrl}/api/conversations/${this.conversationId}/metadata`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.visitorHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ metadata, merge: true }),
       });
     } catch (err) {
@@ -392,6 +405,7 @@ export default class ErghiWidget {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       this.conversationId = data.id ?? data.Id;
+      this.visitorToken = data.visitorToken ?? data.VisitorToken ?? null;
       this.saveSession();
       void this.loadPublicBranding(data.workspaceId ?? data.WorkspaceId);
       void this.connectRealtime();
@@ -424,7 +438,7 @@ export default class ErghiWidget {
         fd.append('file', this.pendingFile);
         const up = await fetch(
           `${this.config.apiUrl}/api/conversations/${this.conversationId}/attachments`,
-          { method: 'POST', body: fd }
+          { method: 'POST', headers: this.visitorHeaders(), body: fd }
         );
         if (!up.ok) throw new Error(`Upload HTTP ${up.status}`);
         const uploaded = await up.json();
@@ -444,7 +458,7 @@ export default class ErghiWidget {
         `${this.config.apiUrl}/api/conversations/${this.conversationId}/messages`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: this.visitorHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ content, type: 'text', attachments }),
         }
       );
@@ -503,7 +517,7 @@ export default class ErghiWidget {
     if (!this.conversationId) return;
 
     try {
-      await this.realtime.connect(this.config.apiUrl, this.conversationId, {
+      await this.realtime.connect(this.config.apiUrl, this.conversationId, this.visitorToken, {
         onMessage: (msg) => this.handleInboundMessage(msg),
         onClosed: () => this.handleSessionEnded(),
         onEscalated: (payload) => {
@@ -580,7 +594,10 @@ export default class ErghiWidget {
         return;
       }
       try {
-        const res = await fetch(`${this.config.apiUrl}/api/conversations/${this.conversationId}/messages`);
+        const res = await fetch(
+          `${this.config.apiUrl}/api/conversations/${this.conversationId}/messages`,
+          { headers: this.visitorHeaders() }
+        );
         const list = this.extractMessages(await res.json());
         list.forEach(m => {
           const id = (m as Message & { Id?: string }).id ?? (m as Message & { Id?: string }).Id ?? '';
@@ -619,7 +636,7 @@ export default class ErghiWidget {
     try {
       const res = await fetch(
         `${this.config.apiUrl}/api/conversations/${this.conversationId}/heartbeat`,
-        { method: 'POST' }
+        { method: 'POST', headers: this.visitorHeaders() }
       );
       if (!res.ok) return;
       const data = await res.json();
@@ -749,7 +766,7 @@ export default class ErghiWidget {
         `${this.config.apiUrl}/api/conversations/${this.conversationId}/messages/${messageId}/feedback`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: this.visitorHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ rating }),
         }
       );
@@ -796,6 +813,7 @@ export default class ErghiWidget {
     try {
       localStorage.setItem(this.sessionKey(), JSON.stringify({
         conversationId: this.conversationId,
+        visitorToken: this.visitorToken,
         savedAt: Date.now(),
       }));
     } catch {
@@ -814,6 +832,7 @@ export default class ErghiWidget {
   private handleSessionEnded(): void {
     this.addSystemMessage(this.tr('widget.session.ended', 'This conversation has ended. Start a new chat if you need more help.'));
     this.conversationId = null;
+    this.visitorToken = null;
     this.clearSession();
     void this.realtime.disconnect();
     this.stopHeartbeat();
@@ -829,8 +848,11 @@ export default class ErghiWidget {
     if (!raw) return false;
 
     let conversationId: string;
+    let visitorToken: string | null = null;
     try {
-      conversationId = JSON.parse(raw).conversationId as string;
+      const parsed = JSON.parse(raw);
+      conversationId = parsed.conversationId as string;
+      visitorToken = (parsed.visitorToken as string | null | undefined) ?? null;
     } catch {
       this.clearSession();
       return false;
@@ -838,7 +860,9 @@ export default class ErghiWidget {
     if (!conversationId) return false;
 
     try {
-      const convRes = await fetch(`${this.config.apiUrl}/api/conversations/${conversationId}`);
+      const convRes = await fetch(`${this.config.apiUrl}/api/conversations/${conversationId}`, {
+        headers: visitorToken ? { 'X-Visitor-Token': visitorToken } : undefined,
+      });
       if (!convRes.ok) {
         this.clearSession();
         return false;
@@ -851,6 +875,7 @@ export default class ErghiWidget {
       }
 
       this.conversationId = conversationId;
+      this.visitorToken = visitorToken;
       void this.loadPublicBranding(conv.workspaceId ?? conv.WorkspaceId);
       await this.loadMessageHistory();
       await this.connectRealtime();
@@ -869,7 +894,10 @@ export default class ErghiWidget {
     this.knownMessageIds.clear();
 
     try {
-      const res = await fetch(`${this.config.apiUrl}/api/conversations/${this.conversationId}/messages?limit=200`);
+      const res = await fetch(
+        `${this.config.apiUrl}/api/conversations/${this.conversationId}/messages?limit=200`,
+        { headers: this.visitorHeaders() }
+      );
       const list = this.extractMessages(await res.json());
       const sorted = [...list].sort((a, b) => {
         const ta = new Date(a.createdAt ?? (a as Message & { CreatedAt?: string }).CreatedAt ?? 0).getTime();

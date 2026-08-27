@@ -190,7 +190,7 @@ describe('ErghiWidget', () => {
     it('should handle conversation creation error', async () => {
       (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      
+
       await widget.open();
       await flushPromises();
 
@@ -199,6 +199,129 @@ describe('ErghiWidget', () => {
         expect.any(Error)
       );
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('Visitor token (Erghi.Conversation P1-3/P1-4 fix)', () => {
+    // POST /api/conversations now returns a per-conversation visitorToken; every subsequent
+    // anonymous REST call must send it back as X-Visitor-Token or the server rejects it.
+    beforeEach(() => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 'conv-vt-1', visitorToken: 'tok-abc123', messages: [], active: true }),
+      });
+    });
+
+    it('captures visitorToken from the conversation-create response', async () => {
+      await widget.open();
+      await flushPromises();
+
+      expect((widget as any).visitorToken).toBe('tok-abc123');
+    });
+
+    it('persists visitorToken to localStorage alongside the conversation id', async () => {
+      await widget.open();
+      await flushPromises();
+
+      const saved = JSON.parse(localStorage.getItem('erghi:session:test-widget-uuid') || '{}');
+      expect(saved.conversationId).toBe('conv-vt-1');
+      expect(saved.visitorToken).toBe('tok-abc123');
+    });
+
+    it('sends the token as X-Visitor-Token on sendMessage', async () => {
+      await widget.open();
+      await flushPromises();
+      (global.fetch as jest.Mock).mockClear();
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ id: 'm1' }) });
+
+      const input = getShadowRoot()?.getElementById('cf-input') as HTMLInputElement;
+      const sendButton = getShadowRoot()?.getElementById('cf-send') as HTMLButtonElement;
+      input.value = 'hello';
+      sendButton.click();
+      await flushPromises();
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/messages'),
+        expect.objectContaining({
+          headers: expect.objectContaining({ 'X-Visitor-Token': 'tok-abc123' }),
+        })
+      );
+    });
+
+    it('sends the token as X-Visitor-Token on the heartbeat call', async () => {
+      await widget.open();
+      await flushPromises();
+      (global.fetch as jest.Mock).mockClear();
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ active: true }) });
+
+      await (widget as any).sendHeartbeat();
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/heartbeat'),
+        expect.objectContaining({
+          headers: expect.objectContaining({ 'X-Visitor-Token': 'tok-abc123' }),
+        })
+      );
+    });
+
+    it('sends the token when restoring a saved session', async () => {
+      localStorage.setItem(
+        'erghi:session:test-widget-uuid',
+        JSON.stringify({ conversationId: 'conv-restored', visitorToken: 'tok-restored', savedAt: Date.now() })
+      );
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 'conv-restored', status: 'open', messages: [] }),
+      });
+
+      const restoredWidget = new ErghiWidget(mockConfig);
+      await flushPromises();
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api.test.com/api/conversations/conv-restored',
+        expect.objectContaining({
+          headers: expect.objectContaining({ 'X-Visitor-Token': 'tok-restored' }),
+        })
+      );
+      expect((restoredWidget as any).visitorToken).toBe('tok-restored');
+      restoredWidget.destroy();
+    });
+
+    it('passes the token through to the SignalR connection', async () => {
+      const connectSpy = jest.spyOn(ConversationRealtimeClient.prototype, 'connect');
+
+      await widget.open();
+      await flushPromises();
+
+      expect(connectSpy).toHaveBeenCalledWith(
+        'https://api.test.com',
+        'conv-vt-1',
+        'tok-abc123',
+        expect.anything()
+      );
+      connectSpy.mockRestore();
+    });
+
+    it('omits the header (rather than sending an undefined value) when no token is available', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 'conv-no-token', messages: [], active: true }),
+      });
+
+      const noTokenWidget = new ErghiWidget(mockConfig);
+      await flushPromises();
+      await noTokenWidget.open();
+      await flushPromises();
+      (global.fetch as jest.Mock).mockClear();
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ active: true }) });
+
+      await (noTokenWidget as any).sendHeartbeat();
+
+      const call = (global.fetch as jest.Mock).mock.calls.find((c: unknown[]) =>
+        String(c[0]).includes('/heartbeat')
+      );
+      expect(call?.[1]?.headers ?? {}).not.toHaveProperty('X-Visitor-Token');
+      noTokenWidget.destroy();
     });
   });
 
