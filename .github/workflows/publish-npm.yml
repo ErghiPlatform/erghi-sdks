@@ -115,7 +115,7 @@ jobs:
         run: npm install
       
       - name: Run tests
-        run: npm test -- --browsers=ChromeHeadlessNoSandbox
-      
+        run: npm test
+
       - name: Build
         run: npm run build

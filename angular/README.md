@@ -237,8 +237,7 @@ export class WidgetsComponent {
 **Messages:**
 - `getMessages(conversationId, page?, limit?): Observable<PaginatedResponse<Message>>`
 - `sendMessage(conversationId, content, type?): Observable<Message>`
-- `markAsRead(messageId): Observable<Message>`
-- `deleteMessage(messageId): Observable<void>`
+- `markAsRead(conversationId, messageId): Observable<void>`
 
 **Widgets:**
 - `getWidgets(workspaceId): Observable<Widget[]>`

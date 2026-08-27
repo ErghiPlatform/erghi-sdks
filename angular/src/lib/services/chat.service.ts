@@ -77,14 +77,18 @@ export class ChatService {
     ).pipe(catchError(this.handleError));
   }
 
-  markAsRead(messageId: string): Observable<Message> {
-    return this.http.post<Message>(`${this.config.apiUrl}/api/messages/${messageId}/read`, {})
-      .pipe(catchError(this.handleError));
-  }
-
-  deleteMessage(messageId: string): Observable<void> {
-    return this.http.delete<void>(`${this.config.apiUrl}/api/messages/${messageId}`)
-      .pipe(catchError(this.handleError));
+  /**
+   * Mark a single message as read. Matches ConversationController.cs's
+   * `POST api/conversations/{conversationId}/messages/{messageId}/read` -- there is no bare
+   * `/api/messages/{id}/read` route on the server, and this endpoint returns 204 No Content, not
+   * a Message body (fixed 2026-08-25; the previous single-argument version called a route that
+   * does not exist and expected a response body the real endpoint never sends).
+   */
+  markAsRead(conversationId: string, messageId: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.config.apiUrl}/api/conversations/${conversationId}/messages/${messageId}/read`,
+      {}
+    ).pipe(catchError(this.handleError));
   }
 
   // Widgets

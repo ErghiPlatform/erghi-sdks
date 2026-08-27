@@ -159,26 +159,20 @@ describe('ChatService', () => {
       req.flush(mockMessage);
     });
 
-    it('should mark message as read', (done) => {
-      const readMessage = { ...mockMessage, isRead: true };
-
-      service.markAsRead('msg-123').subscribe(msg => {
-        expect(msg.isRead).toBe(true);
+    it('should mark message as read against the real conversation-scoped route', (done) => {
+      // Regression guard 2026-08-25: the previous implementation called a bare
+      // /api/messages/{id}/read route that has never existed on the server (real route is
+      // conversation-scoped, ConversationController.cs:547) and expected a Message body back
+      // from an endpoint that actually returns 204 No Content.
+      service.markAsRead('conv-123', 'msg-123').subscribe(() => {
         done();
       });
 
-      const req = httpMock.expectOne(`${mockConfig.apiUrl}/api/messages/msg-123/read`);
-      req.flush(readMessage);
-    });
-
-    it('should delete message', (done) => {
-      service.deleteMessage('msg-123').subscribe(() => {
-        done();
-      });
-
-      const req = httpMock.expectOne(`${mockConfig.apiUrl}/api/messages/msg-123`);
-      expect(req.request.method).toBe('DELETE');
-      req.flush({});
+      const req = httpMock.expectOne(
+        `${mockConfig.apiUrl}/api/conversations/conv-123/messages/msg-123/read`
+      );
+      expect(req.request.method).toBe('POST');
+      req.flush(null);
     });
   });
 
