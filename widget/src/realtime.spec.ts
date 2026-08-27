@@ -150,4 +150,29 @@ describe('ConversationRealtimeClient', () => {
       await specialClient.disconnect();
     });
   });
+
+  describe('CORS credentials mode', () => {
+    // Regression guard. @microsoft/signalr defaults withCredentials to true, making negotiate a
+    // credentials:'include' request; the gateway's PublicWidgetPolicy reflects any origin and
+    // deliberately omits Access-Control-Allow-Credentials, so the browser hard-blocks the
+    // handshake from every real customer domain. Verified in a real browser against the running
+    // gateway: default -> "blocked by CORS policy", withCredentials:false -> connection starts.
+    it('connects with withCredentials disabled so the handshake is not credentialed', () => {
+      const options = withUrlSpy.mock.calls[0][1] as { withCredentials?: boolean } | undefined;
+      expect(options).toBeDefined();
+      expect(options?.withCredentials).toBe(false);
+    });
+
+    it('disables credentials even when no visitor token is present', async () => {
+      withUrlSpy.mockClear();
+      const noTokenClient = new ConversationRealtimeClient();
+      await noTokenClient.connect('https://api.test.com', 'conv-4', null, {
+        onMessage: () => undefined,
+      });
+
+      const options = withUrlSpy.mock.calls[0][1] as { withCredentials?: boolean } | undefined;
+      expect(options?.withCredentials).toBe(false);
+      await noTokenClient.disconnect();
+    });
+  });
 });
