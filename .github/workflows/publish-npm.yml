@@ -7,6 +7,7 @@ on:
       - 'javascript/**'
       - 'react/**'
       - 'angular/**'
+      - 'widget/**'
       - '.github/workflows/publish-npm.yml'
   pull_request:
     branches: [main]
@@ -14,6 +15,7 @@ on:
       - 'javascript/**'
       - 'react/**'
       - 'angular/**'
+      - 'widget/**'
       - '.github/workflows/publish-npm.yml'
   workflow_dispatch:
 
@@ -24,6 +26,7 @@ jobs:
       javascript: ${{ steps.filter.outputs.javascript }}
       react: ${{ steps.filter.outputs.react }}
       angular: ${{ steps.filter.outputs.angular }}
+      widget: ${{ steps.filter.outputs.widget }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -36,6 +39,8 @@ jobs:
               - 'react/**'
             angular:
               - 'angular/**'
+            widget:
+              - 'widget/**'
 
   check-javascript:
     needs: detect-changes
@@ -113,7 +118,32 @@ jobs:
       
       - name: Install dependencies
         run: npm install
-      
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  check-widget:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.widget == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./widget
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm install
+
       - name: Run tests
         run: npm test
 
