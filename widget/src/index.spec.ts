@@ -1,4 +1,4 @@
-import ErghiWidget from './index';
+import ErghiWidget, { escapeHtml } from './index';
 import { ConversationRealtimeClient } from './realtime';
 
 const getShadowRoot = () => document.getElementById('erghi-widget-root')?.shadowRoot;
@@ -559,12 +559,43 @@ describe('ErghiWidget', () => {
     it('should disconnect SignalR on destroy', async () => {
       await widget.open();
       await flushPromises();
-      
+
       const realtime = (widget as any).realtime as ConversationRealtimeClient;
       const stopSpy = jest.spyOn(realtime, 'disconnect');
-      
+
       widget.destroy();
       expect(stopSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('escapeHtml', () => {
+    // 2026-08-08 security-audit regression guard: every current caller interpolates this
+    // into double-quoted HTML attribute positions inside a template-literal innerHTML,
+    // sourced from remote i18n translation strings -- an unescaped quote lets the rest of
+    // the string inject arbitrary attributes/event handlers on every site embedding this
+    // widget. Quotes must be encoded, not just &, <, >.
+    it('encodes double quotes', () => {
+      expect(escapeHtml('say "hi"')).toBe('say &quot;hi&quot;');
+    });
+
+    it('encodes single quotes', () => {
+      expect(escapeHtml("say 'hi'")).toBe('say &#39;hi&#39;');
+    });
+
+    it('still encodes ampersands and angle brackets', () => {
+      expect(escapeHtml('<script>a&b</script>')).toBe('&lt;script&gt;a&amp;b&lt;/script&gt;');
+    });
+
+    it('neutralizes an attribute-breakout payload end to end', () => {
+      const payload = `" onmouseover="alert(document.cookie)`;
+      const escaped = escapeHtml(payload);
+      const rendered = document.createElement('div');
+      rendered.innerHTML = `<a aria-label="${escaped}">x</a>`;
+      const anchor = rendered.querySelector('a')!;
+      // The payload must land entirely inside aria-label -- no onmouseover attribute
+      // should exist on the parsed element.
+      expect(anchor.getAttribute('onmouseover')).toBeNull();
+      expect(anchor.getAttribute('aria-label')).toContain('onmouseover=');
     });
   });
 });
