@@ -1,6 +1,6 @@
 # Erghi API Reference
 
-> **Gateway Base URL** (production): `https://api.erghi.ai`  
+> **Gateway Base URL** (live today): `https://api.staging.erghi.ai` — `staging.` is currently the only live prefix platform-wide, not a separate sandbox; this is the real, production gateway. `api.erghi.ai` does not resolve yet.
 > **Gateway Base URL** (local dev): `http://localhost:5080`  
 > **Conversation API** (direct, dev only): `http://localhost:5002`  
 > **Content-Type**: `application/json`
@@ -260,7 +260,7 @@ Create a new chat widget for the workspace.
   "themeColor": "#6366f1",
   "autoAssign": true,
   "offlineMessage": "We're offline right now...",
-  "embedCode": "<script>window.ErghiConfig={widgetId:'widget-uuid'};</script><script src='https://cdn.erghi.ai/widget.js' async></script>",
+  "embedCode": "<script src='https://chat.staging.erghi.ai/widget.js' data-widget-id='widget-uuid' async></script>",
   "createdAt": "2025-01-15T09:00:00Z"
 }
 ```
@@ -493,17 +493,24 @@ Get invoice history for the workspace.
 
 ---
 
-### POST /api/v1/billing/checkout/paymob — Auth Required
+### POST /api/v1/billing/checkout — Auth Required (Admin)
 
-Initiate a Paymob payment (Egypt/MENA).
+Start a checkout for a paid plan, using the workspace's configured payment provider — currently always Stripe (see [Payment methods](./USER_GUIDE.md#payment-methods)).
 
-**Request body** — `planId`, `interval`
+**Request body**
 
----
+```json
+{
+  "planKey": "growth_monthly",
+  "successUrl": "https://your-site.example/billing/success",
+  "cancelUrl": "https://your-site.example/billing/plans",
+  "startTrial": false
+}
+```
 
-### POST /api/v1/billing/checkout/fawry — Auth Required
+**Response `200 OK`** — a checkout URL to redirect the user to (a real Stripe Checkout session).
 
-Initiate a Fawry payment (Egypt).
+Paymob and Fawry are planned but not yet implemented — do not build against provider-specific checkout endpoints; there aren't any.
 
 ---
 
@@ -512,7 +519,7 @@ Initiate a Fawry payment (Egypt).
 Erghi uses **SignalR** for real-time message delivery. Connect to the hub:
 
 ```
-wss://api.erghi.ai/hubs/chat?conversationId=<conv-id>&token=<jwt>
+wss://api.staging.erghi.ai/hubs/chat?conversationId=<conv-id>&token=<jwt>
 ```
 
 **Events received from server:**

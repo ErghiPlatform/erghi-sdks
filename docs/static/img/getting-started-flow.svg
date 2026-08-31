@@ -1,0 +1,114 @@
+<svg viewBox="0 0 1200 640" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6366f1"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="640" fill="#ffffff"/>
+  <text x="30" y="36" font-size="20" font-weight="700" fill="#111827">Getting started — from sign-up to a live widget</text>
+  <text x="30" y="58" font-size="13" fill="#6b7280">Every screen below is the real, current UI — verified live on 2026-08-31.</text>
+
+  <!-- Step 1: Sign up -->
+  <g transform="translate(30,90)">
+    <rect width="260" height="200" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+    <rect x="16" y="16" width="228" height="24" rx="4" fill="#6366f1"/>
+    <text x="30" y="32" font-size="12" fill="#ffffff" font-weight="600">1  Create your workspace</text>
+    <rect x="16" y="52" width="228" height="26" rx="4" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="24" y="69" font-size="11" fill="#94a3b8">Workspace name</text>
+    <rect x="16" y="84" width="228" height="26" rx="4" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="24" y="101" font-size="11" fill="#94a3b8">Work email</text>
+    <rect x="16" y="116" width="228" height="26" rx="4" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="24" y="133" font-size="11" fill="#94a3b8">Password</text>
+    <rect x="16" y="152" width="228" height="30" rx="6" fill="#6366f1"/>
+    <text x="130" y="171" font-size="12" fill="#ffffff" font-weight="600" text-anchor="middle">Create account</text>
+    <circle cx="244" cy="167" r="9" fill="#f59e0b"/>
+    <text x="244" y="171" font-size="10" fill="#ffffff" text-anchor="middle" font-weight="700">A</text>
+  </g>
+
+  <!-- Step 2: Login -->
+  <g transform="translate(330,90)">
+    <rect width="260" height="200" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+    <rect x="16" y="16" width="228" height="24" rx="4" fill="#6366f1"/>
+    <text x="30" y="32" font-size="12" fill="#ffffff" font-weight="600">2  Sign in</text>
+    <rect x="16" y="52" width="228" height="26" rx="4" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="24" y="69" font-size="11" fill="#94a3b8">Email</text>
+    <rect x="16" y="84" width="228" height="26" rx="4" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="24" y="101" font-size="11" fill="#94a3b8">Password</text>
+    <rect x="16" y="120" width="228" height="30" rx="6" fill="#6366f1"/>
+    <text x="130" y="139" font-size="12" fill="#ffffff" font-weight="600" text-anchor="middle">Sign In</text>
+    <circle cx="244" cy="135" r="9" fill="#f59e0b"/>
+    <text x="244" y="139" font-size="10" fill="#ffffff" text-anchor="middle" font-weight="700">B</text>
+    <text x="16" y="176" font-size="10" fill="#64748b">→ redirects straight to</text>
+    <text x="16" y="190" font-size="10" fill="#64748b" font-weight="600">Billing &amp; Plans, automatically</text>
+  </g>
+
+  <!-- Step 3: Billing/Plans -->
+  <g transform="translate(630,90)">
+    <rect width="260" height="200" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+    <rect x="16" y="16" width="228" height="24" rx="4" fill="#6366f1"/>
+    <text x="30" y="32" font-size="12" fill="#ffffff" font-weight="600">3  Choose a plan</text>
+    <rect x="16" y="50" width="70" height="60" rx="6" fill="#ffffff" stroke="#22c55e" stroke-width="2"/>
+    <text x="51" y="66" font-size="9" fill="#166534" text-anchor="middle" font-weight="700">Free</text>
+    <text x="51" y="80" font-size="8" fill="#64748b" text-anchor="middle">your plan</text>
+    <rect x="93" y="50" width="70" height="60" rx="6" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="128" y="66" font-size="9" fill="#111827" text-anchor="middle" font-weight="700">Starter</text>
+    <text x="128" y="80" font-size="8" fill="#64748b" text-anchor="middle">$39/mo</text>
+    <rect x="170" y="50" width="70" height="60" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+    <text x="205" y="66" font-size="9" fill="#4338ca" text-anchor="middle" font-weight="700">Growth</text>
+    <text x="205" y="80" font-size="8" fill="#64748b" text-anchor="middle">$89/mo</text>
+    <rect x="170" y="90" width="70" height="16" rx="3" fill="#6366f1"/>
+    <text x="205" y="101" font-size="7" fill="#ffffff" text-anchor="middle" font-weight="700">Upgrade</text>
+    <circle cx="244" cy="98" r="9" fill="#f59e0b"/>
+    <text x="244" y="102" font-size="10" fill="#ffffff" text-anchor="middle" font-weight="700">C</text>
+    <text x="16" y="130" font-size="10" fill="#64748b">→ Upgrade opens a real</text>
+    <text x="16" y="144" font-size="10" fill="#64748b" font-weight="600">Stripe Checkout page</text>
+    <text x="16" y="168" font-size="10" fill="#64748b">Free plan needs nothing</text>
+    <text x="16" y="182" font-size="10" fill="#64748b">further — skip to step 4</text>
+  </g>
+
+  <!-- Step 4: Widget -->
+  <g transform="translate(930,90)">
+    <rect width="240" height="200" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+    <rect x="16" y="16" width="208" height="24" rx="4" fill="#6366f1"/>
+    <text x="30" y="32" font-size="12" fill="#ffffff" font-weight="600">4  Embed the widget</text>
+    <rect x="16" y="52" width="208" height="70" rx="6" fill="#0f172a"/>
+    <text x="26" y="70" font-size="9" fill="#a5f3fc" font-family="monospace">&lt;script</text>
+    <text x="26" y="84" font-size="9" fill="#fbbf24" font-family="monospace">  data-widget-id="..."</text>
+    <text x="26" y="98" font-size="9" fill="#fbbf24" font-family="monospace">  src="chat.staging.</text>
+    <text x="26" y="110" font-size="9" fill="#fbbf24" font-family="monospace">  erghi.ai/widget.js"&gt;</text>
+    <circle cx="216" cy="60" r="9" fill="#f59e0b"/>
+    <text x="216" y="64" font-size="10" fill="#ffffff" text-anchor="middle" font-weight="700">D</text>
+    <circle cx="90" cy="160" r="18" fill="#6366f1"/>
+    <text x="90" y="165" font-size="14" fill="#ffffff" text-anchor="middle">💬</text>
+    <text x="120" y="165" font-size="10" fill="#64748b">chat bubble appears</text>
+    <text x="120" y="178" font-size="10" fill="#64748b">bottom-right of your site</text>
+  </g>
+
+  <!-- Arrows -->
+  <path d="M292,190 L328,190" stroke="#6366f1" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M592,190 L628,190" stroke="#6366f1" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <path d="M892,190 L928,190" stroke="#6366f1" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Callout legend -->
+  <g transform="translate(30,330)">
+    <rect width="1140" height="270" rx="10" fill="#fafafa" stroke="#e5e7eb"/>
+    <text x="20" y="30" font-size="14" font-weight="700" fill="#111827">Button callouts</text>
+
+    <circle cx="35" cy="60" r="9" fill="#f59e0b"/><text x="35" y="64" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">A</text>
+    <text x="55" y="64" font-size="12" fill="#374151"><tspan font-weight="600">Create account</tspan> — on erghi.ai's "Start free" CTA, or directly at admin.staging.erghi.ai/register. No card required at this step.</text>
+
+    <circle cx="35" cy="90" r="9" fill="#f59e0b"/><text x="35" y="94" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">B</text>
+    <text x="55" y="94" font-size="12" fill="#374151"><tspan font-weight="600">Sign In</tspan> — first login after registering sends you straight to Billing &amp; Plans, not the dashboard. This is deliberate: pick a plan before anything else.</text>
+
+    <circle cx="35" cy="120" r="9" fill="#f59e0b"/><text x="35" y="124" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">C</text>
+    <text x="55" y="124" font-size="12" fill="#374151"><tspan font-weight="600">Upgrade to [Plan]</tspan> — creates a real Stripe Checkout session for that plan's price. Staying on Free needs no action; you land in your workspace immediately.</text>
+
+    <circle cx="35" cy="150" r="9" fill="#f59e0b"/><text x="35" y="154" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">D</text>
+    <text x="55" y="154" font-size="12" fill="#374151"><tspan font-weight="600">Widget snippet</tspan> — find your real snippet under Widgets → your widget → Embed. Paste it before &lt;/body&gt; on any page you want the chat bubble on.</text>
+
+    <text x="20" y="195" font-size="13" font-weight="700" fill="#111827">What each plan actually includes</text>
+    <text x="20" y="218" font-size="11" fill="#374151" font-family="monospace">Free      1 agent   1 widget    50 conversations/mo    100 AI replies/mo    7-day history</text>
+    <text x="20" y="236" font-size="11" fill="#374151" font-family="monospace">Starter   3 agents  3 widgets  1,000 conversations/mo  2,000 AI replies/mo  30-day history   $39/mo</text>
+    <text x="20" y="254" font-size="11" fill="#374151" font-family="monospace">Growth   10 agents 10 widgets  5,000 conversations/mo  8,000 AI replies/mo  90-day history   $89/mo</text>
+  </g>
+</svg>
