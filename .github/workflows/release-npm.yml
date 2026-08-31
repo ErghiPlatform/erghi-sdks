@@ -17,6 +17,17 @@ on:
         required: true
         type: choice
         options: [sdk, widget, react, angular, all]
+      otp:
+        description: >-
+          npm one-time password, if the account requires 2FA on writes
+          (npm error code EOTP without this). Enter a fresh code right
+          before running this workflow -- codes expire in ~30-60s and the
+          build+test steps ahead of the actual publish eat into that
+          window, so this may take more than one attempt. Never logged:
+          referenced via an env var, not interpolated into the run: script
+          text GitHub Actions echoes.
+        required: false
+        type: string
   push:
     tags:
       - 'sdk-v*'
@@ -52,9 +63,10 @@ jobs:
         run: npx vitest run --passWithNoTests
 
       - name: Publish @erghi/sdk
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public ${NPM_OTP:+--otp="$NPM_OTP"}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_OTP: ${{ inputs.otp }}
 
   publish-widget:
     if: >-
@@ -82,9 +94,10 @@ jobs:
         run: npm run build
 
       - name: Publish @erghi/widget
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public ${NPM_OTP:+--otp="$NPM_OTP"}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_OTP: ${{ inputs.otp }}
 
   publish-react:
     if: >-
@@ -120,9 +133,10 @@ jobs:
         run: npm run build
 
       - name: Publish @erghi/react
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public ${NPM_OTP:+--otp="$NPM_OTP"}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_OTP: ${{ inputs.otp }}
 
   publish-angular:
     if: >-
@@ -153,6 +167,7 @@ jobs:
       # package.json lives there, distinct from the source root's).
       - name: Publish @erghi/angular
         working-directory: ./angular/dist
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public ${NPM_OTP:+--otp="$NPM_OTP"}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_OTP: ${{ inputs.otp }}
