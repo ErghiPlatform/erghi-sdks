@@ -3,6 +3,9 @@ sidebar_position: 2
 title: User Guide
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 # Erghi User Guide
 
 > **Erghi** — Embed AI-powered live chat into your product and manage every conversation in real time.
@@ -233,7 +236,10 @@ All Erghi client SDKs share the same underlying resource-oriented API (`client.a
 | Flutter | `erghi_sdk` | [pub.dev](https://pub.dev/packages/erghi_sdk) | ✅ Published |
 | Swift | `ErghiSDK` | [SPM](https://github.com/ErghiPlatform/erghi-sdk-swift) | ✅ Published |
 
-### JavaScript / TypeScript
+Pick your language once — every code block below switches together.
+
+<Tabs groupId="sdk-language" queryString>
+<TabItem value="js" label="JavaScript / TypeScript">
 
 ```bash
 npm install @erghi-ai/sdk
@@ -246,7 +252,8 @@ const client = new ErghiClient({ apiUrl: 'https://api.staging.erghi.ai', apiKey:
 await client.auth.login({ email: 'user@example.com', password: 'password' });
 ```
 
-### React
+</TabItem>
+<TabItem value="react" label="React">
 
 ```bash
 npm install @erghi-ai/react @erghi-ai/sdk
@@ -269,9 +276,10 @@ function YourChatUI() {
 }
 ```
 
-### Angular
+</TabItem>
+<TabItem value="angular" label="Angular">
 
-Not yet published to npm. Build from source until it is:
+🚧 **Not yet published to npm.** Build from source until it is:
 
 ```bash
 git clone https://github.com/ErghiPlatform/erghi-sdks.git
@@ -291,7 +299,8 @@ export const appConfig: ApplicationConfig = {
 };
 ```
 
-### Python
+</TabItem>
+<TabItem value="python" label="Python">
 
 ```bash
 pip install erghi-sdk
@@ -299,7 +308,8 @@ pip install erghi-sdk
 
 See the [Python SDK reference](https://github.com/ErghiPlatform/erghi-sdks/tree/main/python) for the full client API.
 
-### .NET
+</TabItem>
+<TabItem value="dotnet" label=".NET">
 
 ```bash
 dotnet add package Erghi.SDK
@@ -307,7 +317,8 @@ dotnet add package Erghi.SDK
 
 See the [.NET SDK reference](https://github.com/ErghiPlatform/erghi-sdks/tree/main/dotnet) for the full client API.
 
-### Flutter
+</TabItem>
+<TabItem value="flutter" label="Flutter">
 
 ```yaml
 dependencies:
@@ -316,13 +327,17 @@ dependencies:
 
 See the [Flutter SDK reference](https://github.com/ErghiPlatform/erghi-sdks/tree/main/flutter) for the full client API.
 
-### Swift / iOS
+</TabItem>
+<TabItem value="swift" label="Swift / iOS">
 
 ```swift
 .package(url: "https://github.com/ErghiPlatform/erghi-sdk-swift.git", from: "1.0.0")
 ```
 
 See the [Swift SDK reference](https://github.com/ErghiPlatform/erghi-sdks/tree/main/swift) for the full client API.
+
+</TabItem>
+</Tabs>
 
 ---
 

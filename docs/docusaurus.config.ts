@@ -42,26 +42,14 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
           editUrl:
             'https://github.com/ErghiPlatform/erghi-sdks/tree/main/docs/',
         },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/ErghiPlatform/erghi-sdks/tree/main/docs/',
-          // Useful options to enforce blogging best practices
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
-        },
+        // No blog content exists (2026-08-31 audit) -- the scaffolded blog/ dir
+        // and every nav/footer link to /blog were dead ends for a real visitor.
+        // Turn this back on with real posts if that ever changes; until then a
+        // missing feature beats a broken one.
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -84,11 +72,15 @@ const config: Config = {
       items: [
         {
           type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
+          sidebarId: 'docsSidebar',
           position: 'left',
-          label: 'Tutorial',
+          label: 'Docs',
         },
-        {to: '/blog', label: 'Blog', position: 'left'},
+        {
+          href: 'https://erghi.ai',
+          label: 'erghi.ai',
+          position: 'right',
+        },
         {
           href: 'https://github.com/ErghiPlatform/erghi-sdks',
           label: 'GitHub',
@@ -102,44 +94,29 @@ const config: Config = {
         {
           title: 'Docs',
           items: [
-            {
-              label: 'Tutorial',
-              to: '/docs/intro',
-            },
+            {label: 'Getting Started', to: '/docs/intro'},
+            {label: 'User Guide', to: '/docs/USER_GUIDE'},
+            {label: 'API Reference', to: '/docs/API_REFERENCE'},
           ],
         },
         {
-          title: 'Community',
+          title: 'SDKs',
           items: [
-            {
-              label: 'Stack Overflow',
-              href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-            },
-            {
-              label: 'Discord',
-              href: 'https://discordapp.com/invite/docusaurus',
-            },
-            {
-              label: 'X',
-              href: 'https://x.com/docusaurus',
-            },
+            {label: 'JavaScript / TypeScript', href: 'https://www.npmjs.com/package/@erghi-ai/sdk'},
+            {label: 'Python', href: 'https://pypi.org/project/erghi-sdk/'},
+            {label: '.NET', href: 'https://www.nuget.org/packages/Erghi.SDK'},
+            {label: 'All SDKs on GitHub', href: 'https://github.com/ErghiPlatform/erghi-sdks'},
           ],
         },
         {
           title: 'More',
           items: [
-            {
-              label: 'Blog',
-              to: '/blog',
-            },
-            {
-              label: 'GitHub',
-              href: 'https://github.com/ErghiPlatform/erghi-sdks',
-            },
+            {label: 'erghi.ai', href: 'https://erghi.ai'},
+            {label: 'GitHub Issues', href: 'https://github.com/ErghiPlatform/erghi-sdks/issues'},
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} ErghiPlatform. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} ErghiPlatform.`,
     },
     prism: {
       theme: prismThemes.github,
