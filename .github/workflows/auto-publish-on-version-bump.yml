@@ -1,0 +1,123 @@
+name: Auto-publish on version bump
+
+# Watches every push to main. If a package's manifest version field changed
+# in that push, dispatches that package's existing release-*.yml workflow --
+# the same one you'd trigger by hand with `gh workflow run`. This does NOT
+# duplicate or replace any publish logic; it only automates the "remember to
+# separately run the release workflow after merging a version bump" step.
+#
+# Deliberately does NOT push a git tag to trigger the release workflows'
+# `push: tags:` listener -- tags/pushes made by the default GITHUB_TOKEN do
+# not fire other workflows (a GitHub Actions anti-recursion rule), so that
+# approach would silently no-op. Dispatching workflow_dispatch directly via
+# `gh workflow run`, authenticated with the same default GITHUB_TOKEN plus
+# `actions: write`, is the supported way to chain one workflow into another
+# and does not have that limitation.
+#
+# Diffs github.event.before -> github.sha (the push event's real before/after
+# range), NOT HEAD^/HEAD. HEAD^ is only the immediate parent of the *last*
+# commit in the push -- with rebase-merge enabled and no branch protection on
+# main (both true for this repo today), a push can land several commits at
+# once, and a version-bump commit that isn't literally the last one in that
+# push would be silently invisible to a HEAD^/HEAD diff. Confirmed by
+# simulating that exact scenario during review. github.event.before is the
+# actual pre-push tip of main regardless of how many commits landed.
+#
+# Safe to re-run / idempotent: a push where no manifest version changed does
+# nothing. A push that changes a manifest but not its version field (e.g. a
+# README edit alongside an unrelated version bump in the same commit) also
+# does nothing for that package -- only an actual version diff dispatches.
+# Every downstream release-*.yml also fails safe on a re-dispatch of an
+# already-published version (npm/PyPI reject it outright, NuGet uses
+# --skip-duplicate, pub.dev rejects duplicates too) -- confirmed by reading
+# each workflow's actual publish step.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  detect-and-dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need full history to diff against github.event.before, which can be arbitrarily far back
+
+      - name: Detect version bumps and dispatch matching release workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          # All-zero before-SHA happens on new-branch-creation pushes (no
+          # meaningful prior state to diff against) -- nothing to detect yet.
+          if [[ "$BEFORE_SHA" =~ ^0+$ ]]; then
+            echo "No prior commit for this push (branch/ref just created) -- nothing to compare, skipping."
+            exit 0
+          fi
+          # Defensive fallback: if the before-SHA isn't reachable in this
+          # checkout for any reason (e.g. history rewrite), fail the run --
+          # a missed version bump means a real publish silently never
+          # happens, which deserves a red job, not an easy-to-miss warning
+          # annotation on an otherwise-green one.
+          if ! git cat-file -e "$BEFORE_SHA" 2>/dev/null; then
+            echo "::error::github.event.before ($BEFORE_SHA) is not present in this checkout -- cannot safely detect version bumps this run rather than risk comparing against the wrong base. If this recurs, main's history may have been rewritten (force-push). Check manually whether a release was missed."
+            exit 1
+          fi
+
+          changed_files="$(git diff --name-only "$BEFORE_SHA" "$AFTER_SHA")"
+
+          dispatch_if_bumped() {
+            local pkg_name="$1" manifest="$2" old_version="$3" new_version="$4" workflow="$5" extra_args="$6"
+
+            if ! grep -Fqx "$manifest" <<<"$changed_files"; then
+              echo "== $pkg_name: $manifest unchanged, skipping =="
+              return 0
+            fi
+            if [ -z "$new_version" ]; then
+              echo "== $pkg_name: could not read a version from $manifest, skipping (check the file manually) =="
+              return 0
+            fi
+            if [ "$old_version" = "$new_version" ]; then
+              echo "== $pkg_name: $manifest changed but version is still $new_version, skipping =="
+              return 0
+            fi
+
+            echo "== $pkg_name: version bump $old_version -> $new_version, dispatching $workflow $extra_args =="
+            # shellcheck disable=SC2086
+            gh workflow run "$workflow" --ref main $extra_args
+          }
+
+          # --- javascript / react / angular / widget (npm, release-npm.yml, needs -f package=) ---
+          for entry in "sdk:javascript:sdk" "react:react:react" "angular:angular:angular" "widget:widget:widget"; do
+            IFS=: read -r label dir pkg_input <<<"$entry"
+            manifest="$dir/package.json"
+            old=$(git show "$BEFORE_SHA:$manifest" 2>/dev/null | jq -r '.version // empty' || true)
+            new=$(jq -r '.version // empty' "$manifest" 2>/dev/null || true)
+            dispatch_if_bumped "npm:$label" "$manifest" "$old" "$new" "release-npm.yml" "-f package=$pkg_input"
+          done
+
+          # --- dotnet (NuGet, release-nuget.yml, no package input -- single package repo) ---
+          manifest="dotnet/Erghi.SDK/Erghi.SDK.csproj"
+          old=$(git show "$BEFORE_SHA:$manifest" 2>/dev/null | sed -n 's/.*<Version>\(.*\)<\/Version>.*/\1/p' | head -1 || true)
+          new=$(sed -n 's/.*<Version>\(.*\)<\/Version>.*/\1/p' "$manifest" 2>/dev/null | head -1 || true)
+          dispatch_if_bumped "nuget:dotnet" "$manifest" "$old" "$new" "release-nuget.yml" ""
+
+          # --- python (PyPI, release-pypi.yml, no package input) ---
+          manifest="python/pyproject.toml"
+          old=$(git show "$BEFORE_SHA:$manifest" 2>/dev/null | grep -m1 '^version' | sed -E 's/version *= *"(.*)"/\1/' || true)
+          new=$(grep -m1 '^version' "$manifest" 2>/dev/null | sed -E 's/version *= *"(.*)"/\1/' || true)
+          dispatch_if_bumped "pypi:python" "$manifest" "$old" "$new" "release-pypi.yml" ""
+
+          # --- flutter (pub.dev, release-flutter.yml, no package input) ---
+          manifest="flutter/pubspec.yaml"
+          old=$(git show "$BEFORE_SHA:$manifest" 2>/dev/null | grep -m1 '^version:' | sed -E 's/version: *//' || true)
+          new=$(grep -m1 '^version:' "$manifest" 2>/dev/null | sed -E 's/version: *//' || true)
+          dispatch_if_bumped "pub.dev:flutter" "$manifest" "$old" "$new" "release-flutter.yml" ""
