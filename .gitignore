@@ -8,6 +8,11 @@
 [Ll]ogs/
 .idea/
 
+# Agent worktree working copies -- git add -A would otherwise track these as
+# gitlinks (they contain their own .git file) if one happens to exist on disk
+# at commit time. See Erghi/.gitignore's identical entry (#66) for precedent.
+.claude/worktrees/
+
 # Node.js (javascript/, react/, angular/, widget/, docs/ all use npm)
 node_modules/
 dist/
