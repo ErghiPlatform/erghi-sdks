@@ -1,7 +1,7 @@
 {
   "name": "@erghi-ai/angular",
-  "version": "1.0.0",
-  "description": "Official Angular SDK for Erghi - Real-time chat with SignalR",
+  "version": "1.0.1",
+  "description": "Official Angular SDK for the Erghi customer-support platform — real-time chat via SignalR",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",

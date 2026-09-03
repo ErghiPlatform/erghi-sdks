@@ -1,6 +1,6 @@
 # Erghi .NET SDK
 
-Official .NET 10 SDK for [Erghi](https://erghi.ai) — Real-time customer chat with SignalR integration.
+Official .NET SDK for the [Erghi Platform](https://erghi.ai) — real-time chat via SignalR integration.
 
 [![NuGet](https://img.shields.io/nuget/v/Erghi.SDK.svg)](https://www.nuget.org/packages/Erghi.SDK)
 [![.NET](https://img.shields.io/badge/.NET-10.0-purple.svg)](https://dotnet.microsoft.com)

@@ -1,6 +1,6 @@
 # Erghi React SDK
 
-React hooks and components for the [Erghi Platform](https://erghi.ai).
+Official React SDK for the [Erghi Platform](https://erghi.ai) — hooks and components for real-time chat.
 
 ## Installation
 

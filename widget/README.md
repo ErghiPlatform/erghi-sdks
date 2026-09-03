@@ -1,6 +1,6 @@
 # Erghi Widget
 
-Embeddable chat widget for websites - vanilla TypeScript (no UI framework), using the official `@microsoft/signalr` client for real-time delivery.
+Official embeddable chat widget for the [Erghi Platform](https://erghi.ai) — vanilla TypeScript (no UI framework), using the official `@microsoft/signalr` client for real-time delivery.
 
 ## Installation
 

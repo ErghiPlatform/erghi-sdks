@@ -1,6 +1,6 @@
 name: erghi_sdk
-description: Official Erghi SDK for Flutter - Real-time customer support chat in your iOS and Android apps
-version: 1.0.0
+description: Official Flutter SDK for the Erghi customer-support platform — real-time chat for iOS and Android
+version: 1.0.1
 homepage: https://github.com/ErghiPlatform/erghi-sdks
 repository: https://github.com/ErghiPlatform/erghi-sdks
 

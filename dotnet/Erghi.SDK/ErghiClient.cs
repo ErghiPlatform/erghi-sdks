@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Reflection;
 using Microsoft.AspNetCore.SignalR.Client;
 using Erghi.SDK.Errors;
 using Erghi.SDK.Models;
@@ -16,6 +17,13 @@ public sealed class ErghiClient : IAsyncDisposable
     private readonly ErghiConfig _config;
     private readonly HttpClient _http;
     private HubConnection? _hub;
+
+    // Read from assembly metadata (set by the csproj's <Version>) rather than a
+    // literal, so this can never drift from the actual published package version.
+    private static readonly string SdkVersion =
+        typeof(ErghiClient).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        ?? typeof(ErghiClient).Assembly.GetName().Version?.ToString()
+        ?? "unknown";
 
     // ── Resource accessors ───────────────────────────────────────────────────
 
@@ -71,7 +79,7 @@ public sealed class ErghiClient : IAsyncDisposable
         };
 
         _http.DefaultRequestHeaders.Add("Accept", "application/json");
-        _http.DefaultRequestHeaders.Add("X-SDK-Version", "2.0.0");
+        _http.DefaultRequestHeaders.Add("X-SDK-Version", SdkVersion);
         _http.DefaultRequestHeaders.Add("X-SDK-Language", "dotnet");
 
         if (config.ApiKey is not null)

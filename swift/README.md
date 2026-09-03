@@ -1,6 +1,6 @@
 # Erghi Swift SDK
 
-Official Swift SDK for the [Erghi Platform](https://erghi.ai) — Build AI-powered chat experiences in your iOS, macOS, tvOS, and watchOS apps.
+Official Swift SDK for the [Erghi Platform](https://erghi.ai) — build AI-powered chat experiences in your iOS, macOS, tvOS, and watchOS apps.
 
 [![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)](https://swift.org)
 [![Platform](https://img.shields.io/badge/Platform-iOS%20%7C%20macOS%20%7C%20tvOS%20%7C%20watchOS-blue.svg)](https://developer.apple.com)

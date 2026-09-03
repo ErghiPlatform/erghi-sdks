@@ -1,7 +1,7 @@
 {
   "name": "@erghi-ai/widget",
-  "version": "1.0.0",
-  "description": "Embeddable chat widget for websites - Vanilla JS, no dependencies",
+  "version": "1.0.1",
+  "description": "Official embeddable chat widget for the Erghi customer-support platform — vanilla JS, no dependencies",
   "main": "dist/widget.js",
   "types": "dist/index.d.ts",
   "files": [

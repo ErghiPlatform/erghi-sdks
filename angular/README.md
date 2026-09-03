@@ -1,6 +1,6 @@
 # Erghi Angular SDK
 
-Official Angular 19+ SDK for Erghi - Real-time chat with SignalR integration.
+Official Angular SDK for the [Erghi Platform](https://erghi.ai) — real-time chat via SignalR integration.
 
 ## Installation
 

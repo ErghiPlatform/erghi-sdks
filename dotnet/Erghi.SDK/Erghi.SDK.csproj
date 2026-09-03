@@ -7,10 +7,10 @@
     <Nullable>enable</Nullable>
     
     <PackageId>Erghi.SDK</PackageId>
-    <Version>2.0.0</Version>
+    <Version>2.0.1</Version>
     <Authors>Erghi Team</Authors>
     <Company>Erghi Platform</Company>
-    <Description>Official .NET 10 SDK for Erghi - Real-time chat with SignalR</Description>
+    <Description>Official .NET SDK for the Erghi customer-support platform — real-time chat via SignalR</Description>
     <PackageTags>erghi;ai;chat;chatbot;sdk;websocket;real-time;signalr;dotnet10</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://erghi.com</PackageProjectUrl>

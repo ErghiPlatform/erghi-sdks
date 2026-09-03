@@ -1,6 +1,6 @@
 # Erghi Flutter SDK
 
-Official Flutter SDK for the [Erghi Platform](https://erghi.ai) — Build AI-powered chat experiences in your iOS and Android apps.
+Official Flutter SDK for the [Erghi Platform](https://erghi.ai) — build AI-powered chat experiences in your iOS and Android apps.
 
 [![pub package](https://img.shields.io/pub/v/erghi_sdk.svg)](https://pub.dev/packages/erghi_sdk)
 [![Flutter](https://img.shields.io/badge/Flutter-3.10+-blue.svg)](https://flutter.dev)
