@@ -1,0 +1,45 @@
+name: Parity matrix check
+
+# Fails the build if PARITY.md has drifted from what */parity.json (+
+# docs/parity/swift.json) actually say. Does not verify the manifests
+# themselves are true -- that still needs a human reading real source, see
+# PARITY.md's "How to keep this honest" section -- it only guarantees the
+# generated summary can never silently fall behind its own source data.
+#
+# Deliberately independent of auto-publish-on-version-bump.yml: this workflow
+# never reads or writes any manifest's version field, and parity.json is not
+# among the manifests that workflow's version-bump detector inspects, so the
+# two cannot interact or race.
+
+on:
+  pull_request:
+    paths:
+      - '**/parity.json'
+      - 'docs/parity/swift.json'
+      - 'PARITY.md'
+      - 'scripts/generate-parity-matrix.mjs'
+      - 'scripts/parity-schema.json'
+  push:
+    branches: [main]
+    paths:
+      - '**/parity.json'
+      - 'docs/parity/swift.json'
+      - 'PARITY.md'
+      - 'scripts/generate-parity-matrix.mjs'
+      - 'scripts/parity-schema.json'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verify PARITY.md matches */parity.json
+        run: node scripts/generate-parity-matrix.mjs --check

@@ -9,16 +9,25 @@ Official client SDKs for the [Erghi Platform](https://erghi.ai) — AI-powered c
 
 ## Available SDKs
 
-| SDK | Package | Status | Docs |
-|-----|---------|--------|------|
-| [Widget (Vanilla JS)](#widget) | `@erghi-ai/widget` | ![npm](https://img.shields.io/npm/v/@erghi-ai/widget) | [README](./widget/README.md) |
-| [JavaScript / TypeScript](#javascript--typescript) | `@erghi-ai/sdk` | ![npm](https://img.shields.io/npm/v/@erghi-ai/sdk) | [README](./javascript/README.md) |
-| [React](#react) | `@erghi-ai/react` | ![npm](https://img.shields.io/npm/v/@erghi-ai/react) | [README](./react/README.md) |
-| [Angular](#angular) | `@erghi-ai/angular` | ![npm](https://img.shields.io/npm/v/@erghi-ai/angular) | [README](./angular/README.md) |
-| [.NET / C#](#net--c) | `Erghi.SDK` | ![NuGet](https://img.shields.io/nuget/v/Erghi.SDK) | [README](./dotnet/README.md) |
-| [Python](#python) | `erghi-sdk` | ![PyPI](https://img.shields.io/pypi/v/erghi-sdk) | [README](./python/README.md) |
-| [Flutter / Dart](#flutter--dart) | `erghi_sdk` | ![pub](https://img.shields.io/pub/v/erghi_sdk) | [README](./flutter/README.md) |
-| [Swift](#swift) | `ErghiSDK` (SPM) | Published — tag `1.0.0` | [README](https://github.com/ErghiPlatform/erghi-sdk-swift#readme) |
+Tier meanings and the full per-capability breakdown (auth/chat/widgets/realtime/RAG/webhooks,
+with file:line evidence) live in **[PARITY.md](./PARITY.md)** — generated from each package's
+`parity.json`, not hand-maintained prose. Read that before assuming any SDK has (or lacks) a
+capability.
+
+| SDK | Package | Tier | Status | Docs |
+|-----|---------|------|--------|------|
+| [Widget (Vanilla JS)](#widget) | `@erghi-ai/widget` | 🟢 active | ![npm](https://img.shields.io/npm/v/@erghi-ai/widget) | [README](./widget/README.md) |
+| [JavaScript / TypeScript](#javascript--typescript) | `@erghi-ai/sdk` | 🟢 active | ![npm](https://img.shields.io/npm/v/@erghi-ai/sdk) | [README](./javascript/README.md) |
+| [React](#react) | `@erghi-ai/react` | 🟡 maintenance | ![npm](https://img.shields.io/npm/v/@erghi-ai/react) | [README](./react/README.md) |
+| [Angular](#angular) | `@erghi-ai/angular` | 🟡 maintenance | ![npm](https://img.shields.io/npm/v/@erghi-ai/angular) | [README](./angular/README.md) |
+| [.NET / C#](#net--c) | `Erghi.SDK` | 🟢 active | ![NuGet](https://img.shields.io/nuget/v/Erghi.SDK) | [README](./dotnet/README.md) |
+| [Python](#python) | `erghi-sdk` | 🟢 active | ![PyPI](https://img.shields.io/pypi/v/erghi-sdk) | [README](./python/README.md) |
+| [Flutter / Dart](#flutter--dart) | `erghi_sdk` | 🟢 active | ![pub](https://img.shields.io/pub/v/erghi_sdk) | [README](./flutter/README.md) |
+| [Swift](#swift) | `ErghiSDK` (SPM) | 🟢 active | Published — tag `1.0.1` | [README](https://github.com/ErghiPlatform/erghi-sdk-swift#readme) |
+
+🟢 **active** = gets build effort ahead of parity. 🟡 **maintenance** = real, working, tested,
+still gets bug fixes and security patches, not proactively built ahead of parity (a founder-level
+call — see [PARITY.md](./PARITY.md) for the reasoning per package).
 
 ---
 

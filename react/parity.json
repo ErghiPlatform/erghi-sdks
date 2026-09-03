@@ -1,0 +1,42 @@
+{
+  "$schema": "../scripts/parity-schema.json",
+  "package": "@erghi-ai/react",
+  "sdk_id": "react",
+  "display_name": "React",
+  "tier": "maintenance",
+  "tier_reason": "Founder decision 2026-09-03: deprioritized alongside angular. Neither Chatwoot nor Intercom -- the closest comparable competitors at Erghi's stage -- maintain framework wrappers around their vanilla widget. Kept as real, working, tested code; not getting further active build investment. Bug fixes and security issues still land.",
+  "last_verified_against_api": "2026-09-03",
+  "last_verified_by": "erghi-sdk agent (source read, not docs)",
+  "verification_method": "Read react/src/*.ts(x) directly. react/package.json depends on @erghi-ai/sdk ^1.0.0 (react/package.json:30) and useAuth/useChat/useWebSocket call straight into that client's .auth/.chat resources (react/src/useChat.ts:3,17,58,74) rather than reimplementing HTTP calls -- so its *effective* capability ceiling equals whatever javascript/parity.json declares, even though only a curated subset is exposed via hooks today.",
+  "capabilities": {
+    "auth": {
+      "login": true,
+      "register": true,
+      "refresh": true,
+      "logout": true,
+      "password_reset": false,
+      "email_verification": false,
+      "evidence": "react/src/useAuth.ts wraps client.auth.{login,register,refresh,logout,me}; no hook yet for forgotPassword/resetPassword/verifyEmail even though the underlying client (client.auth.*) already has them -- a hook-surface gap, not a wire-protocol gap."
+    },
+    "chat": {
+      "create_conversation": false,
+      "list_conversations": false,
+      "get_conversation": false,
+      "close_conversation": false,
+      "send_message": true,
+      "get_messages": true,
+      "mark_read": false,
+      "typing_indicator": true,
+      "evidence": "react/src/useChat.ts:17,58,74 -- useChat only covers an existing conversation (getMessages/sendMessage/sendTyping); conversation lifecycle (create/list/close) has no hook, callers must reach into client.chat.* directly via useErghi()."
+    },
+    "widgets": { "create": false, "list": false, "get": false, "update": false, "evidence": "no widget hook exists" },
+    "realtime": {
+      "supported": true,
+      "protocol": "signalr-hub-over-websocket (delegates to @erghi-ai/sdk's client.connect())",
+      "evidence": "react/src/useChat.ts:36-51, react/src/useWebSocket.ts"
+    },
+    "rag": { "supported": false, "note": "Same platform-wide gap as javascript." },
+    "webhooks": { "supported": false, "note": "Same platform-wide gap as javascript." }
+  },
+  "notes": "This package is structurally a DX layer, not an independent client -- it cannot silently drift on wire format/auth/tenancy the way angular can, because it has no HTTP code of its own. Its only realistic drift risk is 'javascript SDK gained a capability and no hook was added for it' (see auth.password_reset/email_verification and chat.create/list/close above), which is a low-cost, non-urgent gap to close later precisely because a caller can already reach the full client via useErghi().client.*  in the meantime."
+}

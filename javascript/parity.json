@@ -1,0 +1,54 @@
+{
+  "$schema": "../scripts/parity-schema.json",
+  "package": "@erghi-ai/sdk",
+  "sdk_id": "javascript",
+  "display_name": "JavaScript / TypeScript",
+  "tier": "active",
+  "tier_reason": "Canonical HTTP+realtime client. Every other SDK either wraps this one (react) or ports its wire contract (dotnet/python/flutter/angular).",
+  "last_verified_against_api": "2026-09-03",
+  "last_verified_by": "erghi-sdk agent (source read, not docs)",
+  "verification_method": "Read javascript/src/resources/*.ts directly against erghi-conversation-api controllers.",
+  "capabilities": {
+    "auth": {
+      "login": true,
+      "register": true,
+      "refresh": true,
+      "logout": true,
+      "password_reset": true,
+      "email_verification": true,
+      "evidence": "javascript/src/resources/auth.ts:18-93"
+    },
+    "chat": {
+      "create_conversation": true,
+      "list_conversations": true,
+      "get_conversation": true,
+      "close_conversation": true,
+      "send_message": true,
+      "get_messages": true,
+      "mark_read": true,
+      "typing_indicator": true,
+      "evidence": "javascript/src/resources/chat.ts:21-122 -- sendTyping() at :120 invokes 'user.typing' -> SignalR 'SendTyping' via client.ts:265"
+    },
+    "widgets": {
+      "create": true,
+      "list": false,
+      "get": false,
+      "update": false,
+      "evidence": "javascript/src/resources/chat.ts:42 (createWidget only)"
+    },
+    "realtime": {
+      "supported": true,
+      "protocol": "signalr-hub-over-websocket",
+      "evidence": "javascript/src/client.ts (HubConnection wiring), javascript/src/types.ts"
+    },
+    "rag": {
+      "supported": false,
+      "note": "No RAG resource client anywhere in this SDK. Platform has one (Erghi/Erghi.Conversation/Api/Controllers/RagController.cs) that no SDK wraps yet -- this is a platform-wide gap, not JS-specific drift."
+    },
+    "webhooks": {
+      "supported": false,
+      "note": "No customer-facing outbound webhook registration API exists on the platform yet (only inbound provider webhooks like Telegram). Nothing to wrap."
+    }
+  },
+  "notes": "Reference implementation. Any capability added here and not propagated to dotnet/python/flutter/angular/widget within a release cycle is a real parity gap -- react inherits automatically since it wraps this package's client object directly."
+}

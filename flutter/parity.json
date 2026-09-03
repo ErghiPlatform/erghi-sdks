@@ -1,0 +1,42 @@
+{
+  "$schema": "../scripts/parity-schema.json",
+  "package": "erghi_sdk",
+  "sdk_id": "flutter",
+  "display_name": "Flutter / Dart",
+  "tier": "active",
+  "tier_reason": "Real independent client for a platform with no wrapper alternative (no vanilla-widget equivalent exists for native mobile) -- unlike react/angular this SDK is not redundant with anything, so it stays actively invested even though it currently has the widest gaps of the 5 'core' SDKs.",
+  "last_verified_against_api": "2026-09-03",
+  "last_verified_by": "erghi-sdk agent (source read, not docs)",
+  "verification_method": "Read flutter/lib/src/resources/*.dart directly.",
+  "capabilities": {
+    "auth": {
+      "login": true,
+      "register": true,
+      "refresh": true,
+      "logout": true,
+      "password_reset": false,
+      "email_verification": false,
+      "evidence": "flutter/lib/src/resources/auth_resource.dart:36-176 -- register/login/refresh/me/logout/authenticate; no forgotPassword/resetPassword/verifyEmail."
+    },
+    "chat": {
+      "create_conversation": true,
+      "list_conversations": false,
+      "get_conversation": true,
+      "close_conversation": false,
+      "send_message": true,
+      "get_messages": true,
+      "mark_read": true,
+      "typing_indicator": false,
+      "evidence": "flutter/lib/src/resources/chat_resource.dart:36-177 -- get/create/getMessages/sendMessage/markAsRead present; no listConversations, no closeConversation, no sendTyping. Real, concrete gap vs javascript/python/dotnet."
+    },
+    "widgets": { "create": false, "list": false, "get": false, "update": false, "note": "No widget resource file." },
+    "realtime": {
+      "supported": true,
+      "protocol": "signalr-hub-over-websocket",
+      "evidence": "flutter/lib/src/erghi_client.dart, flutter/lib/src/config/erghi_config.dart"
+    },
+    "rag": { "supported": false, "note": "Same platform-wide gap as javascript." },
+    "webhooks": { "supported": false, "note": "Same platform-wide gap as javascript." }
+  },
+  "notes": "This is the real parity gap in the repo -- not react/angular (deliberately paused) but flutter, which is supposed to be at full parity and is missing listConversations, closeConversation, sendTyping, password reset, and email verification. Since there's no mobile-native alternative to fall back on the way web callers can fall back to the widget, this should be the next active-tier catch-up target, not react/angular."
+}

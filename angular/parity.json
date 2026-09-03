@@ -1,0 +1,48 @@
+{
+  "$schema": "../scripts/parity-schema.json",
+  "package": "@erghi-ai/angular",
+  "sdk_id": "angular",
+  "display_name": "Angular",
+  "tier": "maintenance",
+  "tier_reason": "Founder decision 2026-09-03: deprioritized alongside react. Neither Chatwoot nor Intercom -- the closest comparable competitors at Erghi's stage -- maintain framework wrappers around their vanilla widget. Kept as real, working, tested code; not getting further active build investment. Bug fixes and security issues still land.",
+  "last_verified_against_api": "2026-09-03",
+  "last_verified_by": "erghi-sdk agent (source read, not docs)",
+  "verification_method": "Read angular/src/lib/services/*.ts directly. Unlike react, angular has NO dependency on @erghi-ai/sdk (angular/package.json:37-40 lists only @microsoft/signalr and tslib) -- it reimplements auth/chat as its own HttpClient calls (angular/src/lib/services/auth.service.ts, chat.service.ts). That is a real, independent client, not a thin hook layer, and it carries its own drift risk: it can silently diverge from the platform's wire contract in ways react structurally cannot.",
+  "capabilities": {
+    "auth": {
+      "login": true,
+      "register": true,
+      "refresh": true,
+      "logout": true,
+      "password_reset": false,
+      "email_verification": false,
+      "evidence": "angular/src/lib/services/auth.service.ts:47,55,68,105,116 (login/register/refresh/logout/me); no forgotPassword/resetPassword/verifyEmail calls anywhere in the service."
+    },
+    "chat": {
+      "create_conversation": true,
+      "list_conversations": true,
+      "get_conversation": true,
+      "close_conversation": true,
+      "send_message": true,
+      "get_messages": true,
+      "mark_read": true,
+      "typing_indicator": true,
+      "evidence": "chat.service.ts has no send-typing call, but signalr.service.ts:134-136's sendTyping() invokes 'SendTyping' on the hub directly."
+    },
+    "widgets": {
+      "create": true,
+      "list": true,
+      "get": true,
+      "update": true,
+      "evidence": "angular/src/lib/services/chat.service.ts:96-120 -- actually the most complete widget CRUD of any SDK (list/get/create/update/delete), ahead of javascript which only has create."
+    },
+    "realtime": {
+      "supported": true,
+      "protocol": "signalr-hub-over-websocket (own implementation, angular/src/lib/services/signalr.service.ts, not shared with javascript)",
+      "evidence": "angular/src/lib/services/signalr.service.ts"
+    },
+    "rag": { "supported": false, "note": "Same platform-wide gap as javascript." },
+    "webhooks": { "supported": false, "note": "Same platform-wide gap as javascript." }
+  },
+  "notes": "Ironically ahead of javascript on widget CRUD and has a de-novo working SignalR client -- this is real, non-trivial code, which is exactly why the founder called it 'not worth removing' even while deprioritizing further investment. The maintenance-tier risk here is specifically the independent-reimplementation one: because it does not depend on @erghi-ai/sdk, a platform auth/tenancy change (e.g. a new required header, a token-refresh contract change) must be manually ported into this package's services and will NOT be caught just by bumping @erghi-ai/sdk's version. Any agent touching auth/tenancy on the platform should grep this package's services explicitly, not assume javascript's fix covers it."
+}

@@ -2,6 +2,15 @@
 
 Official Angular SDK for the [Erghi Platform](https://erghi.ai) — real-time chat via SignalR integration.
 
+> **🟡 Maintenance tier.** This package is real, working, tested code and stays that way — it
+> gets bug fixes and security patches — but it is not getting proactive build investment ahead of
+> parity with the other SDKs. Neither Chatwoot nor Intercom, the closest comparable competitors at
+> Erghi's current stage, maintain framework wrappers around their vanilla widget, and this package
+> is exactly that kind of wrapper. Unlike the React package, this one does **not** depend on
+> `@erghi-ai/sdk` — it's an independent HTTP + SignalR client, so a platform auth/tenancy change
+> needs its own explicit port here, not just a version bump. See [PARITY.md](../PARITY.md) and
+> [`parity.json`](./parity.json) for exactly what's covered and what's independently implemented.
+
 ## Installation
 
 ```bash

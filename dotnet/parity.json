@@ -1,0 +1,48 @@
+{
+  "$schema": "../scripts/parity-schema.json",
+  "package": "Erghi.SDK",
+  "sdk_id": "dotnet",
+  "display_name": ".NET / C#",
+  "tier": "active",
+  "tier_reason": "Independent full client, richest single surface of any SDK today (attachments, conversation assignment, widget CRUD).",
+  "last_verified_against_api": "2026-09-03",
+  "last_verified_by": "erghi-sdk agent (source read, not docs)",
+  "verification_method": "Read dotnet/Erghi.SDK/Resources/*.cs directly.",
+  "capabilities": {
+    "auth": {
+      "login": true,
+      "register": true,
+      "refresh": true,
+      "logout": true,
+      "password_reset": true,
+      "email_verification": false,
+      "evidence": "dotnet/Erghi.SDK/Resources/AuthResource.cs:26-89 -- Register/Login/Refresh/Logout/Me/ForgotPassword/ResetPassword; no VerifyEmailAsync."
+    },
+    "chat": {
+      "create_conversation": true,
+      "list_conversations": true,
+      "get_conversation": true,
+      "close_conversation": true,
+      "send_message": true,
+      "get_messages": true,
+      "mark_read": true,
+      "typing_indicator": true,
+      "evidence": "dotnet/Erghi.SDK/Resources/ChatResource.cs:29-118, plus SendMessageWithAttachmentAsync (line 95) and AssignConversationAsync (line 66) that no other SDK has."
+    },
+    "widgets": {
+      "create": true,
+      "list": true,
+      "get": true,
+      "update": false,
+      "evidence": "dotnet/Erghi.SDK/Resources/ChatResource.cs:126-140 -- Get/List/Create; no UpdateWidgetAsync (angular has this, dotnet doesn't -- a real cross-SDK gap worth closing)."
+    },
+    "realtime": {
+      "supported": true,
+      "protocol": "signalr-hub-over-websocket (Microsoft.AspNetCore.SignalR.Client, native)",
+      "evidence": "dotnet/Erghi.SDK/ErghiClient.cs:3,19,38"
+    },
+    "rag": { "supported": false, "note": "Same platform-wide gap as javascript." },
+    "webhooks": { "supported": false, "note": "Same platform-wide gap as javascript." }
+  },
+  "notes": "Has attachment support and conversation assignment that nothing else has -- worth checking whether those are actually used by a real customer before treating their absence elsewhere as urgent debt, rather than assuming dotnet is just 'ahead' by default. UpdateWidgetAsync gap vs angular is small and cheap to close."
+}

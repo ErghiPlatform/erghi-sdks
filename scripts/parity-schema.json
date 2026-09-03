@@ -1,0 +1,20 @@
+{
+  "$comment": "Not enforced by a validator (deliberately -- keeping this cheap beats keeping it exhaustive). Documents the shape scripts/generate-parity-matrix.mjs expects from every */parity.json and docs/parity/*.json. Add a field here in the same PR that adds it to a manifest.",
+  "package": "string -- the published package/artifact name",
+  "sdk_id": "string -- short slug, must match the SDK's directory name (javascript/react/angular/widget/dotnet/python/flutter/swift)",
+  "display_name": "string -- human label for PARITY.md",
+  "tier": "'active' | 'maintenance' -- active: gets new-capability build effort as the platform grows. maintenance: real, working, tested, kept alive (bug fixes + security patches land), but not proactively built ahead of parity. This is a founder-level call, not something to flip without one -- see each maintenance-tier manifest's tier_reason.",
+  "tier_reason": "string -- why this tier, and since when",
+  "last_verified_against_api": "YYYY-MM-DD -- date someone last actually read this SDK's source against the platform API (not the date this file was edited for typos)",
+  "last_verified_by": "string -- who/what did that read",
+  "verification_method": "string -- how (grep/read of what, against what)",
+  "capabilities": {
+    "auth": "{login, register, refresh, logout, password_reset, email_verification}: bool, plus 'evidence' or 'note'",
+    "chat": "{create_conversation, list_conversations, get_conversation, close_conversation, send_message, get_messages, mark_read, typing_indicator}: bool, plus 'evidence' or 'note'",
+    "widgets": "{create, list, get, update}: bool, plus 'evidence' or 'note'",
+    "realtime": "{supported: bool, protocol: string}, plus 'evidence'",
+    "rag": "{supported: bool}, plus 'note' -- true for zero SDKs today; RagController.cs exists platform-side and nothing wraps it yet",
+    "webhooks": "{supported: bool}, plus 'note' -- true for zero SDKs today; no customer-facing outbound webhook API exists on the platform yet"
+  },
+  "notes": "string -- freeform, the most important field for a human skimming PARITY.md"
+}

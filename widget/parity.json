@@ -1,0 +1,48 @@
+{
+  "$schema": "../scripts/parity-schema.json",
+  "package": "@erghi-ai/widget",
+  "sdk_id": "widget",
+  "display_name": "Widget (Vanilla JS, embeddable)",
+  "tier": "active",
+  "tier_reason": "The product's actual customer-facing embed. Not a wrapper -- this is the surface Chatwoot/Intercom-style comparisons are against, so it stays fully invested regardless of the react/angular call.",
+  "last_verified_against_api": "2026-09-03",
+  "last_verified_by": "erghi-sdk agent (source read, not docs)",
+  "verification_method": "Read widget/src/*.ts. Different shape from the other 6 -- it is not an auth/chat client library, it is a pre-built embeddable UI over its own realtime layer.",
+  "capabilities": {
+    "auth": {
+      "login": false,
+      "register": false,
+      "refresh": false,
+      "logout": false,
+      "password_reset": false,
+      "email_verification": false,
+      "note": "Uses the visitor/non-credentialed hub handshake (fixed in PR #46 / repo history #4,#6,#7), not the account auth flow -- widgets never log a customer's own agents in. Not a gap; a different flow."
+    },
+    "chat": {
+      "create_conversation": true,
+      "list_conversations": false,
+      "get_conversation": false,
+      "close_conversation": false,
+      "send_message": true,
+      "get_messages": true,
+      "mark_read": false,
+      "typing_indicator": true,
+      "evidence": "widget/src/realtime.ts, widget/src/index.ts"
+    },
+    "widgets": { "create": false, "list": false, "get": false, "update": false, "note": "N/A -- the widget IS the widget instance, it doesn't manage other widgets." },
+    "realtime": {
+      "supported": true,
+      "protocol": "own visitor-token realtime layer, see widget/src/realtime.ts",
+      "evidence": "widget/src/realtime.ts, widget/src/realtime.spec.ts"
+    },
+    "rag": { "supported": false, "note": "N/A from the visitor side -- RAG is an agent/admin-side retrieval concern." },
+    "webhooks": { "supported": false, "note": "N/A -- no customer-facing outbound webhook API exists yet." },
+    "widget_specific": {
+      "i18n": true,
+      "rtl": true,
+      "notifications": true,
+      "evidence": "widget/src/locale.ts, widget/src/notification.ts, widget/src/styles.ts"
+    }
+  },
+  "notes": "This package's capability shape is deliberately different from the client SDKs -- it is measured against the platform's public/visitor-facing surface, not the authenticated agent-facing surface the other 6 packages target."
+}

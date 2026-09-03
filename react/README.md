@@ -2,6 +2,14 @@
 
 Official React SDK for the [Erghi Platform](https://erghi.ai) — hooks and components for real-time chat.
 
+> **🟡 Maintenance tier.** This package is real, working, tested code and stays that way — it
+> gets bug fixes and security patches — but it is not getting proactive build investment ahead of
+> the underlying [`@erghi-ai/sdk`](../javascript) it wraps. Neither Chatwoot nor Intercom, the
+> closest comparable competitors at Erghi's current stage, maintain framework wrappers around
+> their vanilla widget, and this package is exactly that kind of wrapper. If a hook you need
+> doesn't exist yet, `useErghi().client` gives you the full underlying SDK client directly — see
+> [PARITY.md](../PARITY.md) and [`parity.json`](./parity.json) for exactly what's covered.
+
 ## Installation
 
 ```bash

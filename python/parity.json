@@ -1,0 +1,42 @@
+{
+  "$schema": "../scripts/parity-schema.json",
+  "package": "erghi-sdk",
+  "sdk_id": "python",
+  "display_name": "Python",
+  "tier": "active",
+  "tier_reason": "Full independent client, near-1:1 parity with javascript on auth+chat.",
+  "last_verified_against_api": "2026-09-03",
+  "last_verified_by": "erghi-sdk agent (source read, not docs)",
+  "verification_method": "Read python/erghi/resources/*.py directly.",
+  "capabilities": {
+    "auth": {
+      "login": true,
+      "register": true,
+      "refresh": true,
+      "logout": true,
+      "password_reset": true,
+      "email_verification": true,
+      "evidence": "python/erghi/resources/auth.py:17-89 -- full parity with javascript/src/resources/auth.ts."
+    },
+    "chat": {
+      "create_conversation": true,
+      "list_conversations": true,
+      "get_conversation": true,
+      "close_conversation": true,
+      "send_message": true,
+      "get_messages": true,
+      "mark_read": true,
+      "typing_indicator": true,
+      "evidence": "python/erghi/resources/chat.py:18-121 -- full parity with javascript's chat.ts."
+    },
+    "widgets": { "create": false, "list": false, "get": false, "update": false, "note": "No widget resource file at all -- javascript at least has createWidget; python has none. Real gap." },
+    "realtime": {
+      "supported": true,
+      "protocol": "signalr-hub-over-websocket",
+      "evidence": "python/erghi/client.py (signalr wiring), python/erghi/errors.py"
+    },
+    "rag": { "supported": false, "note": "Same platform-wide gap as javascript." },
+    "webhooks": { "supported": false, "note": "Same platform-wide gap as javascript." }
+  },
+  "notes": "Auth+chat are the strongest parity story in the whole repo (matches javascript method-for-method). Widget management is the one real gap -- worth a small follow-up PR before calling this SDK fully caught up."
+}
