@@ -94,14 +94,6 @@ doc/api/
 pubspec.lock
 .flutter-plugins
 .flutter-plugins-dependencies
-
-# Swift SDK
-.build/
-*.resolved
-*.xcworkspace/
-xcuserdata/
-DerivedData/
-*.xcscmblueprint
 *.xccheckout
 
 # Environment files

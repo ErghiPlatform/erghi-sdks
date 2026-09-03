@@ -11,7 +11,13 @@ This repository contains client-side SDKs for integrating Erghi services into va
 - **Flutter / Dart**: Cross-platform mobile/web/desktop.
 - **dotnet**: C# backend and desktop clients.
 - **python**: Python backend, CLI, or machine learning clients.
-- **swift**: Apple iOS/macOS platform native client.
+
+Swift (Apple iOS/macOS platform native client) is **not** in this repo — it lives in its own
+repo, [`ErghiPlatform/erghi-sdk-swift`](https://github.com/ErghiPlatform/erghi-sdk-swift), because
+Swift Package Manager requires `Package.swift` at the root of whatever git URL it's given, which
+a monorepo subdirectory can't satisfy. It previously lived here and was published via a `git
+subtree` mirror step at release time; that was dropped in favor of developing it directly in its
+own repo, to remove the confusion of two places holding "the real" source.
 
 All SDKs must align with the open API definitions and maintain consistent naming conventions across languages (e.g., `Client` initialization, `sendMessage`, `getConversation`, webhook verification).
 
@@ -31,6 +37,5 @@ All SDKs must align with the open API definitions and maintain consistent naming
 - Hooks are installed via `scripts/pre-commit.sh`. They run:
   - `dart/flutter analyze` for Dart/Flutter changes.
   - `dotnet format` for C# changes.
-  - `swiftc -parse` for Swift syntax checks.
   - `python -m py_compile` for Python syntax validation.
 - Make sure to correct any linting/syntax warnings before committing.

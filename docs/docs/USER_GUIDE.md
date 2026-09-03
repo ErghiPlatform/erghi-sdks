@@ -334,7 +334,7 @@ See the [Flutter SDK reference](https://github.com/ErghiPlatform/erghi-sdks/tree
 .package(url: "https://github.com/ErghiPlatform/erghi-sdk-swift.git", from: "1.0.0")
 ```
 
-See the [Swift SDK reference](https://github.com/ErghiPlatform/erghi-sdks/tree/main/swift) for the full client API.
+See the [Swift SDK reference](https://github.com/ErghiPlatform/erghi-sdk-swift) for the full client API.
 
 </TabItem>
 </Tabs>

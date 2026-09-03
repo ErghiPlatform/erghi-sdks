@@ -71,13 +71,6 @@ for FILE in $STAGED_FILES; do
                 DIR=$(dirname "$DIR")
             done
             ;;
-        *.swift)
-            echo "Checking Swift syntax for: $FILE"
-            if ! swiftc -parse "$ABS_PATH"; then
-                echo "❌ Swift syntax error in $FILE"
-                FAILED=1
-            fi
-            ;;
         *.js|*.jsx)
             echo "Checking JavaScript syntax for: $FILE"
             if ! node --check "$ABS_PATH"; then

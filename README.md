@@ -18,7 +18,7 @@ Official client SDKs for the [Erghi Platform](https://erghi.ai) — AI-powered c
 | [.NET / C#](#net--c) | `Erghi.SDK` | ![NuGet](https://img.shields.io/nuget/v/Erghi.SDK) | [README](./dotnet/README.md) |
 | [Python](#python) | `erghi-sdk` | ![PyPI](https://img.shields.io/pypi/v/erghi-sdk) | [README](./python/README.md) |
 | [Flutter / Dart](#flutter--dart) | `erghi_sdk` | ![pub](https://img.shields.io/pub/v/erghi_sdk) | [README](./flutter/README.md) |
-| [Swift](#swift) | `ErghiSDK` (SPM) | Published — [erghi-sdk-swift](https://github.com/ErghiPlatform/erghi-sdk-swift), tag `1.0.0` | [README](./swift/README.md) |
+| [Swift](#swift) | `ErghiSDK` (SPM) | Published — tag `1.0.0` | [README](https://github.com/ErghiPlatform/erghi-sdk-swift#readme) |
 
 ---
 
@@ -185,8 +185,12 @@ await client.auth.login(email: 'user@example.com', password: 'password');
 
 ### Swift
 
+Developed and maintained in its own repo — [`ErghiPlatform/erghi-sdk-swift`](https://github.com/ErghiPlatform/erghi-sdk-swift) — not here, since
+Swift Package Manager requires `Package.swift` at the root of whatever git URL it's given,
+which ruled out keeping it inside this monorepo. See that repo's README for full docs.
+
 ```swift
-// Package.swift -- published from a dedicated mirror repo, see swift/README.md for why
+// Package.swift
 .package(url: "https://github.com/ErghiPlatform/erghi-sdk-swift.git", from: "1.0.0")
 ```
 
@@ -201,7 +205,7 @@ let client = ErghiClient(config: ErghiConfig(
 try await client.auth.login(email: "user@example.com", password: "password")
 ```
 
-→ [Full Swift docs](./swift/README.md)
+→ [Full Swift docs](https://github.com/ErghiPlatform/erghi-sdk-swift#readme)
 
 ---
 
@@ -223,8 +227,10 @@ erghi-sdks (this repo)
 ├── widget/       — Embeddable vanilla JS widget
 ├── dotnet/       — .NET 10 SDK with SignalR
 ├── python/       — Async Python SDK
-├── flutter/      — Flutter/Dart SDK
-└── swift/        — Swift SDK (iOS/macOS/tvOS/watchOS)
+└── flutter/      — Flutter/Dart SDK
+
+erghi-sdk-swift (separate repo — SPM requires Package.swift at repo root)
+└── Swift SDK (iOS/macOS/tvOS/watchOS)
 ```
 
 ## Authentication Flow
