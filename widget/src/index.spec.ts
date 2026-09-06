@@ -389,6 +389,89 @@ describe('ErghiWidget', () => {
     });
   });
 
+  describe('Reply timeout (AC-1)', () => {
+    const REPLY_TIMEOUT_MS = 30_000;
+
+    beforeEach(async () => {
+      jest.useFakeTimers();
+      widget.open();
+      await jest.advanceTimersByTimeAsync(0); // let ensureConversation()'s fetch resolve
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    const sendTestMessage = async (content: string) => {
+      const input = getShadowRoot()?.getElementById('cf-input') as HTMLInputElement;
+      const sendButton = getShadowRoot()?.getElementById('cf-send') as HTMLButtonElement;
+      input.value = content;
+      sendButton.click();
+      await jest.advanceTimersByTimeAsync(0); // let the POST /messages fetch resolve
+    };
+
+    const errorMessageText = () =>
+      Array.from(getShadowRoot()?.querySelectorAll('.msg.system .msg-text') ?? [])
+        .map((el) => el.textContent)
+        .find((t) => t === "We're having trouble getting a response. Please try again.");
+
+    it('renders a bounded error and clears typing when no reply arrives within 30s', async () => {
+      await sendTestMessage('hello');
+      expect(getShadowRoot()?.getElementById('cf-typing')?.classList.contains('visible')).toBe(true);
+      expect(errorMessageText()).toBeUndefined();
+
+      await jest.advanceTimersByTimeAsync(REPLY_TIMEOUT_MS);
+
+      expect(getShadowRoot()?.getElementById('cf-typing')?.classList.contains('visible')).toBe(false);
+      expect(errorMessageText()).toBe("We're having trouble getting a response. Please try again.");
+      expect((widget as any).awaitingReply).toBe(false);
+    });
+
+    it('cancels the timer and renders no error when a reply arrives first', async () => {
+      await sendTestMessage('hello');
+
+      // Advance close to, but not past, the deadline, then simulate the reply landing.
+      await jest.advanceTimersByTimeAsync(REPLY_TIMEOUT_MS - 1000);
+      (widget as any).handleInboundMessage({ id: 'reply-1', content: 'Here you go', sender: 'bot' });
+
+      // Advance well past the original deadline — no error should ever appear.
+      await jest.advanceTimersByTimeAsync(REPLY_TIMEOUT_MS);
+
+      expect(errorMessageText()).toBeUndefined();
+      expect(getShadowRoot()?.getElementById('cf-typing')?.classList.contains('visible')).toBe(false);
+    });
+
+    it('guards against a reply landing in the same tick the timer fires', async () => {
+      await sendTestMessage('hello');
+
+      // Reply arrives, clearing awaitingReply, in the same microtask turn the timer callback runs.
+      (widget as any).handleInboundMessage({ id: 'reply-2', content: 'Just in time', sender: 'bot' });
+      await jest.advanceTimersByTimeAsync(REPLY_TIMEOUT_MS);
+
+      expect(errorMessageText()).toBeUndefined();
+    });
+
+    it('starts a fresh timer and behaves normally for a second message after a timeout', async () => {
+      await sendTestMessage('first message');
+      await jest.advanceTimersByTimeAsync(REPLY_TIMEOUT_MS);
+      expect(errorMessageText()).toBe("We're having trouble getting a response. Please try again.");
+
+      (global.fetch as jest.Mock).mockClear();
+      await sendTestMessage('second message');
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/messages'),
+        expect.objectContaining({ method: 'POST', body: expect.stringContaining('second message') })
+      );
+      expect(getShadowRoot()?.getElementById('cf-typing')?.classList.contains('visible')).toBe(true);
+      expect((widget as any).awaitingReply).toBe(true);
+
+      // The second timer fires independently and the widget is not wedged.
+      await jest.advanceTimersByTimeAsync(REPLY_TIMEOUT_MS);
+      expect(getShadowRoot()?.getElementById('cf-typing')?.classList.contains('visible')).toBe(false);
+    });
+  });
+
   describe('Message Display', () => {
     it('should display greeting message', async () => {
       const customWidget = new ErghiWidget({
