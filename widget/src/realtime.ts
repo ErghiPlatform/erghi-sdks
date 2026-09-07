@@ -37,8 +37,8 @@ export class ConversationRealtimeClient {
     await this.disconnect();
 
     // The hub has no workspace_id claim to authorize an anonymous connection against, so it
-    // gates on this per-conversation token instead (Erghi.Conversation's VisitorChatHub,
-    // P1-3/P1-4 fix) -- a missing/invalid token gets the connection aborted server-side.
+    // gates on this per-conversation token instead (Erghi.Conversation's VisitorChatHub) --
+    // a missing/invalid token gets the connection aborted server-side.
     let hubUrl = `${apiUrl.replace(/\/$/, '')}/hubs/visitor?conversationId=${encodeURIComponent(conversationId)}`;
     if (visitorToken) {
       hubUrl += `&visitorToken=${encodeURIComponent(visitorToken)}`;
@@ -46,19 +46,16 @@ export class ConversationRealtimeClient {
     this.hub = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
         // REQUIRED -- do not remove. @microsoft/signalr defaults withCredentials to `true`
-        // (HttpConnection.js: `options.withCredentials === undefined ? true : ...`), which makes
-        // its negotiate/connect handshake a credentials:'include' request. The browser then
-        // demands `Access-Control-Allow-Credentials: true` on the response, and the gateway's
-        // PublicWidgetPolicy deliberately does NOT send it -- that policy reflects any origin
-        // (customer sites can't be allowlisted ahead of time), and reflect-any-origin plus
-        // credentials is the textbook CORS hole, so the gateway is right to withhold it. The
-        // result was that /hubs/visitor was hard-blocked from every real customer domain and
-        // the widget silently degraded to HTTP polling.
+        // (HttpConnection.js: `options.withCredentials === undefined ? true : ...`), making the
+        // negotiate/connect handshake a credentials:'include' request that requires
+        // `Access-Control-Allow-Credentials: true` on the response. The gateway's
+        // PublicWidgetPolicy reflects any origin (customer sites can't be allowlisted ahead of
+        // time) and deliberately withholds that header, since combining it with reflect-any-
+        // origin is a CORS hole.
         //
-        // This connection has genuinely nothing to send: the visitor is authorized by the
-        // ?visitorToken= query param above, not by any cookie or session. Declaring that
-        // explicitly downgrades the handshake to credentials:'same-origin', which needs no
-        // ACAC header -- fixing the block without loosening the gateway's CORS posture.
+        // The visitor here is authorized by the ?visitorToken= query param above, not by any
+        // cookie or session, so there is nothing to send -- setting this to false keeps the
+        // handshake to credentials:'same-origin', which needs no ACAC header.
         withCredentials: false,
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])

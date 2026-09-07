@@ -48,16 +48,12 @@ class ErghiClient {
 
   /// Connect to the real-time hub for real-time updates.
   ///
-  /// Was a raw `web_socket_channel` connection speaking a hand-rolled {type, conversationId}
-  /// envelope directly at /hubs/chat -- that never completes the SignalR negotiate/handshake a
-  /// real ASP.NET Core SignalR hub requires (a POST to /negotiate for a connection token, then
-  /// a JSON handshake record before any invocation frames are accepted), so it could not
-  /// actually exchange messages with the real backend. This implements that protocol directly
-  /// on top of the same `web_socket_channel` package, since no official/maintained SignalR
-  /// client exists for Dart/Flutter. Also fixes a standing bug where the auth headers this
-  /// method built were never actually attached to the connection -- auth now travels the way
-  /// the real hub actually expects it (an `access_token` query parameter, the same mechanism
-  /// browsers use since they can't set custom headers on a WebSocket upgrade either).
+  /// Speaks the SignalR negotiate/handshake protocol a real ASP.NET Core SignalR hub requires
+  /// (POST /negotiate for a connection token, then a JSON handshake record before any
+  /// invocation frames are accepted), implemented directly on top of `web_socket_channel`
+  /// since no official/maintained SignalR client exists for Dart/Flutter. Auth travels as an
+  /// `access_token` query parameter -- the same mechanism browsers use, since neither can set
+  /// custom headers on a WebSocket upgrade.
   Future<void> connectWebSocket() async {
     if (_isConnected) return;
 
@@ -267,7 +263,7 @@ class ErghiClient {
   /// Stream of real-time messages (MessageReceived broadcasts).
   Stream<Message>? get messageStream => _messageController?.stream;
 
-  /// Send typing indicator. Fire-and-forget, matching this method's previous behavior.
+  /// Send typing indicator. Fire-and-forget -- does not wait for a server response.
   void sendTyping(String conversationId) {
     if (!_isConnected) return;
     invoke('SendTyping', [conversationId], waitForResult: false).catchError((e) {

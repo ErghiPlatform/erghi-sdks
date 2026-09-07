@@ -265,13 +265,10 @@ class ErghiClient:
     async def connect(self) -> None:
         """Connect to the real-time hub.
 
-        Was a bare `websockets.connect(...)` speaking a hand-rolled {type, data} envelope
-        directly at /hubs/chat -- that never completes the SignalR negotiate/handshake a real
-        ASP.NET Core SignalR hub requires (a POST to /negotiate for a connection token, then a
-        JSON handshake record before any invocation frames are accepted), so it could not
-        actually exchange messages with the real backend. This implements that protocol
-        directly on top of the same `websockets` library, since no official/maintained SignalR
-        client exists for Python.
+        Speaks the SignalR negotiate/handshake protocol a real ASP.NET Core SignalR hub
+        requires (a POST to /negotiate for a connection token, then a JSON handshake record
+        before any invocation frames are accepted), implemented directly on top of the
+        `websockets` library since no official/maintained SignalR client exists for Python.
         """
         if self._ws_is_open():
             return
@@ -395,9 +392,8 @@ class ErghiClient:
         return None
 
     async def send(self, event_type: str, data: Any) -> None:
-        """Preserved for API compatibility with the SDK's previous {type, data} envelope --
-        maps known event types onto real hub method invocations. Fire-and-forget, matching
-        this method's previous behavior (no waiting for a server response)."""
+        """Maps a {type, data} event onto the matching hub method invocation.
+        Fire-and-forget -- does not wait for a server response."""
         if event_type == "user.typing":
             conversation_id = (data or {}).get("conversationId")
             await self.invoke("SendTyping", conversation_id, wait_for_result=False)

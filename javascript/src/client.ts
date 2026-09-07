@@ -179,13 +179,9 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
   }
 
   /**
-   * Connect to the real-time hub. Was a raw `ws` WebSocket speaking a hand-rolled
-   * {type, data} envelope directly at /hubs/chat -- that never completes the SignalR
-   * negotiate/handshake a real ASP.NET Core SignalR hub requires, so it could not actually
-   * receive events from the real backend. Uses the official @microsoft/signalr client instead
-   * (same one the widget SDK, Angular SDK, and admin portal already use successfully against
-   * this exact hub), with SignalR's own automatic-reconnect in place of the previous
-   * hand-rolled exponential backoff.
+   * Connect to the real-time hub. Uses the official @microsoft/signalr client (the same one
+   * the widget SDK, Angular SDK, and admin portal use against this hub), with SignalR's own
+   * automatic reconnect.
    */
   public connect(): void {
     if (this.hub && this.hub.state !== signalR.HubConnectionState.Disconnected) {
@@ -241,19 +237,16 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
    */
   public disconnect(): void {
     if (this.hub) {
-      // stop() resolves once the connection is fully closed, but the public API is
-      // fire-and-forget (matching the previous synchronous ws.close() call) -- onclose above
-      // still fires 'disconnected' when it actually completes.
+      // stop() resolves once the connection is fully closed, but the public API here is
+      // fire-and-forget -- onclose above still fires 'disconnected' when it actually completes.
       void this.hub.stop();
       this.hub = undefined;
     }
   }
 
   /**
-   * Invoke a hub method. Only the type strings with a real server-side hub method behind them
-   * are supported -- unlike the previous raw-WebSocket transport, which would silently accept
-   * (and send into the void, since the server never understood the envelope) any arbitrary
-   * type string.
+   * Invoke a hub method. Only type strings with a real server-side hub method behind them
+   * are supported; anything else throws rather than being sent into the void.
    */
   public send(type: string, data: any): void {
     if (!this.hub || this.hub.state !== signalR.HubConnectionState.Connected) {
