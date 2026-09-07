@@ -63,6 +63,10 @@ export default class ErghiWidget {
   private fallbackPollTimer: ReturnType<typeof setTimeout> | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private awaitingReply = false;
+  // Bounded failure state: if no reply arrives within this window after a message is sent,
+  // stop spinning the typing indicator and surface a recoverable error instead (AC-1).
+  private replyTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly REPLY_TIMEOUT_MS = 30_000;
   private lastInactivityWarningAt = 0;
   private pendingFile: File | null = null;
   private translations: Record<string, string> = {};
@@ -358,6 +362,7 @@ export default class ErghiWidget {
   public destroy(): void {
     this.stopHeartbeat();
     this.stopFallbackPoll();
+    this.clearReplyTimeout();
     void this.realtime.disconnect();
     this.host?.remove();
     this.host = null;
@@ -494,6 +499,29 @@ export default class ErghiWidget {
   private awaitReply(): void {
     this.awaitingReply = true;
     this.setTyping(true);
+    this.clearReplyTimeout();
+    this.replyTimeoutTimer = setTimeout(() => this.handleReplyTimeout(), ErghiWidget.REPLY_TIMEOUT_MS);
+  }
+
+  /** Cancels the pending no-reply timer, if any. Called from every path that legitimately
+   * ends the "waiting for a reply" state (a real reply, an agent assignment, session end,
+   * or a fresh awaitReply() call) so a slow-but-successful reply never triggers the error. */
+  private clearReplyTimeout(): void {
+    if (this.replyTimeoutTimer) {
+      clearTimeout(this.replyTimeoutTimer);
+      this.replyTimeoutTimer = null;
+    }
+  }
+
+  /** Fires when no reply (bot, agent, or system) arrives within REPLY_TIMEOUT_MS of sending a
+   * message. Clears the typing indicator, renders a recoverable error, and leaves the widget
+   * able to accept a new message normally afterward (AC-1). */
+  private handleReplyTimeout(): void {
+    this.replyTimeoutTimer = null;
+    if (!this.awaitingReply) return; // reply already arrived in this tick — no-op
+    this.awaitingReply = false;
+    this.setTyping(false);
+    this.addSystemMessage(this.tr('widget.error.replyTimeout', "We're having trouble getting a response. Please try again."));
   }
 
   private async loadPublicBranding(workspaceId: string | undefined): Promise<void> {
@@ -537,6 +565,7 @@ export default class ErghiWidget {
             { name: payload.agentName }
           ));
           this.awaitingReply = false;
+          this.clearReplyTimeout();
           this.setTyping(false);
         },
         onStateChange: (connected) => {
@@ -568,6 +597,7 @@ export default class ErghiWidget {
       this.knownMessageIds.add(msg.id);
       this.appendMessageEl({ id: msg.id, content: msg.content, sender: 'system' });
       this.awaitingReply = false;
+      this.clearReplyTimeout();
       this.setTyping(false);
       return;
     }
@@ -579,6 +609,7 @@ export default class ErghiWidget {
     this.knownMessageIds.add(msg.id);
     this.appendMessageEl({ id: msg.id, content: msg.content, sender: msg.sender, sources: msg.sources });
     this.awaitingReply = false;
+    this.clearReplyTimeout();
     this.setTyping(false);
     if (!this.isOpen) {
       this.$('cf-bubble')?.classList.add('has-unread');
@@ -833,6 +864,8 @@ export default class ErghiWidget {
     this.addSystemMessage(this.tr('widget.session.ended', 'This conversation has ended. Start a new chat if you need more help.'));
     this.conversationId = null;
     this.visitorToken = null;
+    this.awaitingReply = false;
+    this.clearReplyTimeout();
     this.clearSession();
     void this.realtime.disconnect();
     this.stopHeartbeat();
