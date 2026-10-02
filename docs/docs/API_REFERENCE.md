@@ -295,36 +295,55 @@ Update widget settings.
 
 ## Admin Endpoints
 
-All `/api/admin/` endpoints require the **Admin** role.
+All `/api/admin/` endpoints are scoped to the workspace in the caller's token and require the
+`view_conversations` permission (creating widgets also needs `manage_widgets`).
 
 ### GET /api/admin/conversations/stats
 
-Workspace-wide conversation statistics.
+Workspace-wide conversation and message totals for the dashboard.
 
 **Response `200 OK`**
 ```json
 {
   "totalConversations": 524,
   "activeConversations": 18,
-  "todayConversations": 42,
-  "avgConversationDuration": 8.3,
-  "conversationTrend": 12.5
+  "queuedConversations": 3,
+  "resolvedConversations": 120,
+  "closedConversations": 383,
+  "totalMessages": 3205,
+  "todayMessages": 142,
+  "avgResponseTime": 1.8,
+  "conversationTrend": 12.5,
+  "messageTrend": 8.3
 }
 ```
+
+| Field | Notes |
+|-------|-------|
+| `activeConversations` | Open (AI answering) plus assigned to an agent |
+| `avgResponseTime` | Seconds from a visitor's first message to the first reply (AI or agent), over up to 100 conversations from the last 30 days. **`null` when there is nothing to measure** — show "no data", not 0 |
+| `conversationTrend`, `messageTrend` | Percent change, last 30 days vs the 30 before; `0` when the earlier period is empty |
 
 ---
 
 ### GET /api/admin/messages/stats
 
-Message statistics for the workspace.
+Message counts over a window.
+
+**Query parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `days` | integer | Window size, default `30` |
 
 **Response `200 OK`**
 ```json
 {
   "totalMessages": 3205,
-  "todayMessages": 142,
-  "avgResponseTime": 1.8,
-  "messageTrend": 8.3
+  "userMessages": 1610,
+  "agentMessages": 240,
+  "aiMessages": 1355,
+  "dailyStats": [{ "date": "2026-10-01T00:00:00Z", "count": 142 }]
 }
 ```
 
@@ -332,40 +351,58 @@ Message statistics for the workspace.
 
 ### GET /api/admin/conversations
 
-List all workspace conversations with advanced filtering.
+The inbox: workspace conversations, most recently started first.
 
 **Query parameters**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `page` | integer | Page number |
-| `limit` | integer | Results per page |
-| `status` | string | `open`, `closed`, `pending` |
-| `search` | string | Search by visitor ID |
-| `agentId` | UUID | Filter by assigned agent |
-| `widgetId` | UUID | Filter by widget |
+| `page` | integer | Page number, default `1` |
+| `limit` | integer | Results per page, default `50` |
+| `status` | string | One status or a comma-separated list: `open`, `queued`, `assigned`, `resolved`, `closed` (e.g. `open,assigned`). Unknown values are ignored |
+| `search` | string | Case-insensitive match on visitor name, visitor id, or any message content |
+| `widgetId` | UUID | Only conversations from this widget |
 
-**Response `200 OK`** — Paginated conversation list
+**Response `200 OK`**
+```json
+{
+  "items": [
+    {
+      "id": "conv-uuid",
+      "userId": "visitor-uuid",
+      "widgetId": "widget-uuid",
+      "status": "open",
+      "channel": "web_widget",
+      "createdAt": "2026-10-02T09:41:19Z",
+      "updatedAt": "2026-10-02T09:41:50Z",
+      "messageCount": 4,
+      "lastMessage": { "content": "Thanks!", "timestamp": "2026-10-02T09:41:50Z" },
+      "isRead": false,
+      "visitorName": "Sara Mendes",
+      "visitorPhoneMasked": null,
+      "assignedAgentId": null
+    }
+  ],
+  "statusCounts": { "open": 10, "queued": 1, "closed": 5 },
+  "totalCount": 16,
+  "page": 1,
+  "pageSize": 50,
+  "totalPages": 1
+}
+```
+
+`statusCounts` applies the `widgetId` and `search` filters but not `status`, so each inbox tab can
+show how many it would contain. Statuses with no conversations are omitted.
 
 ---
 
 ### GET /api/admin/widgets/stats
 
-Aggregated statistics per widget.
-
 **Response `200 OK`**
 ```json
 {
   "totalWidgets": 4,
-  "activeWidgets": 3,
-  "widgets": [
-    {
-      "widgetId": "widget-uuid",
-      "name": "Homepage",
-      "conversationsToday": 18,
-      "avgResponseTime": 2.1
-    }
-  ]
+  "activeWidgets": 3
 }
 ```
 
