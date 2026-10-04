@@ -121,6 +121,14 @@ describe('workspace branding in the widget', () => {
     widget.destroy();
   });
 
+  it('greets in the visitor\'s language when the workspace set no welcome message', async () => {
+    localStorage.setItem('erghi:locale', 'de');
+    serve({ companyName: 'Nimbus', welcomeMessage: null, aiAssistantName: null });
+    const { widget, shadow } = await mount();
+    expect(shadow.querySelector('.msg.system')?.textContent).toContain('Wie können wir Ihnen heute helfen?');
+    widget.destroy();
+  });
+
   it('lets embed attributes win over the workspace settings', async () => {
     serve({ primaryColor: '#0f766e', widgetTheme: 'dark', widgetPosition: 'bottom-left', companyName: 'Nimbus' });
     const { widget, root, css, shadow } = await mount({

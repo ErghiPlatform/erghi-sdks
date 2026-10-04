@@ -1,5 +1,5 @@
 /**
- * Built-in widget UI strings (EN/AR/ES). Server-provided translations
+ * Built-in widget UI strings (EN/AR/ES/DE/FR/NL). Server-provided translations
  * (`/api/v1/i18n/translations?context=widget`) override these at runtime;
  * bundling guarantees the widget is fully localized — including RTL Arabic —
  * even when the server has no translation rows for a key.
@@ -94,7 +94,95 @@ const ES: Record<string, string> = {
   'widget.footer.support': 'Soporte',
 };
 
-const BUNDLED: Record<string, Record<string, string>> = { en: EN, ar: AR, es: ES };
+const DE: Record<string, string> = {
+  'widget.greeting': 'Hallo! Wie können wir Ihnen heute helfen?',
+  'widget.header.subtitle': 'Wir antworten in der Regel innerhalb weniger Minuten',
+  'widget.input.placeholder': 'Nachricht eingeben…',
+  'widget.aria.open': 'Chat öffnen',
+  'widget.aria.close': 'Chat schließen',
+  'widget.aria.send': 'Senden',
+  'widget.aria.attach': 'Datei anhängen',
+  'widget.aria.dialog': 'Chat',
+  'widget.error.connect': 'Verbindung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+  'widget.error.send': 'Die Nachricht konnte nicht gesendet werden.',
+  'widget.error.replyTimeout': 'Wir haben gerade Probleme, eine Antwort zu erhalten. Bitte versuchen Sie es erneut.',
+  'widget.queue.position': 'Sie sind auf Platz {position} der Warteschlange. Gleich meldet sich jemand bei Ihnen.',
+  'widget.agent.connected': 'Sie sind jetzt mit {name} verbunden.',
+  'widget.inactivity.warning': 'Dieser Chat wird wegen Inaktivität in etwa {minutes} Min. geschlossen. Senden Sie eine Nachricht, um verbunden zu bleiben.',
+  'widget.inactivity.stillThere': 'Sind Sie noch da? Dieser Chat wird in etwa {minutes} Min. geschlossen, wenn Sie nicht antworten.',
+  'widget.session.ended': 'Diese Unterhaltung ist beendet. Starten Sie einen neuen Chat, wenn Sie weitere Hilfe brauchen.',
+  'widget.label.ai': 'KI-Assistent',
+  'widget.label.agent': 'Support-Mitarbeiter',
+  'widget.source.label': 'Quelle',
+  'widget.feedback.up': 'Hilfreich',
+  'widget.feedback.down': 'Nicht hilfreich',
+  'widget.footer.terms': 'AGB',
+  'widget.footer.privacy': 'Datenschutz',
+  'widget.footer.support': 'Support',
+};
+
+const FR: Record<string, string> = {
+  'widget.greeting': 'Bonjour ! Comment pouvons-nous vous aider aujourd\'hui ?',
+  'widget.header.subtitle': 'Nous répondons généralement en quelques minutes',
+  'widget.input.placeholder': 'Écrivez un message…',
+  'widget.aria.open': 'Ouvrir le chat',
+  'widget.aria.close': 'Fermer le chat',
+  'widget.aria.send': 'Envoyer',
+  'widget.aria.attach': 'Joindre un fichier',
+  'widget.aria.dialog': 'Chat',
+  'widget.error.connect': 'Connexion impossible. Veuillez réessayer.',
+  'widget.error.send': 'Le message n\'a pas pu être envoyé.',
+  'widget.error.replyTimeout': 'Nous avons du mal à obtenir une réponse. Veuillez réessayer.',
+  'widget.queue.position': 'Vous êtes n° {position} dans la file d\'attente. Un agent va bientôt vous rejoindre.',
+  'widget.agent.connected': 'Vous êtes en contact avec {name}.',
+  'widget.inactivity.warning': 'Ce chat sera fermé dans environ {minutes} min pour inactivité. Envoyez un message pour rester connecté.',
+  'widget.inactivity.stillThere': 'Toujours là ? Ce chat sera fermé dans environ {minutes} min sans réponse de votre part.',
+  'widget.session.ended': 'Cette conversation est terminée. Démarrez un nouveau chat si vous avez besoin d\'aide.',
+  'widget.label.ai': 'Assistant IA',
+  'widget.label.agent': 'Agent du support',
+  'widget.source.label': 'Source',
+  'widget.feedback.up': 'Utile',
+  'widget.feedback.down': 'Pas utile',
+  'widget.footer.terms': 'Conditions',
+  'widget.footer.privacy': 'Confidentialité',
+  'widget.footer.support': 'Support',
+};
+
+const NL: Record<string, string> = {
+  'widget.greeting': 'Hallo! Hoe kunnen we je vandaag helpen?',
+  'widget.header.subtitle': 'We reageren meestal binnen enkele minuten',
+  'widget.input.placeholder': 'Typ een bericht…',
+  'widget.aria.open': 'Chat openen',
+  'widget.aria.close': 'Chat sluiten',
+  'widget.aria.send': 'Versturen',
+  'widget.aria.attach': 'Bestand bijvoegen',
+  'widget.aria.dialog': 'Chat',
+  'widget.error.connect': 'Verbinden is mislukt. Probeer het opnieuw.',
+  'widget.error.send': 'Het bericht kon niet worden verzonden.',
+  'widget.error.replyTimeout': 'We krijgen nu geen antwoord. Probeer het opnieuw.',
+  'widget.queue.position': 'Je bent nummer {position} in de wachtrij. Er komt zo iemand bij je.',
+  'widget.agent.connected': 'Je bent verbonden met {name}.',
+  'widget.inactivity.warning': 'Deze chat wordt over ongeveer {minutes} min gesloten wegens inactiviteit. Stuur een bericht om verbonden te blijven.',
+  'widget.inactivity.stillThere': 'Ben je er nog? Deze chat wordt over ongeveer {minutes} min gesloten als je niet reageert.',
+  'widget.session.ended': 'Dit gesprek is beëindigd. Start een nieuwe chat als je meer hulp nodig hebt.',
+  'widget.label.ai': 'AI-assistent',
+  'widget.label.agent': 'Supportmedewerker',
+  'widget.source.label': 'Bron',
+  'widget.feedback.up': 'Nuttig',
+  'widget.feedback.down': 'Niet nuttig',
+  'widget.footer.terms': 'Voorwaarden',
+  'widget.footer.privacy': 'Privacy',
+  'widget.footer.support': 'Support',
+};
+
+/**
+ * Adding a language: copy the EN block, translate every key, and register it here. Keys missing
+ * from a bundle fall back to English; server rows from /api/v1/i18n/translations still override.
+ */
+const BUNDLED: Record<string, Record<string, string>> = { en: EN, ar: AR, es: ES, de: DE, fr: FR, nl: NL };
+
+/** Languages with a bundled translation; every bundle must define every EN key. */
+export const BUNDLED_LOCALES = Object.keys(BUNDLED);
 
 export function bundledTranslations(locale: string): Record<string, string> {
   return { ...EN, ...(BUNDLED[locale.slice(0, 2).toLowerCase()] ?? {}) };
