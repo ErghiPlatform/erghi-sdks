@@ -1,4 +1,5 @@
-import { buildStyles, ICON_CHAT, ICON_SEND } from './styles';
+import { buildStyles, ICON_CHAT, ICON_SEND, WidgetPosition, WidgetTheme } from './styles';
+import { DARK_SURFACE, LIGHT_SURFACE, normalizeHex, readableAccent } from './color';
 import { ConversationRealtimeClient } from './realtime';
 import { playMessageNotification } from './notification';
 import { bundledTranslations, interpolate, isRtlLocale, WidgetDirection } from './locale';
@@ -9,13 +10,16 @@ export interface ErghiConfig {
   /** @deprecated use widgetId */
   workspace?: string;
   apiUrl?: string;
-  position?: 'bottom-left' | 'bottom-right';
+  // position, primaryColor, greeting, title and theme override the workspace settings when set;
+  // left out, the widget uses what the workspace configured, then the built-in default.
+  position?: WidgetPosition;
+  /** Hex colour, "#abc" or "#aabbcc"; anything else is ignored. */
   primaryColor?: string;
   greeting?: string;
   title?: string;
   autoOpen?: boolean;
-  /** Color theme: 'light' (default), 'dark', or 'auto' (follows system preference) */
-  theme?: 'light' | 'dark' | 'auto';
+  /** Color theme: 'light', 'dark', or 'auto' (follows system preference) */
+  theme?: WidgetTheme;
   /**
    * Layout direction: 'auto' (default — follows the detected locale, e.g. RTL for Arabic),
    * or force 'ltr' / 'rtl'.
@@ -44,6 +48,11 @@ export default class ErghiWidget {
     greeting?: string;
     visitorContext: Record<string, unknown>;
   };
+  // Which settings the embed (constructor/data-* attributes) fixed; those win over the
+  // workspace settings fetched from /public.
+  private readonly explicit: Record<'primaryColor' | 'position' | 'theme' | 'title' | 'greeting', boolean>;
+  // Workspace branding with no embed-attribute equivalent.
+  private look = { logoUrl: '', secondaryColor: '', cornerRadius: DEFAULT_CORNER_RADIUS };
   private host: HTMLElement | null = null;
   private shadow: ShadowRoot | null = null;
   private isOpen = false;
@@ -91,16 +100,27 @@ export default class ErghiWidget {
     const widgetId = config.widgetId || config.workspace;
     if (!widgetId) throw new Error('Erghi: widgetId is required');
 
+    const primaryColor = normalizeHex(config.primaryColor);
+    const position = isPosition(config.position) ? config.position : null;
+    const theme = isTheme(config.theme) ? config.theme : null;
+    this.explicit = {
+      primaryColor: primaryColor !== null,
+      position: position !== null,
+      theme: theme !== null,
+      title: !!config.title,
+      greeting: !!config.greeting,
+    };
+
     this.config = {
       widgetId,
       workspace: config.workspace,
       apiUrl: config.apiUrl || 'http://localhost:5080',
-      position: config.position || 'bottom-right',
-      primaryColor: config.primaryColor || '#3b82f6',
+      position: position ?? 'bottom-right',
+      primaryColor: primaryColor ?? '#3b82f6',
       greeting: config.greeting,
       title: config.title || 'Erghi',
       autoOpen: config.autoOpen ?? false,
-      theme: config.theme ?? 'light',
+      theme: theme ?? 'light',
       direction: config.direction ?? 'auto',
       visitorContext: { ...(config.visitorContext ?? {}) },
     };
@@ -152,37 +172,50 @@ export default class ErghiWidget {
     // Bundled EN/AR/ES strings first, so the widget is localized even offline;
     // server-managed translations override them when available.
     this.translations = bundledTranslations(this.locale);
-    try {
-      const res = await fetch(
-        `${this.config.apiUrl}/api/v1/i18n/translations?language=${encodeURIComponent(this.locale)}&context=widget`
-      );
-      if (res.ok) {
-        const remote = await res.json();
-        this.translations = { ...this.translations, ...remote };
-      }
-    } catch { /* optional */ }
+    const remote = await fetchJsonWithTimeout(
+      `${this.config.apiUrl}/api/v1/i18n/translations?language=${encodeURIComponent(this.locale)}&context=widget`,
+      STARTUP_FETCH_TIMEOUT_MS
+    );
+    if (remote && typeof remote === 'object') {
+      this.translations = { ...this.translations, ...(remote as Record<string, string>) };
+    }
   }
 
+  /**
+   * Workspace settings for this widget. Bounded by STARTUP_FETCH_TIMEOUT_MS because the widget
+   * isn't shown until this settles: a slow API must not leave a customer's page without chat.
+   * A response that arrives after the timeout is dropped (the request is aborted), so the widget
+   * never restyles itself after appearing.
+   */
   private async loadWidgetEmbedConfig(): Promise<void> {
-    try {
-      const res = await fetch(`${this.config.apiUrl}/api/widgets/${this.config.widgetId}/public`);
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.primaryColor) this.config.primaryColor = data.primaryColor;
-      if (data.welcomeMessage) this.config.greeting = data.welcomeMessage;
-      if (data.companyName) this.config.title = data.companyName;
-      this.displayConfig = {
-        aiAssistantName: data.aiAssistantName ?? data.AiAssistantName ?? '',
-        showAiLabel: data.showAiLabel ?? data.ShowAiLabel ?? true,
-        showAgentName: data.showAgentName ?? data.ShowAgentName ?? true,
-        assignedAgentName: this.displayConfig.assignedAgentName,
-      };
-      this.footerLinks = {
-        termsUrl: safeHttpsUrl(data.termsUrl ?? data.TermsUrl),
-        privacyUrl: safeHttpsUrl(data.privacyUrl ?? data.PrivacyUrl),
-        supportUrl: safeHttpsUrl(data.supportUrl ?? data.SupportUrl),
-      };
-    } catch { /* optional */ }
+    const raw = await fetchJsonWithTimeout(
+      `${this.config.apiUrl}/api/widgets/${encodeURIComponent(this.config.widgetId)}/public`,
+      STARTUP_FETCH_TIMEOUT_MS
+    );
+    if (!raw || typeof raw !== 'object') return;
+    const data = raw as PublicWidgetConfig;
+    const primaryColor = normalizeHex(data.primaryColor);
+    if (primaryColor && !this.explicit.primaryColor) this.config.primaryColor = primaryColor;
+    if (isPosition(data.widgetPosition) && !this.explicit.position) this.config.position = data.widgetPosition;
+    if (isTheme(data.widgetTheme) && !this.explicit.theme) this.config.theme = data.widgetTheme;
+    if (nonBlank(data.welcomeMessage) && !this.explicit.greeting) this.config.greeting = data.welcomeMessage;
+    if (nonBlank(data.companyName) && !this.explicit.title) this.config.title = data.companyName;
+    this.look = {
+      logoUrl: safeLogoUrl(data.logoUrl, this.config.apiUrl),
+      secondaryColor: normalizeHex(data.secondaryColor) ?? '',
+      cornerRadius: clampCornerRadius(data.widgetCornerRadius),
+    };
+    this.displayConfig = {
+      aiAssistantName: stringOr(data.aiAssistantName ?? data.AiAssistantName, ''),
+      showAiLabel: boolOr(data.showAiLabel ?? data.ShowAiLabel, true),
+      showAgentName: boolOr(data.showAgentName ?? data.ShowAgentName, true),
+      assignedAgentName: this.displayConfig.assignedAgentName,
+    };
+    this.footerLinks = {
+      termsUrl: safeHttpsUrl(data.termsUrl ?? data.TermsUrl),
+      privacyUrl: safeHttpsUrl(data.privacyUrl ?? data.PrivacyUrl),
+      supportUrl: safeHttpsUrl(data.supportUrl ?? data.SupportUrl),
+    };
   }
 
   /** True if footerLinks has at least one configured link — controls whether the footer
@@ -264,19 +297,31 @@ export default class ErghiWidget {
     this.shadow = this.host.attachShadow({ mode: 'open' });
 
     const style = document.createElement('style');
-    style.textContent = buildStyles(this.config.primaryColor, this.config.position);
+    // The accent (workspace secondary colour) decorates but never carries text on a fill; it is
+    // shifted per theme until it reads on that theme's surface, and defaults to the primary.
+    const accent = this.look.secondaryColor || this.config.primaryColor;
+    style.textContent = buildStyles({
+      primaryColor: this.config.primaryColor,
+      accentLight: readableAccent(accent, LIGHT_SURFACE, '#1a1d29'),
+      accentDark: readableAccent(accent, DARK_SURFACE, '#e8eaef'),
+      position: this.config.position,
+      cornerRadius: this.look.cornerRadius,
+    });
     this.shadow.appendChild(style);
 
     const root = document.createElement('div');
     root.className = 'root';
+    root.setAttribute('data-theme', this.config.theme);
     root.setAttribute('dir', this.resolvedDirection());
     root.setAttribute('lang', this.locale);
     root.innerHTML = `
       <div class="panel" id="cf-panel" role="dialog" aria-label="${escapeHtml(this.tr('widget.aria.dialog', 'Chat'))}">
         <div class="header">
-          <div>
-            <p class="header-title">${escapeHtml(this.config.title)}</p>
-            <p class="header-sub">${escapeHtml(this.tr('widget.header.subtitle', 'We typically reply in minutes'))}</p>
+          <div class="header-brand" id="cf-brand">
+            <div class="header-text">
+              <p class="header-title">${escapeHtml(this.config.title)}</p>
+              <p class="header-sub">${escapeHtml(this.tr('widget.header.subtitle', 'We typically reply in minutes'))}</p>
+            </div>
           </div>
           <button type="button" class="icon-btn" id="cf-close" aria-label="${escapeHtml(this.tr('widget.aria.close', 'Close chat'))}">&times;</button>
         </div>
@@ -293,6 +338,7 @@ export default class ErghiWidget {
       <button type="button" class="bubble" id="cf-bubble" aria-label="${escapeHtml(this.tr('widget.aria.open', 'Open chat'))}">${ICON_CHAT}</button>
     `;
     this.shadow.appendChild(root);
+    this.attachLogo();
 
     document.body.appendChild(this.host);
     this.bindEvents();
@@ -357,6 +403,27 @@ export default class ErghiWidget {
 
   public toggle(): void {
     this.isOpen ? this.close() : this.open();
+  }
+
+  /**
+   * Logo beside the company name. Built through the DOM (never innerHTML) and removed if it fails
+   * to load, which includes the host page's CSP blocking the image, so the header falls back to the
+   * name alone. Decorative: the name next to it already says whose chat this is.
+   */
+  private attachLogo(): void {
+    const brand = this.$('cf-brand');
+    if (!brand || !this.look.logoUrl) return;
+    const img = document.createElement('img');
+    img.className = 'header-logo';
+    img.alt = '';
+    img.width = 32;
+    img.height = 32;
+    img.decoding = 'async';
+    img.referrerPolicy = 'no-referrer';
+    img.draggable = false;
+    img.addEventListener('error', () => img.remove(), { once: true });
+    img.src = this.look.logoUrl;
+    brand.insertBefore(img, brand.firstChild);
   }
 
   public destroy(): void {
@@ -531,9 +598,9 @@ export default class ErghiWidget {
       if (!res.ok) return;
       const data = await res.json();
       this.displayConfig = {
-        aiAssistantName: data.aiAssistantName ?? data.AiAssistantName ?? '',
-        showAiLabel: data.showAiLabel ?? data.ShowAiLabel ?? true,
-        showAgentName: data.showAgentName ?? data.ShowAgentName ?? true,
+        aiAssistantName: stringOr(data.aiAssistantName ?? data.AiAssistantName, ''),
+        showAiLabel: boolOr(data.showAiLabel ?? data.ShowAiLabel, true),
+        showAgentName: boolOr(data.showAgentName ?? data.ShowAgentName, true),
         assignedAgentName: this.displayConfig.assignedAgentName,
       };
     } catch {
@@ -966,6 +1033,79 @@ export default class ErghiWidget {
  * validates these as HTTPS-only at save time (UpdateBrandingRequestValidator), but the widget
  * embeds on arbitrary third-party sites, so it re-validates here rather than trusting a
  * `javascript:`/`data:` scheme could never reach this code path some other way. */
+/** GET /api/widgets/{id}/public (WidgetEmbedConfigDto). Untrusted: every field is checked before use. */
+type PublicWidgetConfig = Partial<Record<
+  | 'primaryColor' | 'secondaryColor' | 'widgetPosition' | 'widgetTheme' | 'widgetCornerRadius'
+  | 'welcomeMessage' | 'companyName' | 'logoUrl'
+  | 'aiAssistantName' | 'AiAssistantName' | 'showAiLabel' | 'ShowAiLabel' | 'showAgentName' | 'ShowAgentName'
+  | 'termsUrl' | 'TermsUrl' | 'privacyUrl' | 'PrivacyUrl' | 'supportUrl' | 'SupportUrl',
+  unknown
+>>;
+
+function stringOr(value: unknown, fallback: string): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function boolOr(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+const DEFAULT_CORNER_RADIUS = 12;
+// Generous enough for a slow mobile network, short enough that a stalled API still lets the
+// widget appear (with the embed settings and defaults) instead of never.
+const STARTUP_FETCH_TIMEOUT_MS = 3000;
+
+function isPosition(value: unknown): value is WidgetPosition {
+  return value === 'bottom-left' || value === 'bottom-right';
+}
+
+function isTheme(value: unknown): value is WidgetTheme {
+  return value === 'light' || value === 'dark' || value === 'auto';
+}
+
+function nonBlank(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+/** Workspace corner radius: a whole number of pixels in 0-50, else the default. */
+export function clampCornerRadius(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_CORNER_RADIUS;
+  return Math.min(50, Math.max(0, Math.round(value)));
+}
+
+/**
+ * The logo is shown only from https, or from the API's own origin (the uploaded-logo endpoint,
+ * which is plain http on a local stack). Nothing else: no data:, blob:, or other-origin http.
+ */
+export function safeLogoUrl(value: unknown, apiUrl: string): string {
+  if (typeof value !== 'string' || !value) return '';
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol === 'https:') return parsed.href;
+    if (parsed.protocol === 'http:' && parsed.origin === new URL(apiUrl).origin) return parsed.href;
+  } catch { /* not a URL */ }
+  return '';
+}
+
+/**
+ * GET and parse JSON, giving up after `timeoutMs` for the whole exchange (headers and body).
+ * Never throws: any failure, non-2xx, or timeout comes back as null.
+ */
+async function fetchJsonWithTimeout(url: string, timeoutMs: number): Promise<unknown> {
+  // AbortController + setTimeout rather than AbortSignal.timeout, which older Safari lacks.
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = setTimeout(() => controller?.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, controller ? { signal: controller.signal } : undefined);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function safeHttpsUrl(value: unknown): string {
   if (typeof value !== 'string' || !value) return '';
   try {
@@ -1021,7 +1161,8 @@ function autoInit(): void {
     widgetId,
     apiUrl: script.getAttribute('data-api-url') ?? undefined,
     primaryColor: script.getAttribute('data-primary-color') ?? undefined,
-    position: (script.getAttribute('data-position') as 'bottom-left' | 'bottom-right') ?? undefined,
+    position: (script.getAttribute('data-position') as WidgetPosition | null) ?? undefined,
+    theme: (script.getAttribute('data-theme') as WidgetTheme | null) ?? undefined,
     title: script.getAttribute('data-title') ?? undefined,
     greeting: script.getAttribute('data-greeting') ?? undefined,
     direction: (script.getAttribute('data-direction') as 'auto' | 'ltr' | 'rtl') ?? undefined,

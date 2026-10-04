@@ -1,12 +1,72 @@
+import { DARK_SURFACE, LIGHT_SURFACE } from './color';
+
+export type WidgetPosition = 'bottom-left' | 'bottom-right';
+export type WidgetTheme = 'light' | 'dark' | 'auto';
+
+export interface WidgetLook {
+  /** Normalized "#rrggbb"; carries white text (header, launcher, visitor bubbles, send). */
+  primaryColor: string;
+  /** Accent already made readable on each theme's surface (see color.readableAccent). */
+  accentLight: string;
+  accentDark: string;
+  position: WidgetPosition;
+  /** Workspace corner radius, already clamped to 0-50. */
+  cornerRadius: number;
+}
+
+/** Corner radii derived from the one workspace setting, so 0 is square and 50 fully round. */
+export function radii(cornerRadius: number): { panel: number; message: number; control: string; launcher: string } {
+  const r = Math.min(50, Math.max(0, Math.round(cornerRadius)));
+  return {
+    panel: Math.min(r, 28),
+    message: Math.min(r + 2, 18),
+    control: r >= 12 ? '999px' : `${r}px`,
+    launcher: r >= 16 ? '50%' : `${Math.max(r * 1.75, 4)}px`,
+  };
+}
+
+// Light is the default palette; dark overrides it on [data-theme="dark"], and on
+// [data-theme="auto"] when the visitor's system asks for dark.
+const DARK_PALETTE = `
+      --cf-surface: ${DARK_SURFACE};
+      --cf-canvas: #15171c;
+      --cf-raised: #262a33;
+      --cf-border: #2f3440;
+      --cf-text: #e8eaef;
+      --cf-text-muted: #9aa1ad;
+      --cf-text-faint: #7d8491;
+      --cf-hover: #2f3440;
+      --cf-accent: var(--cf-accent-dark);
+      color-scheme: dark;`;
+
 /** Injected into Shadow DOM — isolated from host page CSS */
-export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bottom-right'): string {
+export function buildStyles(look: WidgetLook): string {
   // Bubble/panel anchoring is a physical placement choice (viewport corner), independent
   // of text direction. Everything inside the panel uses logical properties so the
   // layout mirrors automatically when the root carries dir="rtl".
+  const { primaryColor, accentLight, accentDark, position } = look;
+  const r = radii(look.cornerRadius);
   const anchor = position === 'bottom-right' ? 'right: 20px;' : 'left: 20px;';
   return `
     :host, * { box-sizing: border-box; }
     .root {
+      --cf-primary: ${primaryColor};
+      --cf-accent-light: ${accentLight};
+      --cf-accent-dark: ${accentDark};
+      --cf-surface: ${LIGHT_SURFACE};
+      --cf-canvas: #f8f9fb;
+      --cf-raised: #f1f3f6;
+      --cf-border: #e8eaef;
+      --cf-text: #1a1d29;
+      --cf-text-muted: #6b7280;
+      --cf-text-faint: #9095a1;
+      --cf-hover: #e8eaef;
+      --cf-accent: var(--cf-accent-light);
+      --cf-r-panel: ${r.panel}px;
+      --cf-r-msg: ${r.message}px;
+      --cf-r-control: ${r.control};
+      --cf-r-launcher: ${r.launcher};
+      color-scheme: light;
       position: fixed;
       ${anchor}
       bottom: 20px;
@@ -14,11 +74,21 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
       font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 14px;
       line-height: 1.5;
-      color: #1a1d29;
+      color: var(--cf-text);
       -webkit-font-smoothing: antialiased;
+    }
+    .root[data-theme="dark"] {${DARK_PALETTE}
+    }
+    @media (prefers-color-scheme: dark) {
+      .root[data-theme="auto"] {${DARK_PALETTE}
+      }
     }
     .root[dir="rtl"] {
       font-family: Inter, -apple-system, 'Segoe UI', Tahoma, Roboto, sans-serif;
+    }
+    .root :focus-visible {
+      outline: 2px solid var(--cf-accent);
+      outline-offset: 2px;
     }
     .panel {
       display: none;
@@ -26,8 +96,8 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
       width: 380px;
       height: min(560px, calc(100vh - 100px));
       max-height: calc(100vh - 100px);
-      background: #fff;
-      border-radius: 16px;
+      background: var(--cf-surface);
+      border-radius: var(--cf-r-panel);
       box-shadow: 0 12px 40px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.06);
       overflow: hidden;
       margin-bottom: 12px;
@@ -38,12 +108,34 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 10px;
       padding: 14px 16px;
-      background: ${primaryColor};
+      background: var(--cf-primary);
       color: #fff;
       flex-shrink: 0;
     }
-    .header-title { font-weight: 600; font-size: 15px; margin: 0; }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .header-logo {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+      flex-shrink: 0;
+      border-radius: 6px;
+    }
+    .header-text { min-width: 0; }
+    .header-title {
+      font-weight: 600;
+      font-size: 15px;
+      margin: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .header-sub { font-size: 12px; opacity: .9; margin: 2px 0 0; }
     .icon-btn {
       background: rgba(255,255,255,.15);
@@ -58,8 +150,10 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
       justify-content: center;
       font-size: 18px;
       line-height: 1;
+      flex-shrink: 0;
     }
     .icon-btn:hover { background: rgba(255,255,255,.25); }
+    .icon-btn:focus-visible { outline-color: #fff; }
     .messages {
       flex: 1;
       overflow-y: auto;
@@ -67,33 +161,33 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
       display: flex;
       flex-direction: column;
       gap: 10px;
-      background: #f8f9fb;
+      background: var(--cf-canvas);
       scroll-behavior: smooth;
     }
     .msg {
       max-width: 85%;
       padding: 10px 14px;
-      border-radius: 14px;
+      border-radius: var(--cf-r-msg);
       word-wrap: break-word;
       white-space: pre-wrap;
     }
     .msg.visitor {
       align-self: flex-end;
-      background: ${primaryColor};
+      background: var(--cf-primary);
       color: #fff;
       border-end-end-radius: 4px;
     }
     .msg.bot, .msg.agent {
       align-self: flex-start;
-      background: #fff;
-      color: #1a1d29;
-      border: 1px solid #e8eaef;
+      background: var(--cf-surface);
+      color: var(--cf-text);
+      border: 1px solid var(--cf-border);
       border-end-start-radius: 4px;
     }
     .msg.system {
       align-self: center;
       background: transparent;
-      color: #6b7280;
+      color: var(--cf-text-muted);
       font-size: 12px;
       padding: 4px 8px;
       max-width: 100%;
@@ -112,25 +206,23 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
       gap: 6px;
       margin-top: 8px;
       padding-top: 8px;
-      border-top: 1px solid #e8eaef;
+      border-top: 1px solid var(--cf-border);
     }
     .msg-source-chip {
       font-size: 11px;
       line-height: 1.3;
-      padding: 3px 9px;
+      padding: 2px 8px;
       border-radius: 999px;
-      background: #f1f3f6;
-      color: #4b5568;
-      text-decoration: none;
+      border: 1px solid var(--cf-accent);
+      background: transparent;
+      color: var(--cf-accent);
+      text-decoration: underline;
       max-width: 100%;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .msg-source-chip:hover {
-      background: #e8eaef;
-      text-decoration: underline;
-    }
+    .msg-source-chip:hover { background: var(--cf-raised); }
     .msg-feedback {
       display: flex;
       gap: 4px;
@@ -149,11 +241,11 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
     }
     .msg-feedback-btn:hover:not(:disabled) {
       opacity: 1;
-      background: #f1f3f6;
+      background: var(--cf-raised);
     }
     .msg-feedback-btn.active {
       opacity: 1;
-      background: #f1f3f6;
+      background: var(--cf-raised);
     }
     .msg-feedback-btn:disabled {
       cursor: default;
@@ -166,15 +258,15 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
       display: none;
       gap: 4px;
       padding: 12px 16px;
-      background: #fff;
-      border: 1px solid #e8eaef;
-      border-radius: 14px;
+      background: var(--cf-surface);
+      border: 1px solid var(--cf-border);
+      border-radius: var(--cf-r-msg);
       border-end-start-radius: 4px;
     }
     .typing.visible { display: flex; }
     .typing span {
       width: 7px; height: 7px;
-      background: #9ca3af;
+      background: var(--cf-accent);
       border-radius: 50%;
       animation: cf-bounce 1.2s infinite ease-in-out;
     }
@@ -184,8 +276,8 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
       display: flex;
       gap: 8px;
       padding: 12px 14px;
-      border-top: 1px solid #e8eaef;
-      background: #fff;
+      border-top: 1px solid var(--cf-border);
+      background: var(--cf-surface);
       flex-shrink: 0;
       align-items: center;
     }
@@ -193,25 +285,29 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
       background: none; border: none; cursor: pointer; font-size: 1.1rem;
       padding: 4px 6px; border-radius: 6px; opacity: 0.75; flex-shrink: 0;
     }
-    .attach-btn:hover { opacity: 1; background: #f3f4f6; }
+    .attach-btn:hover { opacity: 1; background: var(--cf-raised); }
     .composer input[type="text"] {
       flex: 1;
-      border: 1px solid #e8eaef;
-      border-radius: 999px;
+      min-width: 0;
+      border: 1px solid var(--cf-border);
+      border-radius: var(--cf-r-control);
       padding: 10px 16px;
       font-size: 14px;
       outline: none;
       font-family: inherit;
+      background: var(--cf-canvas);
+      color: var(--cf-text);
     }
+    .composer input[type="text"]::placeholder { color: var(--cf-text-faint); }
     .composer input:focus {
-      border-color: ${primaryColor};
-      box-shadow: 0 0 0 3px ${primaryColor}22;
+      border-color: var(--cf-accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--cf-accent) 20%, transparent);
     }
     .send-btn {
       width: 40px; height: 40px;
       border: none;
-      border-radius: 50%;
-      background: ${primaryColor};
+      border-radius: var(--cf-r-control);
+      background: var(--cf-primary);
       color: #fff;
       cursor: pointer;
       display: flex;
@@ -227,20 +323,21 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
       align-items: center;
       gap: 6px;
       padding: 6px 14px 10px;
-      background: #fff;
+      background: var(--cf-surface);
       flex-shrink: 0;
       font-size: 11px;
     }
     .footer a {
-      color: #9095a1;
+      color: var(--cf-text-faint);
       text-decoration: none;
     }
-    .footer a:hover { color: #6b7280; text-decoration: underline; }
-    .footer-sep { color: #d1d5db; }
+    .footer a:hover { color: var(--cf-accent); text-decoration: underline; }
+    .footer-sep { color: var(--cf-border); }
     .bubble {
+      position: relative;
       width: 56px; height: 56px;
-      border-radius: 50%;
-      background: ${primaryColor};
+      border-radius: var(--cf-r-launcher);
+      background: var(--cf-primary);
       color: #fff;
       border: none;
       cursor: pointer;
@@ -253,9 +350,17 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
     .bubble:hover { transform: scale(1.06); box-shadow: 0 6px 20px rgba(0,0,0,.25); }
     .bubble svg { width: 26px; height: 26px; fill: currentColor; }
     .bubble.hidden { display: none; }
-    .bubble.has-unread {
-      animation: cf-pulse 1.5s ease-in-out infinite;
-      box-shadow: 0 0 0 3px rgba(255,255,255,.9), 0 0 0 6px ${primaryColor};
+    .bubble.has-unread { animation: cf-pulse 1.5s ease-in-out infinite; }
+    .bubble.has-unread::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      inset-inline-end: 2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--cf-accent);
+      box-shadow: 0 0 0 3px var(--cf-surface);
     }
     @keyframes cf-pulse {
       0%, 100% { transform: scale(1); }
@@ -268,6 +373,9 @@ export function buildStyles(primaryColor: string, position: 'bottom-left' | 'bot
     @keyframes cf-bounce {
       0%, 60%, 100% { transform: translateY(0); }
       30% { transform: translateY(-5px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .panel, .bubble, .bubble.has-unread, .typing span { animation: none; transition: none; }
     }
     @media (max-width: 480px) {
       .root {

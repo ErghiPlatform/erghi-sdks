@@ -154,8 +154,16 @@ The widget reads its configuration **only** from `data-*` attributes on its own 
 | Attribute | Required | Description |
 |---|---|---|
 | `data-widget-id` | Yes | Your widget's unique ID, from Widgets → your widget → Embed |
-| `data-primary-color` | No | Hex colour for the bubble/header, overrides the widget's saved theme |
+| `data-primary-color` | No | Hex colour (`#abc` or `#aabbcc`) for the bubble, header and your visitors' messages |
+| `data-theme` | No | `light`, `dark`, or `auto` (follows the visitor's system setting) |
+| `data-position` | No | `bottom-right` or `bottom-left` |
+| `data-title` | No | Name shown in the chat header |
 | `data-greeting` | No | First message shown when a visitor opens the chat |
+
+You normally don't need any of the optional attributes: the widget uses what you set under
+**Workspace → Identity** and **Workspace → Widgets** (logo, colours, theme, position, corner
+radius, company name). An attribute on the script tag overrides the workspace setting for that
+one page, and an invalid value is ignored. Saved changes reach your site within about a minute.
 
 ### Controlling the widget from your own JavaScript
 

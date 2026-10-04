@@ -54,6 +54,15 @@ new ErghiWidget({
 });
 ```
 
+`theme`, `position`, `primaryColor`, `title` and `greeting` are overrides. Left out, the widget
+uses the workspace's settings from `GET /api/widgets/{id}/public` (which also supplies the logo,
+the corner radius and the accent colour), then the built-in defaults. Invalid values are ignored.
+The script-tag equivalents are `data-theme`, `data-position`, `data-primary-color`, `data-title`
+and `data-greeting`.
+
+If the API doesn't answer within 3 seconds the widget appears anyway, with the overrides and the
+defaults, rather than leaving the page without chat.
+
 ### Localization & RTL
 
 The widget ships with built-in English, Arabic, and Spanish UI strings and full
