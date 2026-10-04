@@ -598,9 +598,9 @@ export default class ErghiWidget {
       if (!res.ok) return;
       const data = await res.json();
       this.displayConfig = {
-        aiAssistantName: data.aiAssistantName ?? data.AiAssistantName ?? '',
-        showAiLabel: data.showAiLabel ?? data.ShowAiLabel ?? true,
-        showAgentName: data.showAgentName ?? data.ShowAgentName ?? true,
+        aiAssistantName: stringOr(data.aiAssistantName ?? data.AiAssistantName, ''),
+        showAiLabel: boolOr(data.showAiLabel ?? data.ShowAiLabel, true),
+        showAgentName: boolOr(data.showAgentName ?? data.ShowAgentName, true),
         assignedAgentName: this.displayConfig.assignedAgentName,
       };
     } catch {
