@@ -1,4 +1,5 @@
 import { ErghiClient } from '../client';
+import { ErghiError } from '../errors';
 import {
   Message,
   Conversation,
@@ -7,6 +8,7 @@ import {
   PaginatedResponse,
   Widget,
   CreateWidgetRequest,
+  Attachment,
   CreateConversationOptions,
   SecureContextOptions,
   SecureContextResult,
@@ -23,7 +25,8 @@ export class ChatResource {
    */
   async getConversation(conversationId: string): Promise<Conversation> {
     const response = await this.client.getHttpClient().get<Conversation>(
-      `/api/conversations/${conversationId}`
+      `/api/conversations/${conversationId}`,
+      { headers: this.visitorHeaders(conversationId) }
     );
     return response.data;
   }
@@ -64,18 +67,22 @@ export class ChatResource {
       payload.identityToken = options.identityToken;
     }
     const response = await this.client.getHttpClient().post<Conversation>('/api/conversations', payload);
-    return response.data;
+    const conversation = response.data;
+    if (conversation.visitorToken) {
+      this.client.setVisitorToken(conversation.id, conversation.visitorToken);
+    }
+    return conversation;
   }
 
   /**
    * Attach (or refresh) a signed identity JWT on an existing conversation. A token for a
    * different user than the one already attached is refused (409).
    */
-  async attachIdentityToken(conversationId: string, visitorToken: string, identityToken: string): Promise<void> {
+  async attachIdentityToken(conversationId: string, identityToken: string): Promise<void> {
     await this.client.getHttpClient().post(
       `/api/conversations/${conversationId}/identity-token`,
       { identityToken },
-      { headers: { 'X-Visitor-Token': visitorToken } }
+      { headers: this.requireVisitorHeaders(conversationId) }
     );
   }
 
@@ -86,56 +93,64 @@ export class ChatResource {
    */
   async setSecureContext(
     conversationId: string,
-    visitorToken: string,
     values: Record<string, string>,
     options: SecureContextOptions = {}
   ): Promise<SecureContextResult> {
     const response = await this.client.getHttpClient().put<SecureContextResult>(
       `/api/conversations/${conversationId}/secure-context`,
       { values, ttlSeconds: options.ttlSeconds, merge: options.merge ?? true },
-      { headers: { 'X-Visitor-Token': visitorToken } }
+      { headers: this.requireVisitorHeaders(conversationId) }
     );
     return response.data;
   }
 
   /** Remove every secure value from a conversation (e.g. on sign-out). */
-  async clearSecureContext(conversationId: string, visitorToken: string): Promise<void> {
+  async clearSecureContext(conversationId: string): Promise<void> {
     await this.client.getHttpClient().delete(
       `/api/conversations/${conversationId}/secure-context`,
-      { headers: { 'X-Visitor-Token': visitorToken } }
+      { headers: this.requireVisitorHeaders(conversationId) }
     );
   }
 
   /**
-   * Close conversation
+   * Close conversation. Operator-only: needs an access token or API key, not a visitor token.
    */
   async closeConversation(conversationId: string): Promise<void> {
     await this.client.getHttpClient().post(`/api/conversations/${conversationId}/close`);
   }
 
   /**
-   * Send a message
+   * Send a message. Files in `attachments` are uploaded first (images, PDF or plain text,
+   * up to the workspace's size limit), then the message is posted with references to them.
+   * As a visitor, the conversation's visitor token is sent automatically.
    */
   async sendMessage(data: SendMessageRequest): Promise<Message> {
-    const formData = new FormData();
-    formData.append('content', data.content);
-    if (data.type) {
-      formData.append('type', data.type);
-    }
-    if (data.attachments) {
-      data.attachments.forEach((file) => {
-        formData.append('attachments', file);
-      });
+    const attachments: Attachment[] = [];
+    for (const file of data.attachments ?? []) {
+      attachments.push(await this.uploadAttachment(data.conversationId, file));
     }
 
     const response = await this.client.getHttpClient().post<Message>(
       `/api/conversations/${data.conversationId}/messages`,
-      formData,
       {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
+        content: data.content,
+        type: data.type ?? 'text',
+        attachments: attachments.length > 0 ? attachments : undefined,
+      },
+      { headers: this.visitorHeaders(data.conversationId) }
+    );
+    return response.data;
+  }
+
+  /** Upload one file to a conversation; pass the result in a message's attachments. */
+  async uploadAttachment(conversationId: string, file: Blob, filename?: string): Promise<Attachment> {
+    const form = new FormData();
+    const name = filename ?? (file as File).name ?? 'attachment';
+    form.append('file', file, name);
+    const response = await this.client.getHttpClient().post<Attachment>(
+      `/api/conversations/${conversationId}/attachments`,
+      form,
+      { headers: this.visitorHeaders(conversationId) }
     );
     return response.data;
   }
@@ -149,13 +164,13 @@ export class ChatResource {
   ): Promise<PaginatedResponse<Message>> {
     const response = await this.client.getHttpClient().get<PaginatedResponse<Message>>(
       `/api/conversations/${conversationId}/messages`,
-      { params }
+      { params, headers: this.visitorHeaders(conversationId) }
     );
     return response.data;
   }
 
   /**
-   * Mark message as read
+   * Mark message as read. Operator-only: needs an access token or API key.
    */
   async markAsRead(conversationId: string, messageId: string): Promise<void> {
     await this.client.getHttpClient().post(
@@ -168,5 +183,24 @@ export class ChatResource {
    */
   sendTyping(conversationId: string): void {
     this.client.send('user.typing', { conversationId });
+  }
+
+  /** X-Visitor-Token for this conversation when the client holds one; operators send none and
+   * authenticate with their access token or API key instead. */
+  private visitorHeaders(conversationId: string): Record<string, string> {
+    const token = this.client.getVisitorToken(conversationId);
+    return token ? { 'X-Visitor-Token': token } : {};
+  }
+
+  /** For calls only the visitor's own client may make. */
+  private requireVisitorHeaders(conversationId: string): Record<string, string> {
+    const headers = this.visitorHeaders(conversationId);
+    if (!headers['X-Visitor-Token']) {
+      throw new ErghiError(
+        'No visitor token for this conversation; create it with chat.createConversation or call client.setVisitorToken',
+        'VISITOR_TOKEN_MISSING'
+      );
+    }
+    return headers;
   }
 }

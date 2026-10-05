@@ -233,19 +233,23 @@ describe('ChatService', () => {
     });
   });
 
-  describe('Identity token and secure context', () => {
-    it('sends the identity token on create', () => {
+  describe('Visitor calls', () => {
+    const base = `${mockConfig.apiUrl}/api/conversations/conv-123`;
+
+    it('remembers the visitor token from create and sends the identity token', () => {
       service.createConversation('widget-123', undefined, 'jwt').subscribe(c => {
         expect(c.visitorToken).toBe('vt-1');
       });
       const req = httpMock.expectOne(`${mockConfig.apiUrl}/api/conversations`);
       expect(req.request.body.identityToken).toBe('jwt');
       req.flush({ ...mockConversation, visitorToken: 'vt-1' });
+      expect(service.getVisitorToken('conv-123')).toBe('vt-1');
     });
 
-    it('attaches an identity token with the visitor token header', () => {
-      service.attachIdentityToken('conv-123', 'vt-1', 'jwt').subscribe();
-      const req = httpMock.expectOne(`${mockConfig.apiUrl}/api/conversations/conv-123/identity-token`);
+    it('attaches an identity token with the stored visitor token', () => {
+      service.setVisitorToken('conv-123', 'vt-1');
+      service.attachIdentityToken('conv-123', 'jwt').subscribe();
+      const req = httpMock.expectOne(`${base}/identity-token`);
       expect(req.request.method).toBe('POST');
       expect(req.request.headers.get('X-Visitor-Token')).toBe('vt-1');
       expect(req.request.body).toEqual({ identityToken: 'jwt' });
@@ -253,18 +257,60 @@ describe('ChatService', () => {
     });
 
     it('puts secure context merging by default, and clears it', () => {
-      service.setSecureContext('conv-123', 'vt-1', { mf_access_token: 'abc' }, { ttlSeconds: 900 })
+      service.setVisitorToken('conv-123', 'vt-1');
+      service.setSecureContext('conv-123', { mf_access_token: 'abc' }, { ttlSeconds: 900 })
         .subscribe(r => expect(r.keys).toEqual(['mf_access_token']));
-      const put = httpMock.expectOne(`${mockConfig.apiUrl}/api/conversations/conv-123/secure-context`);
+      const put = httpMock.expectOne(`${base}/secure-context`);
       expect(put.request.method).toBe('PUT');
       expect(put.request.headers.get('X-Visitor-Token')).toBe('vt-1');
       expect(put.request.body).toEqual({ values: { mf_access_token: 'abc' }, ttlSeconds: 900, merge: true });
       put.flush({ expiresAt: '2026-10-05T10:00:00Z', keys: ['mf_access_token'] });
 
-      service.clearSecureContext('conv-123', 'vt-1').subscribe();
-      const del = httpMock.expectOne(`${mockConfig.apiUrl}/api/conversations/conv-123/secure-context`);
+      service.clearSecureContext('conv-123').subscribe();
+      const del = httpMock.expectOne(`${base}/secure-context`);
       expect(del.request.method).toBe('DELETE');
+      expect(del.request.headers.get('X-Visitor-Token')).toBe('vt-1');
       del.flush(null);
+    });
+
+    it('refuses secure context without a visitor token and makes no request', (done) => {
+      jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      service.setSecureContext('conv-123', { a: 'b' }).subscribe({
+        error: (err: Error) => {
+          expect(err.message).toContain('No visitor token');
+          done();
+        }
+      });
+      httpMock.expectNone(`${base}/secure-context`);
+    });
+
+    it('sends and reads messages with the visitor token', () => {
+      service.setVisitorToken('conv-123', 'vt-1');
+      service.sendMessage('conv-123', 'Hello').subscribe();
+      const post = httpMock.expectOne(`${base}/messages`);
+      expect(post.request.headers.get('X-Visitor-Token')).toBe('vt-1');
+      expect(post.request.body).toEqual({ content: 'Hello', type: 'text', attachments: undefined });
+      post.flush(mockMessage);
+
+      service.getMessages('conv-123').subscribe();
+      const get = httpMock.expectOne(r => r.url === `${base}/messages`);
+      expect(get.request.headers.get('X-Visitor-Token')).toBe('vt-1');
+      get.flush({ data: [], total: 0, page: 1, limit: 50, totalPages: 0 });
+    });
+
+    it('uploads files first, then references them in the message', () => {
+      service.setVisitorToken('conv-123', 'vt-1');
+      const uploaded = { id: 'a-1', filename: 'r.pdf', contentType: 'application/pdf', size: 3, url: 'https://x/a-1' };
+      service.sendMessage('conv-123', 'see file', 'text', [new Blob(['abc'], { type: 'application/pdf' })]).subscribe();
+
+      const upload = httpMock.expectOne(`${base}/attachments`);
+      expect(upload.request.body instanceof FormData).toBe(true);
+      expect(upload.request.headers.get('X-Visitor-Token')).toBe('vt-1');
+      upload.flush(uploaded);
+
+      const post = httpMock.expectOne(`${base}/messages`);
+      expect(post.request.body).toEqual({ content: 'see file', type: 'text', attachments: [uploaded] });
+      post.flush(mockMessage);
     });
   });
 });

@@ -31,22 +31,43 @@ export function useChat(conversationId: string) {
     loadMessages();
   }, [client, conversationId]);
 
-  // Setup WebSocket
+  // Real-time: an end user (the client holds this conversation's visitor token, set by
+  // chat.createConversation or client.setVisitorToken) joins the visitor hub; an operator
+  // (access token / API key) uses the agent hub.
   useEffect(() => {
-    client.connect();
-    setIsConnected(true);
+    let active = true;
+    const isVisitor = Boolean(client.getVisitorToken(conversationId));
 
     const handleMessage = (data: Message) => {
       if (data.conversationId === conversationId) {
-        setMessages((prev) => [...prev, data]);
+        setMessages((prev) => (prev.some((m) => m.id === data.id) ? prev : [...prev, data]));
       }
     };
+    const handleConnected = () => active && setIsConnected(true);
+    const handleDisconnected = () => active && setIsConnected(false);
 
     client.on('message.received', handleMessage);
+    client.on('connected', handleConnected);
+    client.on('disconnected', handleDisconnected);
+
+    if (isVisitor) {
+      client.connectVisitor(conversationId).catch((err: unknown) => {
+        if (active) setError(err instanceof Error ? err : new Error('Failed to connect'));
+      });
+    } else {
+      client.connect();
+    }
 
     return () => {
+      active = false;
       client.off('message.received', handleMessage);
-      client.disconnect();
+      client.off('connected', handleConnected);
+      client.off('disconnected', handleDisconnected);
+      if (isVisitor) {
+        void client.disconnectVisitor();
+      } else {
+        client.disconnect();
+      }
       setIsConnected(false);
     };
   }, [client, conversationId]);

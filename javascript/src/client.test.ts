@@ -112,4 +112,35 @@ describe('ErghiClient real-time transport', () => {
 
     expect(mockHubConnection.stop).toHaveBeenCalled();
   });
+
+  it('connects to the visitor hub with the conversation\'s visitor token and no credentials', async () => {
+    const client = new ErghiClient({ apiUrl: 'https://api.example.test/' });
+    client.setVisitorToken('conv 1', 'vt/1');
+    await client.connectVisitor('conv 1');
+
+    expect(withUrlMock).toHaveBeenCalledWith(
+      'https://api.example.test/hubs/visitor?conversationId=conv%201&visitorToken=vt%2F1',
+      { withCredentials: false }
+    );
+    const events = mockHubConnection.on.mock.calls.map((c) => c[0]);
+    expect(events).toEqual(expect.arrayContaining(['MessageReceived', 'ContextRequired', 'ConversationClosed']));
+  });
+
+  it('re-emits ContextRequired from the visitor hub as context.required', async () => {
+    const client = new ErghiClient({ apiUrl: 'https://api.example.test' });
+    client.setVisitorToken('conv-1', 'vt-1');
+    const seen = vi.fn();
+    client.on('context.required', seen);
+    await client.connectVisitor('conv-1');
+
+    const handler = mockHubConnection.on.mock.calls.find((c) => c[0] === 'ContextRequired')![1];
+    handler(undefined);
+    expect(seen).toHaveBeenCalledWith({ conversationId: 'conv-1' });
+  });
+
+  it('refuses a visitor connection without a visitor token', async () => {
+    const client = new ErghiClient({ apiUrl: 'https://api.example.test' });
+    await expect(client.connectVisitor('conv-1')).rejects.toMatchObject({ code: 'VISITOR_TOKEN_MISSING' });
+    expect(withUrlMock).not.toHaveBeenCalled();
+  });
 });

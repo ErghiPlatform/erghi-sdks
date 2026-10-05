@@ -28,15 +28,25 @@ export interface RegisterRequest {
   workspaceId?: string;
 }
 
+export interface Attachment {
+  id: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  url: string;
+}
+
 export interface Message {
   id: string;
   conversationId: string;
   content: string;
-  sender: 'visitor' | 'agent' | 'system';
+  sender: 'visitor' | 'agent' | 'system' | 'ai';
   senderId?: string;
   type: 'text' | 'image' | 'file';
   createdAt: string;
   isRead: boolean;
+  isAI?: boolean;
+  attachments?: Attachment[];
 }
 
 export interface Conversation {
