@@ -118,6 +118,11 @@ await widget.clearSecureContext(); // on sign-out
 
 // Without a provider, listen for the server asking for fresh values:
 window.addEventListener('erghi:context-required', () => refreshAndPush());
+
+// An identity JWT that is invalid or expired when the chat starts is dropped, and the
+// conversation starts anonymously instead of failing. Attach a fresh one when you can:
+window.addEventListener('erghi:identity-expired', async () =>
+  widget.setIdentityToken(await auth.getErghiIdentityToken()));
 ```
 
 Secure values are kept in memory only (never localStorage) and stored server-side

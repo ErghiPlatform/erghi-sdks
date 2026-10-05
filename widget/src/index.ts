@@ -618,18 +618,31 @@ export default class ErghiWidget {
     }
   }
 
+  private postConversation(identityToken: string | null): Promise<Response> {
+    return fetch(`${this.config.apiUrl}/api/conversations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        widgetId: this.config.widgetId,
+        visitorId: this.visitorId,
+        identityToken: identityToken ?? undefined,
+        metadata: this.buildMetadata(),
+      }),
+    });
+  }
+
   private async startConversation(): Promise<void> {
     try {
-      const res = await fetch(`${this.config.apiUrl}/api/conversations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          widgetId: this.config.widgetId,
-          visitorId: this.visitorId,
-          identityToken: this.identityToken ?? undefined,
-          metadata: this.buildMetadata(),
-        }),
-      });
+      let res = await this.postConversation(this.identityToken);
+      if (res.status === 401 && this.identityToken) {
+        // The identity JWT expired (or is invalid) before the visitor opened the chat. Start
+        // the conversation without it rather than blocking chat; the host app can attach a
+        // fresh token later with setIdentityToken, which applies to this conversation.
+        console.warn('[Erghi] Identity token was rejected; starting the conversation without it');
+        this.identityToken = null;
+        window.dispatchEvent(new CustomEvent('erghi:identity-expired'));
+        res = await this.postConversation(null);
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       this.conversationId = data.id ?? data.Id;

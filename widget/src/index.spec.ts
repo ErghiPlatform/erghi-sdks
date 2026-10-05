@@ -349,6 +349,35 @@ describe('ErghiWidget', () => {
       w.destroy();
     });
 
+    it('starts the conversation without an identity token the server rejects', async () => {
+      const ok = { ok: true, status: 200, json: async () => ({ id: 'conv-sc-1', visitorToken: 'tok-sc', messages: [], active: true }) };
+      (global.fetch as jest.Mock).mockImplementation(async (url: string, init?: RequestInit) => {
+        const body = init?.body ? JSON.parse(String(init.body)) : {};
+        if (url.endsWith('/api/conversations') && init?.method === 'POST' && body.identityToken) {
+          return { ok: false, status: 401, json: async () => ({ error: 'Invalid or expired identity token.' }) };
+        }
+        return ok;
+      });
+      const expired = jest.fn();
+      window.addEventListener('erghi:identity-expired', expired);
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+      const w = new ErghiWidget({ ...mockConfig, identityToken: 'expired-jwt' });
+      await flushPromises();
+      await w.open();
+      await flushPromises();
+
+      const creates = (global.fetch as jest.Mock).mock.calls.filter(
+        ([url, init]) => String(url).endsWith('/api/conversations') && init?.method === 'POST');
+      expect(creates).toHaveLength(2);
+      expect(JSON.parse(String(creates[1][1].body)).identityToken).toBeUndefined();
+      expect(expired).toHaveBeenCalledTimes(1);
+
+      window.removeEventListener('erghi:identity-expired', expired);
+      warn.mockRestore();
+      w.destroy();
+    });
+
     it('posts setIdentityToken to the current conversation with the visitor token', async () => {
       await widget.open();
       await flushPromises();
