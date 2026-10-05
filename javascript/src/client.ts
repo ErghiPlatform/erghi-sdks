@@ -28,6 +28,22 @@ type WebSocketEvents = {
 /**
  * Main Erghi SDK Client
  */
+interface PageEventTarget {
+  addEventListener(type: string, listener: () => void): void;
+  removeEventListener(type: string, listener: () => void): void;
+}
+
+/** The browser's window and document, or undefined under Node (the SDK builds without DOM types). */
+function pageEvents():
+  | { window: PageEventTarget; document: PageEventTarget & { visibilityState?: string } }
+  | undefined {
+  const scope = globalThis as {
+    window?: PageEventTarget;
+    document?: PageEventTarget & { visibilityState?: string };
+  };
+  return scope.window && scope.document ? { window: scope.window, document: scope.document } : undefined;
+}
+
 export class ErghiClient extends EventEmitter<WebSocketEvents> {
   private config: Required<ErghiConfig>;
   private httpClient: AxiosInstance;
@@ -203,6 +219,12 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
    * conversation's visitor token instead of an operator access token. Emits 'message.received'
    * for agent/AI replies, plus 'conversation.closed', 'conversation.assigned',
    * 'conversation.escalated', 'conversation.inactivity_warning' and 'context.required'.
+   *
+   * Mobile webviews (Capacitor, in-app browsers) suspend the page in the background, and the
+   * automatic reconnect gives up while suspended. When the page is visible, online or restored
+   * from the back/forward cache again, the hub is restarted if needed and
+   * 'conversation.resumed' is emitted: refetch the messages then, since replies sent while
+   * suspended never arrived over the socket.
    */
   public async connectVisitor(conversationId: string): Promise<void> {
     const visitorToken = this.visitorTokens.get(conversationId);
@@ -244,9 +266,55 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
     await hub.start();
     this.debug('Visitor hub connected');
     this.emit('connected');
+    this.watchResume(conversationId);
+  }
+
+  private resumeConversationId?: string;
+  private resuming = false;
+
+  private readonly onResume = (): void => {
+    if (pageEvents()?.document.visibilityState === 'hidden') return;
+    void this.resumeVisitor();
+  };
+
+  private async resumeVisitor(): Promise<void> {
+    const conversationId = this.resumeConversationId;
+    const hub = this.visitorHub;
+    if (!conversationId || !hub || this.resuming) return;
+    this.resuming = true;
+    try {
+      if (hub.state === signalR.HubConnectionState.Disconnected) {
+        await hub.start();
+        this.emit('connected');
+      }
+      this.emit('conversation.resumed', { conversationId });
+    } catch (error) {
+      this.emit('error', error);
+    } finally {
+      this.resuming = false;
+    }
+  }
+
+  private watchResume(conversationId: string): void {
+    this.resumeConversationId = conversationId;
+    const page = pageEvents();
+    if (!page) return;
+    page.document.addEventListener('visibilitychange', this.onResume);
+    page.window.addEventListener('online', this.onResume);
+    page.window.addEventListener('pageshow', this.onResume);
+  }
+
+  private unwatchResume(): void {
+    this.resumeConversationId = undefined;
+    const page = pageEvents();
+    if (!page) return;
+    page.document.removeEventListener('visibilitychange', this.onResume);
+    page.window.removeEventListener('online', this.onResume);
+    page.window.removeEventListener('pageshow', this.onResume);
   }
 
   public async disconnectVisitor(): Promise<void> {
+    this.unwatchResume();
     const hub = this.visitorHub;
     this.visitorHub = undefined;
     if (hub) {

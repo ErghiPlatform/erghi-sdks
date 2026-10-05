@@ -46,7 +46,11 @@ export function buildStyles(look: WidgetLook): string {
   // layout mirrors automatically when the root carries dir="rtl".
   const { primaryColor, accentLight, accentDark, position } = look;
   const r = radii(look.cornerRadius);
-  const anchor = position === 'bottom-right' ? 'right: 20px;' : 'left: 20px;';
+  // env(safe-area-inset-*) keeps the launcher and the full-screen panel clear of the notch and
+  // home indicator in iOS webviews (Capacitor sets viewport-fit=cover); it is 0 elsewhere.
+  const anchor = position === 'bottom-right'
+    ? 'right: calc(20px + env(safe-area-inset-right, 0px));'
+    : 'left: calc(20px + env(safe-area-inset-left, 0px));';
   return `
     :host, * { box-sizing: border-box; }
     .root {
@@ -69,7 +73,7 @@ export function buildStyles(look: WidgetLook): string {
       color-scheme: light;
       position: fixed;
       ${anchor}
-      bottom: 20px;
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
       z-index: 2147483646;
       font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 14px;
@@ -95,7 +99,9 @@ export function buildStyles(look: WidgetLook): string {
       flex-direction: column;
       width: 380px;
       height: min(560px, calc(100vh - 100px));
+      height: min(560px, calc(100dvh - 100px));
       max-height: calc(100vh - 100px);
+      max-height: calc(100dvh - 100px);
       background: var(--cf-surface);
       border-radius: var(--cf-r-panel);
       box-shadow: 0 12px 40px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.06);
@@ -392,8 +398,10 @@ export function buildStyles(look: WidgetLook): string {
         max-height: 100%;
         margin: 0;
         border-radius: 0;
+        padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+          env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
       }
-      .bubble { margin: 16px; ${position === 'bottom-right' ? 'margin-left: auto;' : 'margin-right: auto;'} }
+      .bubble { margin: 16px; margin-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); ${position === 'bottom-right' ? 'margin-left: auto;' : 'margin-right: auto;'} }
       .bubble.hidden { display: none; }
     }
   `;

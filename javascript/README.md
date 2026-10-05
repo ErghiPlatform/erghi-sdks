@@ -211,6 +211,20 @@ client.chat.sendTyping('conversation-id');
 client.disconnect();
 ```
 
+### Mobile apps (Capacitor)
+
+On a visitor connection (`connectVisitor`), the client restarts the hub when a suspended webview
+returns to the foreground, comes back online or is restored from the back/forward cache, then
+emits `conversation.resumed`. Reload the messages then, because replies sent while the app was
+suspended never reached the socket:
+
+```typescript
+client.on('conversation.resumed', async ({ conversationId }) => {
+  const messages = await client.chat.getMessages(conversationId);
+  render(messages);
+});
+```
+
 ## Identity Verification & Webhooks (Server-Side)
 
 `generateIdentityHash` and `verifyWebhookSignature` are stateless helpers exported from the

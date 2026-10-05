@@ -1,5 +1,10 @@
 ## Unreleased
 
+- Mobile webviews (Capacitor, in-app browsers): after the app returns from the background or
+  the device comes back online, the widget reconnects and fetches replies it missed while
+  suspended. The launcher and full-screen panel respect safe-area insets, and the panel sizes
+  with `100dvh` so it follows the on-screen keyboard.
+
 - An identity token the server rejects (e.g. expired before the visitor opened the chat)
   no longer blocks the chat: the conversation starts without it and the widget dispatches
   `erghi:identity-expired` so the host app can attach a fresh one with `setIdentityToken`.

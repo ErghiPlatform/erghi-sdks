@@ -170,7 +170,8 @@ export type WebSocketEventType =
   | 'conversation.closed'
   | 'conversation.escalated'
   | 'conversation.inactivity_warning'
-  | 'context.required';
+  | 'context.required'
+  | 'conversation.resumed';
 
 export interface PaginationParams {
   page?: number;

@@ -104,7 +104,7 @@ describe('ErghiWidget', () => {
       });
       await flushPromises();
       const style = (leftWidget as any).shadow?.querySelector('style');
-      expect(style?.textContent).toContain('left: 20px');
+      expect(style?.textContent).toContain('left: calc(20px + env(safe-area-inset-left, 0px))');
       leftWidget.destroy();
     });
 
@@ -325,6 +325,81 @@ describe('ErghiWidget', () => {
     });
   });
 
+  describe('Resuming a suspended page (mobile webviews)', () => {
+    const setVisibility = (state: 'visible' | 'hidden') =>
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
+
+    beforeEach(() => {
+      (widget as any).conversationId = 'conv-resume';
+      setVisibility('visible');
+    });
+
+    afterEach(() => setVisibility('visible'));
+
+    it('reconnects when the page becomes visible with the socket down', () => {
+      jest.spyOn((widget as any).realtime, 'isConnected').mockReturnValue(false);
+      const connect = jest.spyOn(widget as any, 'connectRealtime').mockResolvedValue(undefined);
+
+      document.dispatchEvent(new Event('visibilitychange'));
+
+      expect(connect).toHaveBeenCalledTimes(1);
+    });
+
+    it('reconnects when the network comes back', () => {
+      jest.spyOn((widget as any).realtime, 'isConnected').mockReturnValue(false);
+      const connect = jest.spyOn(widget as any, 'connectRealtime').mockResolvedValue(undefined);
+
+      window.dispatchEvent(new Event('online'));
+
+      expect(connect).toHaveBeenCalledTimes(1);
+    });
+
+    it('only fetches missed replies when the socket survived', () => {
+      jest.spyOn((widget as any).realtime, 'isConnected').mockReturnValue(true);
+      const connect = jest.spyOn(widget as any, 'connectRealtime');
+      const fetchMissed = jest.spyOn(widget as any, 'fetchMissedMessages').mockResolvedValue(undefined);
+
+      document.dispatchEvent(new Event('visibilitychange'));
+
+      expect(fetchMissed).toHaveBeenCalledTimes(1);
+      expect(connect).not.toHaveBeenCalled();
+    });
+
+    it('does nothing while hidden', () => {
+      setVisibility('hidden');
+      const connect = jest.spyOn(widget as any, 'connectRealtime');
+
+      document.dispatchEvent(new Event('visibilitychange'));
+
+      expect(connect).not.toHaveBeenCalled();
+    });
+
+    it('stops listening once destroyed', () => {
+      const connect = jest.spyOn(widget as any, 'connectRealtime');
+      widget.destroy();
+
+      window.dispatchEvent(new Event('online'));
+
+      expect(connect).not.toHaveBeenCalled();
+    });
+
+    it('adds replies that arrived while disconnected, once each', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ items: [
+          { id: 'm-missed', sender: 'agent', content: 'Sent while you were away' },
+          { id: 'm-own', sender: 'visitor', content: 'mine' },
+        ] }),
+      });
+      const inbound = jest.spyOn(widget as any, 'handleInboundMessage');
+
+      await (widget as any).fetchMissedMessages();
+
+      expect(inbound).toHaveBeenCalledTimes(1);
+      expect(inbound).toHaveBeenCalledWith(expect.objectContaining({ id: 'm-missed' }));
+    });
+  });
+
   describe('Identity token and secure context', () => {
     const findCall = (fragment: string, method?: string) =>
       (global.fetch as jest.Mock).mock.calls.find((c: unknown[]) =>
@@ -510,10 +585,9 @@ describe('ErghiWidget', () => {
       input.value = '   ';
       sendButton.click();
 
-      expect(global.fetch).not.toHaveBeenCalledWith(
-        expect.stringContaining('/messages'),
-        expect.anything()
-      );
+      const posts = (global.fetch as jest.Mock).mock.calls.filter((c: unknown[]) =>
+        String(c[0]).includes('/messages') && (c[1] as RequestInit | undefined)?.method === 'POST');
+      expect(posts).toHaveLength(0);
     });
 
     it('should send message on Enter key', async () => {

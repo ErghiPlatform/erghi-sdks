@@ -1,5 +1,9 @@
 ## Unreleased
 
+- `SignalRService.connectVisitor` restarts the hub when a suspended mobile webview resumes
+  (visible, online, or restored from the back/forward cache) and emits a `resumed` event so the
+  app can reload messages missed meanwhile.
+
 - `ChatService.createConversation(widgetId, metadata, identityToken)`, plus
   `attachIdentityToken`, `setSecureContext` and `clearSecureContext`.
   `Conversation.visitorToken` is now typed (returned by create only).
