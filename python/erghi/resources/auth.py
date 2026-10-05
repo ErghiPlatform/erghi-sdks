@@ -1,5 +1,7 @@
 """Authentication resource"""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from ..types import AuthResponse, LoginRequest, RegisterRequest, User
@@ -11,7 +13,7 @@ if TYPE_CHECKING:
 class AuthResource:
     """Authentication resource"""
 
-    def __init__(self, client: "ErghiClient") -> None:
+    def __init__(self, client: ErghiClient) -> None:
         self.client = client
 
     async def register(self, data: RegisterRequest) -> AuthResponse:

@@ -1,6 +1,9 @@
 """Workspace resource"""
 
-from typing import TYPE_CHECKING, List, Optional
+from __future__ import annotations
+
+import builtins
+from typing import TYPE_CHECKING
 
 from ..types import Workspace
 
@@ -11,7 +14,7 @@ if TYPE_CHECKING:
 class WorkspaceResource:
     """Workspace resource"""
 
-    def __init__(self, client: "ErghiClient") -> None:
+    def __init__(self, client: ErghiClient) -> None:
         self.client = client
 
     async def get(self, workspace_id: str) -> Workspace:
@@ -22,13 +25,13 @@ class WorkspaceResource:
         )
         return Workspace.model_validate(response.json())
 
-    async def list(self) -> List[Workspace]:
+    async def list(self) -> builtins.list[Workspace]:
         """List user's workspaces"""
         response = await self.client.request("GET", "/api/workspaces")
         data = response.json()
         return [Workspace.model_validate(w) for w in data]
 
-    async def create(self, name: str, slug: Optional[str] = None) -> Workspace:
+    async def create(self, name: str, slug: str | None = None) -> Workspace:
         """Create a new workspace"""
         response = await self.client.request(
             "POST",
@@ -44,8 +47,8 @@ class WorkspaceResource:
     async def update(
         self,
         workspace_id: str,
-        name: Optional[str] = None,
-        slug: Optional[str] = None,
+        name: str | None = None,
+        slug: str | None = None,
     ) -> Workspace:
         """Update workspace"""
         data = {}
