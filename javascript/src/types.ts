@@ -92,6 +92,27 @@ export interface Conversation {
   startedAt: string;
   closedAt?: string;
   metadata?: Record<string, any>;
+  /** Returned by conversation create only: the per-conversation credential every later
+   * visitor call (X-Visitor-Token) needs. */
+  visitorToken?: string;
+}
+
+export interface CreateConversationOptions {
+  /** Identity JWT your backend signed with the workspace's widget secret (HS256, `sub` and
+   * `exp` required). Gives the conversation a verified identity (`identity.*`). */
+  identityToken?: string;
+}
+
+export interface SecureContextOptions {
+  /** 60 to 86400 seconds, default 3600. */
+  ttlSeconds?: number;
+  /** Merge with values already stored (default) or replace them all. */
+  merge?: boolean;
+}
+
+export interface SecureContextResult {
+  expiresAt: string;
+  keys: string[];
 }
 
 export interface Widget {

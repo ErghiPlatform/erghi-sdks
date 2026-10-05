@@ -7,6 +7,9 @@ import {
   PaginatedResponse,
   Widget,
   CreateWidgetRequest,
+  CreateConversationOptions,
+  SecureContextOptions,
+  SecureContextResult,
 } from '../types';
 
 /**
@@ -47,14 +50,60 @@ export class ChatResource {
   /**
    * Create a new conversation
    */
-  async createConversation(widgetId: string, metadata?: Record<string, any>): Promise<Conversation> {
+  async createConversation(
+    widgetId: string,
+    metadata?: Record<string, any>,
+    options: CreateConversationOptions = {}
+  ): Promise<Conversation> {
     const payload: any = { widgetId, metadata };
     const visitorId = this.client.getVisitorId();
     if (visitorId) {
       payload.visitorId = visitorId;
     }
+    if (options.identityToken) {
+      payload.identityToken = options.identityToken;
+    }
     const response = await this.client.getHttpClient().post<Conversation>('/api/conversations', payload);
     return response.data;
+  }
+
+  /**
+   * Attach (or refresh) a signed identity JWT on an existing conversation. A token for a
+   * different user than the one already attached is refused (409).
+   */
+  async attachIdentityToken(conversationId: string, visitorToken: string, identityToken: string): Promise<void> {
+    await this.client.getHttpClient().post(
+      `/api/conversations/${conversationId}/identity-token`,
+      { identityToken },
+      { headers: { 'X-Visitor-Token': visitorToken } }
+    );
+  }
+
+  /**
+   * Store values only the workspace's integrations can use (e.g. the signed-in user's access
+   * token, bound as `{{secret.<key>}}`). The AI never sees them; they expire after ttlSeconds.
+   * Call again with fresh values whenever your token is renewed.
+   */
+  async setSecureContext(
+    conversationId: string,
+    visitorToken: string,
+    values: Record<string, string>,
+    options: SecureContextOptions = {}
+  ): Promise<SecureContextResult> {
+    const response = await this.client.getHttpClient().put<SecureContextResult>(
+      `/api/conversations/${conversationId}/secure-context`,
+      { values, ttlSeconds: options.ttlSeconds, merge: options.merge ?? true },
+      { headers: { 'X-Visitor-Token': visitorToken } }
+    );
+    return response.data;
+  }
+
+  /** Remove every secure value from a conversation (e.g. on sign-out). */
+  async clearSecureContext(conversationId: string, visitorToken: string): Promise<void> {
+    await this.client.getHttpClient().delete(
+      `/api/conversations/${conversationId}/secure-context`,
+      { headers: { 'X-Visitor-Token': visitorToken } }
+    );
   }
 
   /**

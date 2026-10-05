@@ -27,6 +27,7 @@
       "get_messages": true,
       "mark_read": true,
       "typing_indicator": true,
+      "tool_context": true,
       "evidence": "chat.service.ts has no send-typing call, but signalr.service.ts:134-136's sendTyping() invokes 'SendTyping' on the hub directly."
     },
     "widgets": {

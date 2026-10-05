@@ -110,6 +110,20 @@ const conversation = await client.chat.createConversation('widget-id', {
 });
 ```
 
+### Signed-in users and integration calls
+
+```typescript
+// identityToken: a JWT your backend signs with the workspace's widget secret.
+const conv = await client.chat.createConversation(widgetId, { locale: 'ar' }, { identityToken });
+// conv.visitorToken is returned only here; keep it for the calls below.
+
+// Values the AI never sees (bound in integrations as {{secret.<key>}}). Call again
+// whenever your app refreshes its token; the conversation keeps going.
+await client.chat.setSecureContext(conv.id, conv.visitorToken!, { mf_access_token: token }, { ttlSeconds: 900 });
+await client.chat.attachIdentityToken(conv.id, conv.visitorToken!, freshIdentityJwt);
+await client.chat.clearSecureContext(conv.id, conv.visitorToken!);
+```
+
 ### Send Message
 
 ```typescript

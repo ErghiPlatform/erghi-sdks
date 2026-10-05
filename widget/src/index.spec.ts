@@ -325,6 +325,120 @@ describe('ErghiWidget', () => {
     });
   });
 
+  describe('Identity token and secure context', () => {
+    const findCall = (fragment: string, method?: string) =>
+      (global.fetch as jest.Mock).mock.calls.find((c: unknown[]) =>
+        String(c[0]).includes(fragment) && (!method || (c[1] as RequestInit | undefined)?.method === method)
+      );
+
+    beforeEach(() => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 'conv-sc-1', visitorToken: 'tok-sc', messages: [], active: true }),
+      });
+    });
+
+    it('sends identityToken from config when creating the conversation', async () => {
+      const w = new ErghiWidget({ ...mockConfig, identityToken: 'jwt-1' });
+      await flushPromises();
+      await w.open();
+      await flushPromises();
+
+      const create = findCall('/api/conversations', 'POST');
+      expect(JSON.parse(String(create?.[1]?.body)).identityToken).toBe('jwt-1');
+      w.destroy();
+    });
+
+    it('posts setIdentityToken to the current conversation with the visitor token', async () => {
+      await widget.open();
+      await flushPromises();
+      (global.fetch as jest.Mock).mockClear();
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({}) });
+
+      await expect(widget.setIdentityToken('jwt-2')).resolves.toBe(true);
+
+      const call = findCall('/conv-sc-1/identity-token', 'POST');
+      expect(JSON.parse(String(call?.[1]?.body))).toEqual({ identityToken: 'jwt-2' });
+      expect(call?.[1]?.headers).toEqual(expect.objectContaining({ 'X-Visitor-Token': 'tok-sc' }));
+    });
+
+    it('holds secure context set before the conversation exists, then PUTs it after create', async () => {
+      await widget.setSecureContext({ mf_access_token: 'secret-1' }, { ttlSeconds: 900 });
+      expect(findCall('/secure-context')).toBeUndefined();
+
+      await widget.open();
+      await flushPromises();
+
+      const put = findCall('/conv-sc-1/secure-context', 'PUT');
+      expect(JSON.parse(String(put?.[1]?.body))).toEqual({
+        values: { mf_access_token: 'secret-1' }, ttlSeconds: 900, merge: true,
+      });
+    });
+
+    it('never writes secure values to localStorage', async () => {
+      await widget.open();
+      await flushPromises();
+      await widget.setSecureContext({ mf_access_token: 'secret-ls' });
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i) as string;
+        expect(localStorage.getItem(key)).not.toContain('secret-ls');
+      }
+    });
+
+    it('asks secureContextProvider before sending when nothing is stored yet, and not again while fresh', async () => {
+      const provider = jest.fn().mockResolvedValue({ values: { mf_access_token: 'fresh' }, ttlSeconds: 3600 });
+      const w = new ErghiWidget({ ...mockConfig, secureContextProvider: provider });
+      await flushPromises();
+      await w.open();
+      await flushPromises();
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ expiresAt: new Date(Date.now() + 3600_000).toISOString() }),
+      });
+
+      const send = async (text: string) => {
+        const root = (w as any).shadow as ShadowRoot;
+        const input = root?.getElementById('cf-input') as HTMLInputElement;
+        input.value = text;
+        (root?.getElementById('cf-send') as HTMLButtonElement).click();
+        await flushPromises();
+      };
+      await send('one');
+      await send('two');
+
+      expect(provider).toHaveBeenCalledTimes(1);
+      expect(findCall('/secure-context', 'PUT')).toBeDefined();
+      w.destroy();
+    });
+
+    it('refreshes on ContextRequired and emits erghi:context-required', async () => {
+      const provider = jest.fn().mockResolvedValue({ values: { mf_access_token: 'renewed' } });
+      const w = new ErghiWidget({ ...mockConfig, secureContextProvider: provider });
+      await flushPromises();
+      await w.open();
+      await flushPromises();
+      const listener = jest.fn();
+      window.addEventListener('erghi:context-required', listener);
+
+      (w as any).handleContextRequired();
+      await flushPromises();
+
+      expect(provider).toHaveBeenCalled();
+      expect(listener).toHaveBeenCalled();
+      window.removeEventListener('erghi:context-required', listener);
+      w.destroy();
+    });
+
+    it('clearSecureContext sends DELETE', async () => {
+      await widget.open();
+      await flushPromises();
+      await widget.clearSecureContext();
+
+      expect(findCall('/conv-sc-1/secure-context', 'DELETE')).toBeDefined();
+    });
+  });
+
   describe('Message Sending', () => {
     beforeEach(async () => {
       widget.open();

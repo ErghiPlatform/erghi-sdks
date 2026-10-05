@@ -9,7 +9,7 @@ What each of the 7 Erghi SDKs actually implements right now, verified against re
 `docs/parity/swift.json` (a manually-synced reference copy, since Swift lives in
 [`erghi-sdk-swift`](https://github.com/ErghiPlatform/erghi-sdk-swift), a separate repo).
 
-Regenerated on: 2026-09-03
+Regenerated on: 2026-10-05
 
 ## Maintenance tier
 
@@ -46,16 +46,16 @@ Regenerated on: 2026-09-03
 
 ### Chat / conversations
 
-| SDK | Create conv. | List convs. | Get conv. | Close conv. | Send msg | Get msgs | Mark read | Typing |
-|---|---|---|---|---|---|---|---|---|
-| JavaScript / TypeScript | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| React | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ✅ |
-| Angular | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Widget (Vanilla JS, embeddable) | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ✅ |
-| .NET / C# | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Python | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Flutter / Dart | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ |
-| Swift | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ |
+| SDK | Create conv. | List convs. | Get conv. | Close conv. | Send msg | Get msgs | Mark read | Typing | Identity + secure ctx |
+|---|---|---|---|---|---|---|---|---|---|
+| JavaScript / TypeScript | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| React | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ✅ | ❌ |
+| Angular | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Widget (Vanilla JS, embeddable) | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| .NET / C# | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Python | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Flutter / Dart | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Swift | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
 
 ### Widget management
 

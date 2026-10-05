@@ -21,6 +21,9 @@ export type RealtimeHandlers = {
   onEscalated?: (payload: { queuePosition: number }) => void;
   onAssigned?: (payload: { agentName: string }) => void;
   onInactivityWarning?: (payload: { secondsUntilClose: number }) => void;
+  /** An AI tool call needed the host app's session context (setSecureContext) and it was
+   * missing or rejected; the widget asks secureContextProvider for fresh values. */
+  onContextRequired?: () => void;
 };
 
 export class ConversationRealtimeClient {
@@ -79,6 +82,8 @@ export class ConversationRealtimeClient {
         agentName: String(raw['agentName'] ?? 'Support Agent'),
       });
     });
+
+    this.hub.on('ContextRequired', () => handlers.onContextRequired?.());
 
     this.hub.on('ConversationInactivityWarning', (raw: Record<string, unknown>) => {
       handlers.onInactivityWarning?.({

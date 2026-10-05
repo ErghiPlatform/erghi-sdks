@@ -232,4 +232,39 @@ describe('ChatService', () => {
       req.flush({});
     });
   });
+
+  describe('Identity token and secure context', () => {
+    it('sends the identity token on create', () => {
+      service.createConversation('widget-123', undefined, 'jwt').subscribe(c => {
+        expect(c.visitorToken).toBe('vt-1');
+      });
+      const req = httpMock.expectOne(`${mockConfig.apiUrl}/api/conversations`);
+      expect(req.request.body.identityToken).toBe('jwt');
+      req.flush({ ...mockConversation, visitorToken: 'vt-1' });
+    });
+
+    it('attaches an identity token with the visitor token header', () => {
+      service.attachIdentityToken('conv-123', 'vt-1', 'jwt').subscribe();
+      const req = httpMock.expectOne(`${mockConfig.apiUrl}/api/conversations/conv-123/identity-token`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.headers.get('X-Visitor-Token')).toBe('vt-1');
+      expect(req.request.body).toEqual({ identityToken: 'jwt' });
+      req.flush(null);
+    });
+
+    it('puts secure context merging by default, and clears it', () => {
+      service.setSecureContext('conv-123', 'vt-1', { mf_access_token: 'abc' }, { ttlSeconds: 900 })
+        .subscribe(r => expect(r.keys).toEqual(['mf_access_token']));
+      const put = httpMock.expectOne(`${mockConfig.apiUrl}/api/conversations/conv-123/secure-context`);
+      expect(put.request.method).toBe('PUT');
+      expect(put.request.headers.get('X-Visitor-Token')).toBe('vt-1');
+      expect(put.request.body).toEqual({ values: { mf_access_token: 'abc' }, ttlSeconds: 900, merge: true });
+      put.flush({ expiresAt: '2026-10-05T10:00:00Z', keys: ['mf_access_token'] });
+
+      service.clearSecureContext('conv-123', 'vt-1').subscribe();
+      const del = httpMock.expectOne(`${mockConfig.apiUrl}/api/conversations/conv-123/secure-context`);
+      expect(del.request.method).toBe('DELETE');
+      del.flush(null);
+    });
+  });
 });

@@ -25,9 +25,31 @@ export interface ErghiConfig {
    * or force 'ltr' / 'rtl'.
    */
   direction?: WidgetDirection;
-  /** Arbitrary visitor / session context passed to the AI (customerId, claims, etc.) */
+  /** Arbitrary visitor / session context passed to the AI (customerId, claims, etc.).
+   * Visible to the AI and settable by anyone, so never put tokens or secrets here; use
+   * secureContextProvider / setSecureContext for those. */
   visitorContext?: Record<string, unknown>;
+  /** Identity JWT signed by your backend with the workspace's widget secret (HS256, `sub`
+   * and `exp` required). Makes `identity.*` available to integration bindings and action
+   * policies. Same as calling setIdentityToken(). */
+  identityToken?: string;
+  /** Returns values only your integrations should see (e.g. the signed-in user's access
+   * token). Called before a message is sent when the stored values are missing or about
+   * to expire, and when the server reports they were rejected. Values are kept in memory
+   * and on the server for at most ttlSeconds, never in localStorage. */
+  secureContextProvider?: () => Promise<SecureContext | null> | SecureContext | null;
 }
+
+export interface SecureContext {
+  /** Up to 20 keys (letters, digits, `_`, `-`, `.`), each value up to 8192 characters. */
+  values: Record<string, string>;
+  /** How long the server keeps them: 60 to 86400 seconds, default 3600. Match it to the
+   * token's own lifetime so a stale token is never used. */
+  ttlSeconds?: number;
+}
+
+/** Refresh secure context this long before the server-side copy expires. */
+const SECURE_CONTEXT_REFRESH_MARGIN_MS = 60_000;
 
 interface MessageSource {
   url: string | null;
@@ -43,7 +65,7 @@ interface Message {
 }
 
 export default class ErghiWidget {
-  private config: Required<Omit<ErghiConfig, 'workspace' | 'visitorContext' | 'greeting'>> & {
+  private config: Required<Omit<ErghiConfig, 'workspace' | 'visitorContext' | 'greeting' | 'identityToken' | 'secureContextProvider'>> & {
     workspace?: string;
     greeting?: string;
     visitorContext: Record<string, unknown>;
@@ -64,6 +86,12 @@ export default class ErghiWidget {
   // so a restored session can keep using it.
   private visitorToken: string | null = null;
   private visitorId: string | null = null;
+  private identityToken: string | null = null;
+  private secureContextProvider: ErghiConfig['secureContextProvider'] | null = null;
+  // Values set before a conversation exists; sent once it does. Never persisted.
+  private pendingSecureContext: SecureContext | null = null;
+  private secureContextExpiresAt = 0;
+  private secureContextRefresh: Promise<void> | null = null;
   private messages: Message[] = [];
   private isTyping = false;
   private knownMessageIds = new Set<string>();
@@ -124,6 +152,8 @@ export default class ErghiWidget {
       direction: config.direction ?? 'auto',
       visitorContext: { ...(config.visitorContext ?? {}) },
     };
+    this.identityToken = config.identityToken || null;
+    this.secureContextProvider = config.secureContextProvider ?? null;
 
     this.bootstrap();
   }
@@ -261,6 +291,10 @@ export default class ErghiWidget {
    * This links the widget session to an external user ID.
    */
   public async authenticate(jwtToken: string): Promise<void> {
+    // The same JWT also gives the conversation a verified identity (identity.* for
+    // integrations and action policies); a bare visitorId never does.
+    this.identityToken = jwtToken;
+    if (this.conversationId) void this.setIdentityToken(jwtToken);
     try {
       const res = await fetch(`${this.config.apiUrl}/api/conversations/identity`, {
         method: 'POST',
@@ -282,6 +316,127 @@ export default class ErghiWidget {
       
     } catch (err) {
       console.error('[Erghi] Authentication failed:', err);
+    }
+  }
+
+  /**
+   * Attach a signed identity JWT (see ErghiConfig.identityToken). Before a conversation
+   * exists it is sent when the conversation is created; afterwards it is attached to the
+   * current one. Re-send a fresh token whenever yours is renewed; a token for a different
+   * user is refused for an existing conversation.
+   */
+  public async setIdentityToken(jwt: string): Promise<boolean> {
+    this.identityToken = jwt;
+    if (!this.conversationId) return true;
+    try {
+      const res = await fetch(
+        `${this.config.apiUrl}/api/conversations/${this.conversationId}/identity-token`,
+        {
+          method: 'POST',
+          headers: this.visitorHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ identityToken: jwt }),
+        }
+      );
+      if (!res.ok) {
+        console.warn(`[Erghi] Identity token was not accepted (HTTP ${res.status})`);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn('[Erghi] Failed to send identity token:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Store values only integrations can use, e.g. `{ mf_access_token: '...' }`, referenced in
+   * an integration's request bindings as `{{secret.mf_access_token}}`. The AI never sees
+   * them. Call again with a fresh token whenever yours is renewed; the conversation is not
+   * interrupted.
+   */
+  public async setSecureContext(values: Record<string, string>, options: { ttlSeconds?: number; merge?: boolean } = {}): Promise<boolean> {
+    const context: SecureContext = { values, ttlSeconds: options.ttlSeconds };
+    if (!this.conversationId) {
+      this.pendingSecureContext = options.merge === false || !this.pendingSecureContext
+        ? context
+        : { values: { ...this.pendingSecureContext.values, ...values }, ttlSeconds: options.ttlSeconds };
+      return true;
+    }
+    return this.putSecureContext(context, options.merge ?? true);
+  }
+
+  /** Remove every secure value from the server, e.g. when the user signs out of your app. */
+  public async clearSecureContext(): Promise<void> {
+    this.pendingSecureContext = null;
+    this.secureContextExpiresAt = 0;
+    if (!this.conversationId) return;
+    try {
+      await fetch(`${this.config.apiUrl}/api/conversations/${this.conversationId}/secure-context`, {
+        method: 'DELETE',
+        headers: this.visitorHeaders(),
+      });
+    } catch (err) {
+      console.warn('[Erghi] Failed to clear secure context:', err);
+    }
+  }
+
+  private async putSecureContext(context: SecureContext, merge: boolean): Promise<boolean> {
+    if (!this.conversationId) return false;
+    try {
+      const res = await fetch(`${this.config.apiUrl}/api/conversations/${this.conversationId}/secure-context`, {
+        method: 'PUT',
+        headers: this.visitorHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ values: context.values, ttlSeconds: context.ttlSeconds, merge }),
+      });
+      if (!res.ok) {
+        console.warn(`[Erghi] Secure context was not accepted (HTTP ${res.status})`);
+        return false;
+      }
+      const data = await res.json().catch(() => ({}));
+      const expiresAt = Date.parse(String(data.expiresAt ?? data.ExpiresAt ?? ''));
+      this.secureContextExpiresAt = Number.isNaN(expiresAt)
+        ? Date.now() + (context.ttlSeconds ?? 3600) * 1000
+        : expiresAt;
+      return true;
+    } catch (err) {
+      console.warn('[Erghi] Failed to send secure context:', err);
+      return false;
+    }
+  }
+
+  /** Asks secureContextProvider for fresh values when the stored ones are missing, near
+   * expiry, or (force) were rejected. Concurrent callers share one refresh. */
+  private refreshSecureContext(force = false): Promise<void> {
+    if (!this.secureContextProvider || !this.conversationId) return Promise.resolve();
+    if (!force && this.secureContextExpiresAt - Date.now() > SECURE_CONTEXT_REFRESH_MARGIN_MS) {
+      return Promise.resolve();
+    }
+    if (this.secureContextRefresh) return this.secureContextRefresh;
+    const provider = this.secureContextProvider;
+    this.secureContextRefresh = (async () => {
+      try {
+        const context = await provider();
+        if (context && Object.keys(context.values ?? {}).length > 0) {
+          await this.putSecureContext(context, true);
+        }
+      } catch (err) {
+        console.warn('[Erghi] secureContextProvider failed:', err);
+      } finally {
+        this.secureContextRefresh = null;
+      }
+    })();
+    return this.secureContextRefresh;
+  }
+
+  private handleContextRequired(): void {
+    this.secureContextExpiresAt = 0;
+    void this.refreshSecureContext(true);
+    try {
+      window.dispatchEvent(new CustomEvent('erghi:context-required', {
+        detail: { conversationId: this.conversationId },
+      }));
+    } catch {
+      // non-DOM environment
     }
   }
 
@@ -471,6 +626,7 @@ export default class ErghiWidget {
         body: JSON.stringify({
           widgetId: this.config.widgetId,
           visitorId: this.visitorId,
+          identityToken: this.identityToken ?? undefined,
           metadata: this.buildMetadata(),
         }),
       });
@@ -479,6 +635,11 @@ export default class ErghiWidget {
       this.conversationId = data.id ?? data.Id;
       this.visitorToken = data.visitorToken ?? data.VisitorToken ?? null;
       this.saveSession();
+      if (this.pendingSecureContext) {
+        const pending = this.pendingSecureContext;
+        this.pendingSecureContext = null;
+        await this.putSecureContext(pending, true);
+      }
       void this.loadPublicBranding(data.workspaceId ?? data.WorkspaceId);
       void this.connectRealtime();
       this.startHeartbeat();
@@ -497,6 +658,8 @@ export default class ErghiWidget {
       await this.startConversation();
       if (!this.conversationId) return;
     }
+    // Fresh host-app session values before the AI may call an integration with them.
+    await this.refreshSecureContext();
 
     const tempId = `temp-${Date.now()}`;
     this.appendMessageEl({ id: tempId, content: content || `📎 ${this.pendingFile!.name}`, sender: 'visitor' });
@@ -615,6 +778,7 @@ export default class ErghiWidget {
       await this.realtime.connect(this.config.apiUrl, this.conversationId, this.visitorToken, {
         onMessage: (msg) => this.handleInboundMessage(msg),
         onClosed: () => this.handleSessionEnded(),
+        onContextRequired: () => this.handleContextRequired(),
         onEscalated: (payload) => {
           if (payload.queuePosition > 1) {
             this.addSystemMessage(this.trf(
@@ -931,6 +1095,7 @@ export default class ErghiWidget {
     this.addSystemMessage(this.tr('widget.session.ended', 'This conversation has ended. Start a new chat if you need more help.'));
     this.conversationId = null;
     this.visitorToken = null;
+    this.secureContextExpiresAt = 0;
     this.awaitingReply = false;
     this.clearReplyTimeout();
     this.clearSession();

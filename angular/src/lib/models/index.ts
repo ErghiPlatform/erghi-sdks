@@ -49,6 +49,20 @@ export interface Conversation {
   metadata?: Record<string, any>;
   createdAt: string;
   closedAt?: string;
+  /** Returned by conversation create only; required as X-Visitor-Token on later visitor calls. */
+  visitorToken?: string;
+}
+
+export interface SecureContextOptions {
+  /** 60 to 86400 seconds, default 3600. */
+  ttlSeconds?: number;
+  /** Merge with values already stored (default) or replace them all. */
+  merge?: boolean;
+}
+
+export interface SecureContextResult {
+  expiresAt: string;
+  keys: string[];
 }
 
 export interface Widget {

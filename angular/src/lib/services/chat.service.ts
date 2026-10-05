@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ERGHI_CONFIG, ErghiConfig } from '../erghi.config';
-import { Conversation, Message, Widget, PaginatedResponse } from '../models';
+import { Conversation, Message, Widget, PaginatedResponse, SecureContextOptions, SecureContextResult } from '../models';
 import { AuthService } from './auth.service';
 
 @Injectable({
@@ -37,14 +37,49 @@ export class ChatService {
       .pipe(catchError(this.handleError));
   }
 
-  createConversation(widgetId: string, metadata?: Record<string, any>): Observable<Conversation> {
+  /** identityToken: a JWT your backend signed with the workspace's widget secret; gives the
+   * conversation a verified identity for integrations and action policies. */
+  createConversation(widgetId: string, metadata?: Record<string, any>, identityToken?: string): Observable<Conversation> {
     const payload: any = { widgetId, metadata };
     const visitorId = this.authService.getVisitorId();
     if (visitorId) {
       payload.visitorId = visitorId;
     }
+    if (identityToken) {
+      payload.identityToken = identityToken;
+    }
     return this.http.post<Conversation>(`${this.config.apiUrl}/api/conversations`, payload)
       .pipe(catchError(this.handleError));
+  }
+
+  attachIdentityToken(conversationId: string, visitorToken: string, identityToken: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.config.apiUrl}/api/conversations/${conversationId}/identity-token`,
+      { identityToken },
+      { headers: { 'X-Visitor-Token': visitorToken } }
+    ).pipe(catchError(this.handleError));
+  }
+
+  /** Values only integrations can use (bound as {{secret.<key>}}); never shown to the AI.
+   * Call again with fresh values whenever the user's token is renewed. */
+  setSecureContext(
+    conversationId: string,
+    visitorToken: string,
+    values: Record<string, string>,
+    options: SecureContextOptions = {}
+  ): Observable<SecureContextResult> {
+    return this.http.put<SecureContextResult>(
+      `${this.config.apiUrl}/api/conversations/${conversationId}/secure-context`,
+      { values, ttlSeconds: options.ttlSeconds, merge: options.merge ?? true },
+      { headers: { 'X-Visitor-Token': visitorToken } }
+    ).pipe(catchError(this.handleError));
+  }
+
+  clearSecureContext(conversationId: string, visitorToken: string): Observable<void> {
+    return this.http.delete<void>(
+      `${this.config.apiUrl}/api/conversations/${conversationId}/secure-context`,
+      { headers: { 'X-Visitor-Token': visitorToken } }
+    ).pipe(catchError(this.handleError));
   }
 
   closeConversation(id: string): Observable<Conversation> {

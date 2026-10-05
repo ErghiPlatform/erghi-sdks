@@ -121,6 +121,19 @@ export class ChatComponent implements OnInit {
 }
 ```
 
+#### Signed-in users and integration calls
+
+```typescript
+this.chat.createConversation(widgetId, { locale: 'ar' }, identityToken).pipe(
+  switchMap(conv => this.chat.setSecureContext(
+    conv.id, conv.visitorToken!, { mf_access_token: token }, { ttlSeconds: 900 })),
+).subscribe();
+// Also: attachIdentityToken(id, visitorToken, jwt), clearSecureContext(id, visitorToken).
+```
+
+`visitorToken` is returned only by `createConversation`. Secure values are never shown
+to the AI; call `setSecureContext` again whenever your app refreshes its token.
+
 ### Real-time with SignalR
 
 ```typescript
