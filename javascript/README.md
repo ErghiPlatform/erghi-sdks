@@ -110,6 +110,42 @@ const conversation = await client.chat.createConversation('widget-id', {
 });
 ```
 
+### Chatting as the end user (visitor)
+
+`createConversation` returns a per-conversation `visitorToken` and the client keeps it.
+Every later call for that conversation (messages, attachments, the visitor hub, identity
+and secure context) sends it as `X-Visitor-Token` automatically. To resume a conversation
+after a reload, persist `conv.id` and `conv.visitorToken` yourself and call
+`client.setVisitorToken(id, token)`.
+
+```typescript
+const client = new ErghiClient({ apiUrl: 'https://api.staging.erghi.ai' }); // no API key
+const conv = await client.chat.createConversation(widgetId, { locale: 'ar' }, { identityToken });
+
+client.on('message.received', (m) => render(m));      // agent and AI replies
+client.on('context.required', () => refreshSession());  // an integration needs fresh context
+await client.connectVisitor(conv.id);
+
+await client.chat.sendMessage({ conversationId: conv.id, content: 'When is my next payout?' });
+await client.chat.sendMessage({ conversationId: conv.id, content: 'Receipt', attachments: [file] });
+const history = await client.chat.getMessages(conv.id);
+```
+
+`closeConversation` and `markAsRead` are operator calls (access token or API key).
+
+### Signed-in users and integration calls
+
+```typescript
+// identityToken: a JWT your backend signs with the workspace's widget secret.
+const conv = await client.chat.createConversation(widgetId, { locale: 'ar' }, { identityToken });
+
+// Values the AI never sees (bound in integrations as {{secret.<key>}}). Call again
+// whenever your app refreshes its token; the conversation keeps going.
+await client.chat.setSecureContext(conv.id, { mf_access_token: token }, { ttlSeconds: 900 });
+await client.chat.attachIdentityToken(conv.id, freshIdentityJwt);
+await client.chat.clearSecureContext(conv.id);
+```
+
 ### Send Message
 
 ```typescript

@@ -121,6 +121,28 @@ export class ChatComponent implements OnInit {
 }
 ```
 
+#### Signed-in users and integration calls
+
+```typescript
+this.chat.createConversation(widgetId, { locale: 'ar' }, identityToken).pipe(
+  switchMap(conv => this.chat.setSecureContext(conv.id, { mf_access_token: token }, { ttlSeconds: 900 })),
+).subscribe();
+// Also: attachIdentityToken(id, jwt), clearSecureContext(id).
+```
+
+`createConversation` returns a per-conversation `visitorToken` and `ChatService` keeps it;
+every visitor call for that conversation (`getMessages`, `sendMessage` including file
+uploads, `getConversation`, identity, secure context) sends it as `X-Visitor-Token`. To
+resume after a reload, persist the id and token and call `setVisitorToken(id, token)`.
+`closeConversation`, `assignConversation` and `markAsRead` are operator calls.
+
+For end-user real-time, use `SignalRService.connectVisitor(conversationId)`: it joins the
+visitor hub with that token and emits `message`, `closed`, `assigned`, `escalated`,
+`inactivity-warning` and `context-required` (call `setSecureContext` with fresh values).
+
+Secure values are never shown to the AI; call `setSecureContext` again whenever your app
+refreshes its token.
+
 ### Real-time with SignalR
 
 ```typescript

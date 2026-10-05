@@ -1,15 +1,19 @@
 import { Injectable, Inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { Observable, defer, forkJoin, of, throwError } from 'rxjs';
+import { catchError, switchMap, tap } from 'rxjs/operators';
 import { ERGHI_CONFIG, ErghiConfig } from '../erghi.config';
-import { Conversation, Message, Widget, PaginatedResponse } from '../models';
+import { Attachment, Conversation, Message, Widget, PaginatedResponse, SecureContextOptions, SecureContextResult } from '../models';
 import { AuthService } from './auth.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChatService {
+  // Per-conversation credential the server issues on create; every visitor-side call (messages,
+  // attachments, identity, secure context, the visitor hub) must present it as X-Visitor-Token.
+  private readonly visitorTokens = new Map<string, string>();
+
   constructor(
     private http: HttpClient,
     private authService: AuthService,
@@ -33,20 +37,77 @@ export class ChatService {
   }
 
   getConversation(id: string): Observable<Conversation> {
-    return this.http.get<Conversation>(`${this.config.apiUrl}/api/conversations/${id}`)
+    return this.http.get<Conversation>(`${this.config.apiUrl}/api/conversations/${id}`,
+      { headers: this.visitorHeaders(id) })
       .pipe(catchError(this.handleError));
   }
 
-  createConversation(widgetId: string, metadata?: Record<string, any>): Observable<Conversation> {
+  /** Remember a conversation's visitor token. createConversation does this for you; call it
+   * when resuming a conversation whose id and token you persisted. */
+  setVisitorToken(conversationId: string, visitorToken: string): void {
+    this.visitorTokens.set(conversationId, visitorToken);
+  }
+
+  getVisitorToken(conversationId: string): string | undefined {
+    return this.visitorTokens.get(conversationId);
+  }
+
+  clearVisitorToken(conversationId: string): void {
+    this.visitorTokens.delete(conversationId);
+  }
+
+  /** identityToken: a JWT your backend signed with the workspace's widget secret; gives the
+   * conversation a verified identity for integrations and action policies. */
+  createConversation(widgetId: string, metadata?: Record<string, any>, identityToken?: string): Observable<Conversation> {
     const payload: any = { widgetId, metadata };
     const visitorId = this.authService.getVisitorId();
     if (visitorId) {
       payload.visitorId = visitorId;
     }
-    return this.http.post<Conversation>(`${this.config.apiUrl}/api/conversations`, payload)
-      .pipe(catchError(this.handleError));
+    if (identityToken) {
+      payload.identityToken = identityToken;
+    }
+    return this.http.post<Conversation>(`${this.config.apiUrl}/api/conversations`, payload).pipe(
+      tap(conversation => {
+        if (conversation.visitorToken) {
+          this.setVisitorToken(conversation.id, conversation.visitorToken);
+        }
+      }),
+      catchError(this.handleError)
+    );
   }
 
+  /** Attach (or refresh) the signed identity JWT; a token for a different user is refused (409). */
+  attachIdentityToken(conversationId: string, identityToken: string): Observable<void> {
+    return this.withVisitorToken(conversationId, headers => this.http.post<void>(
+      `${this.config.apiUrl}/api/conversations/${conversationId}/identity-token`,
+      { identityToken },
+      { headers }
+    ));
+  }
+
+  /** Values only integrations can use (bound as {{secret.<key>}}); never shown to the AI.
+   * Call again with fresh values whenever the user's token is renewed. */
+  setSecureContext(
+    conversationId: string,
+    values: Record<string, string>,
+    options: SecureContextOptions = {}
+  ): Observable<SecureContextResult> {
+    return this.withVisitorToken(conversationId, headers => this.http.put<SecureContextResult>(
+      `${this.config.apiUrl}/api/conversations/${conversationId}/secure-context`,
+      { values, ttlSeconds: options.ttlSeconds, merge: options.merge ?? true },
+      { headers }
+    ));
+  }
+
+  clearSecureContext(conversationId: string): Observable<void> {
+    return this.withVisitorToken(conversationId, headers => this.http.delete<void>(
+      `${this.config.apiUrl}/api/conversations/${conversationId}/secure-context`,
+      { headers }
+    ));
+  }
+
+  /** Operator-only (access token), not available to a visitor. */
   closeConversation(id: string): Observable<Conversation> {
     return this.http.post<Conversation>(`${this.config.apiUrl}/api/conversations/${id}/close`, {})
       .pipe(catchError(this.handleError));
@@ -66,14 +127,38 @@ export class ChatService {
 
     return this.http.get<PaginatedResponse<Message>>(
       `${this.config.apiUrl}/api/conversations/${conversationId}/messages`,
-      { params }
+      { params, headers: this.visitorHeaders(conversationId) }
     ).pipe(catchError(this.handleError));
   }
 
-  sendMessage(conversationId: string, content: string, type: 'text' | 'image' | 'file' = 'text'): Observable<Message> {
-    return this.http.post<Message>(
-      `${this.config.apiUrl}/api/conversations/${conversationId}/messages`,
-      { content, type }
+  /** Send a message. Files are uploaded first (images, PDF or plain text), then referenced. */
+  sendMessage(
+    conversationId: string,
+    content: string,
+    type: 'text' | 'image' | 'file' = 'text',
+    files: Blob[] = []
+  ): Observable<Message> {
+    const uploads: Observable<Attachment[]> = files.length > 0
+      ? forkJoin(files.map(file => this.uploadAttachment(conversationId, file)))
+      : of([]);
+    return uploads.pipe(
+      switchMap(attachments => this.http.post<Message>(
+        `${this.config.apiUrl}/api/conversations/${conversationId}/messages`,
+        { content, type, attachments: attachments.length > 0 ? attachments : undefined },
+        { headers: this.visitorHeaders(conversationId) }
+      )),
+      catchError(this.handleError)
+    );
+  }
+
+  /** Upload one file to a conversation; the result goes in a message's attachments. */
+  uploadAttachment(conversationId: string, file: Blob, filename?: string): Observable<Attachment> {
+    const form = new FormData();
+    form.append('file', file, filename ?? (file as File).name ?? 'attachment');
+    return this.http.post<Attachment>(
+      `${this.config.apiUrl}/api/conversations/${conversationId}/attachments`,
+      form,
+      { headers: this.visitorHeaders(conversationId) }
     ).pipe(catchError(this.handleError));
   }
 
@@ -119,6 +204,24 @@ export class ChatService {
   deleteWidget(id: string): Observable<void> {
     return this.http.delete<void>(`${this.config.apiUrl}/api/widgets/${id}`)
       .pipe(catchError(this.handleError));
+  }
+
+  /** X-Visitor-Token when this service holds one for the conversation; operators send none and
+   * authenticate with their access token instead. */
+  private visitorHeaders(conversationId: string): HttpHeaders {
+    const token = this.visitorTokens.get(conversationId);
+    return token ? new HttpHeaders({ 'X-Visitor-Token': token }) : new HttpHeaders();
+  }
+
+  /** For calls only the visitor's own client may make. */
+  private withVisitorToken<T>(conversationId: string, call: (headers: HttpHeaders) => Observable<T>): Observable<T> {
+    return defer(() => {
+      if (!this.visitorTokens.has(conversationId)) {
+        return throwError(() => new Error(
+          'No visitor token for this conversation; create it with createConversation or call setVisitorToken'));
+      }
+      return call(this.visitorHeaders(conversationId));
+    }).pipe(catchError(this.handleError));
   }
 
   private handleError(error: any): Observable<never> {

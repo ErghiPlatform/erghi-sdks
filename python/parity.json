@@ -27,6 +27,7 @@
       "get_messages": true,
       "mark_read": true,
       "typing_indicator": true,
+      "tool_context": false,
       "evidence": "python/erghi/resources/chat.py:18-121 -- full parity with javascript's chat.ts."
     },
     "widgets": { "create": false, "list": false, "get": false, "update": false, "note": "No widget resource file at all -- javascript at least has createWidget; python has none. Real gap." },

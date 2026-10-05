@@ -32,7 +32,11 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
   private config: Required<ErghiConfig>;
   private httpClient: AxiosInstance;
   private hub?: signalR.HubConnection;
+  private visitorHub?: signalR.HubConnection;
   private visitorId: string;
+  // Per-conversation credential the server issues on conversation create. Every visitor-side
+  // call (messages, attachments, identity, secure context, the visitor hub) must present it.
+  private visitorTokens = new Map<string, string>();
   
   public readonly auth: AuthResource;
   public readonly chat: ChatResource;
@@ -179,6 +183,78 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
   }
 
   /**
+   * Remember the visitor token for a conversation. `chat.createConversation` does this for you;
+   * call it yourself when resuming a conversation whose id and token you persisted.
+   */
+  public setVisitorToken(conversationId: string, visitorToken: string): void {
+    this.visitorTokens.set(conversationId, visitorToken);
+  }
+
+  public getVisitorToken(conversationId: string): string | undefined {
+    return this.visitorTokens.get(conversationId);
+  }
+
+  public clearVisitorToken(conversationId: string): void {
+    this.visitorTokens.delete(conversationId);
+  }
+
+  /**
+   * Connect to a conversation's visitor hub (`/hubs/visitor`) as the end user, authorized by the
+   * conversation's visitor token instead of an operator access token. Emits 'message.received'
+   * for agent/AI replies, plus 'conversation.closed', 'conversation.assigned',
+   * 'conversation.escalated', 'conversation.inactivity_warning' and 'context.required'.
+   */
+  public async connectVisitor(conversationId: string): Promise<void> {
+    const visitorToken = this.visitorTokens.get(conversationId);
+    if (!visitorToken) {
+      throw new ErghiError(
+        'No visitor token for this conversation; create it with chat.createConversation or call setVisitorToken',
+        'VISITOR_TOKEN_MISSING'
+      );
+    }
+    await this.disconnectVisitor();
+
+    const base = this.config.apiUrl.replace(/\/$/, '');
+    const hub = new signalR.HubConnectionBuilder()
+      .withUrl(
+        `${base}/hubs/visitor?conversationId=${encodeURIComponent(conversationId)}` +
+          `&visitorToken=${encodeURIComponent(visitorToken)}`,
+        // The visitor is authorized by the token in the query, not a cookie. The gateway's public
+        // CORS policy reflects any origin without Allow-Credentials, so a credentialed handshake
+        // (signalr's default) would be blocked in browsers and Capacitor webviews.
+        { withCredentials: false }
+      )
+      .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+      .build();
+
+    hub.on('MessageReceived', (data) => this.emit('message.received', data));
+    hub.on('ConversationClosed', (data) => this.emit('conversation.closed', data));
+    hub.on('ConversationAssigned', (data) => this.emit('conversation.assigned', data));
+    hub.on('ConversationEscalated', (data) => this.emit('conversation.escalated', data));
+    hub.on('ConversationInactivityWarning', (data) => this.emit('conversation.inactivity_warning', data));
+    hub.on('ContextRequired', (data) => this.emit('context.required', { conversationId, ...(data ?? {}) }));
+    hub.onreconnecting(() => this.emit('disconnected'));
+    hub.onreconnected(() => this.emit('connected'));
+    hub.onclose((error) => {
+      this.emit('disconnected');
+      if (error) this.emit('error', error);
+    });
+
+    this.visitorHub = hub;
+    await hub.start();
+    this.debug('Visitor hub connected');
+    this.emit('connected');
+  }
+
+  public async disconnectVisitor(): Promise<void> {
+    const hub = this.visitorHub;
+    this.visitorHub = undefined;
+    if (hub) {
+      await hub.stop().catch(() => undefined);
+    }
+  }
+
+  /**
    * Connect to the real-time hub. Uses the official @microsoft/signalr client (the same one
    * the widget SDK, Angular SDK, and admin portal use against this hub), with SignalR's own
    * automatic reconnect.
@@ -242,6 +318,7 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
       void this.hub.stop();
       this.hub = undefined;
     }
+    void this.disconnectVisitor();
   }
 
   /**

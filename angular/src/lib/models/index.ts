@@ -28,15 +28,25 @@ export interface RegisterRequest {
   workspaceId?: string;
 }
 
+export interface Attachment {
+  id: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  url: string;
+}
+
 export interface Message {
   id: string;
   conversationId: string;
   content: string;
-  sender: 'visitor' | 'agent' | 'system';
+  sender: 'visitor' | 'agent' | 'system' | 'ai';
   senderId?: string;
   type: 'text' | 'image' | 'file';
   createdAt: string;
   isRead: boolean;
+  isAI?: boolean;
+  attachments?: Attachment[];
 }
 
 export interface Conversation {
@@ -49,6 +59,20 @@ export interface Conversation {
   metadata?: Record<string, any>;
   createdAt: string;
   closedAt?: string;
+  /** Returned by conversation create only; required as X-Visitor-Token on later visitor calls. */
+  visitorToken?: string;
+}
+
+export interface SecureContextOptions {
+  /** 60 to 86400 seconds, default 3600. */
+  ttlSeconds?: number;
+  /** Merge with values already stored (default) or replace them all. */
+  merge?: boolean;
+}
+
+export interface SecureContextResult {
+  expiresAt: string;
+  keys: string[];
 }
 
 export interface Widget {

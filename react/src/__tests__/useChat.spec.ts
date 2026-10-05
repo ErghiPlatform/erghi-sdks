@@ -14,6 +14,9 @@ describe('useChat', () => {
   const mockOn = vi.fn();
   const mockOff = vi.fn();
   const mockSendTypingEvent = vi.fn();
+  const mockGetVisitorToken = vi.fn();
+  const mockConnectVisitor = vi.fn();
+  const mockDisconnectVisitor = vi.fn();
 
   const mockClient = {
     chat: {
@@ -24,12 +27,18 @@ describe('useChat', () => {
     },
     connect: mockConnect,
     disconnect: mockDisconnect,
+    getVisitorToken: mockGetVisitorToken,
+    connectVisitor: mockConnectVisitor,
+    disconnectVisitor: mockDisconnectVisitor,
     on: mockOn,
     off: mockOff,
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetVisitorToken.mockReturnValue(undefined);
+    mockConnectVisitor.mockResolvedValue(undefined);
+    mockDisconnectVisitor.mockResolvedValue(undefined);
     (useErghi as vi.Mock).mockReturnValue({ client: mockClient });
   });
 
@@ -121,5 +130,34 @@ describe('useChat', () => {
     });
 
     expect(mockSendMessage).toHaveBeenCalledWith({ conversationId: 'conv-1', content: 'sent', type: 'text' });
+  });
+
+  it('joins the visitor hub instead of the agent hub when it holds a visitor token', async () => {
+    mockGetMessages.mockResolvedValue({ data: [], meta: {} });
+    mockGetVisitorToken.mockReturnValue('vt-1');
+
+    const { unmount } = renderHook(() => useChat('conv-1'));
+
+    expect(mockConnectVisitor).toHaveBeenCalledWith('conv-1');
+    expect(mockConnect).not.toHaveBeenCalled();
+
+    unmount();
+
+    expect(mockDisconnectVisitor).toHaveBeenCalled();
+    expect(mockDisconnect).not.toHaveBeenCalled();
+  });
+
+  it('ignores a duplicate of a message it already has', async () => {
+    mockGetMessages.mockResolvedValue({ data: [{ id: '1', content: 'hello', conversationId: 'conv-1' }], meta: {} });
+    let messageHandler: Function = () => {};
+    mockOn.mockImplementation((event, handler) => {
+      if (event === 'message.received') messageHandler = handler;
+    });
+
+    const { result } = renderHook(() => useChat('conv-1'));
+    await waitFor(() => expect(result.current.messages.length).toBe(1));
+
+    act(() => messageHandler({ id: '1', content: 'hello', conversationId: 'conv-1' }));
+    expect(result.current.messages).toHaveLength(1);
   });
 });

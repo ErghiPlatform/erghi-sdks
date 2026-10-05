@@ -27,6 +27,7 @@
       "get_messages": true,
       "mark_read": true,
       "typing_indicator": true,
+      "tool_context": true,
       "evidence": "javascript/src/resources/chat.ts:21-122 -- sendTyping() at :120 invokes 'user.typing' -> SignalR 'SendTyping' via client.ts:265"
     },
     "widgets": {
