@@ -1,7 +1,8 @@
 """Chat resource"""
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
 
 from ..types import Conversation, Message, PaginatedResponse, PaginationParams
 
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
 class ChatResource:
     """Chat resource"""
 
-    def __init__(self, client: "ErghiClient") -> None:
+    def __init__(self, client: ErghiClient) -> None:
         self.client = client
 
     async def get_conversation(self, conversation_id: str) -> Conversation:
@@ -25,7 +26,7 @@ class ChatResource:
 
     async def list_conversations(
         self,
-        params: Optional[PaginationParams] = None,
+        params: PaginationParams | None = None,
     ) -> PaginatedResponse:
         """List conversations"""
         query_params = params.model_dump(exclude_none=True) if params else {}
@@ -40,7 +41,7 @@ class ChatResource:
     async def create_conversation(
         self,
         widget_id: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> Conversation:
         """Create a new conversation"""
         payload = {"widgetId": widget_id, "metadata": metadata}
@@ -66,7 +67,7 @@ class ChatResource:
         conversation_id: str,
         content: str,
         message_type: str = "text",
-        attachments: Optional[List[Any]] = None,
+        attachments: list[Any] | None = None,
     ) -> Message:
         """Send a message"""
         if attachments:
@@ -99,7 +100,7 @@ class ChatResource:
     async def get_messages(
         self,
         conversation_id: str,
-        params: Optional[PaginationParams] = None,
+        params: PaginationParams | None = None,
     ) -> PaginatedResponse:
         """Get messages for a conversation"""
         query_params = params.model_dump(exclude_none=True) if params else {}

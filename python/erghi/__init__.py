@@ -1,42 +1,44 @@
 """Erghi Python SDK"""
 
+from __future__ import annotations
+
 from .client import ErghiClient
 from .errors import (
-    ErghiError,
     AuthenticationError,
-    ValidationError,
-    RateLimitError,
+    ErghiError,
+    HubException,
     NetworkError,
     NotFoundError,
-    HubException,
+    RateLimitError,
+    ValidationError,
 )
 from .hmac import generate_identity_hash, verify_webhook_signature
 from .types import (
-    User,
-    RegisterRequest,
-    LoginRequest,
     AuthResponse,
-    Message,
     Conversation,
+    LoginRequest,
+    Message,
+    RegisterRequest,
+    User,
     Workspace,
 )
 
 __version__ = "1.0.0"
 __all__ = [
+    "AuthResponse",
+    "AuthenticationError",
+    "Conversation",
     "ErghiClient",
     "ErghiError",
-    "AuthenticationError",
-    "ValidationError",
-    "RateLimitError",
+    "HubException",
+    "LoginRequest",
+    "Message",
     "NetworkError",
     "NotFoundError",
-    "HubException",
-    "User",
+    "RateLimitError",
     "RegisterRequest",
-    "LoginRequest",
-    "AuthResponse",
-    "Message",
-    "Conversation",
+    "User",
+    "ValidationError",
     "Workspace",
     "generate_identity_hash",
     "verify_webhook_signature",

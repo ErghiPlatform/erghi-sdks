@@ -72,5 +72,6 @@ def verify_webhook_signature(payload: str, signature: str, secret: str) -> bool:
         expected = generate_identity_hash(payload, secret)
         # Constant-time comparison to prevent timing attacks
         return hmac_lib.compare_digest(expected.lower(), signature.lower())
-    except Exception:
+    except (TypeError, ValueError):
+        # compare_digest rejects non-ASCII strings: such a signature is never valid.
         return False

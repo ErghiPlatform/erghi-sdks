@@ -1,6 +1,8 @@
 """Custom exceptions for Erghi SDK"""
 
-from typing import Any, Dict, Optional
+from __future__ import annotations
+
+from typing import Any
 
 
 class ErghiError(Exception):
@@ -10,8 +12,8 @@ class ErghiError(Exception):
         self,
         message: str,
         code: str,
-        status_code: Optional[int] = None,
-        details: Optional[Any] = None,
+        status_code: int | None = None,
+        details: Any | None = None,
     ) -> None:
         super().__init__(message)
         self.message = message
@@ -23,9 +25,7 @@ class ErghiError(Exception):
 class AuthenticationError(ErghiError):
     """Authentication failed"""
 
-    def __init__(
-        self, message: str = "Authentication failed", details: Optional[Any] = None
-    ) -> None:
+    def __init__(self, message: str = "Authentication failed", details: Any | None = None) -> None:
         super().__init__(message, "AUTH_ERROR", 401, details)
 
 
@@ -35,7 +35,7 @@ class ValidationError(ErghiError):
     def __init__(
         self,
         message: str = "Validation failed",
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(message, "VALIDATION_ERROR", 400, details)
 
@@ -51,9 +51,7 @@ class RateLimitError(ErghiError):
 class NetworkError(ErghiError):
     """Network request failed"""
 
-    def __init__(
-        self, message: str = "Network request failed", details: Optional[Any] = None
-    ) -> None:
+    def __init__(self, message: str = "Network request failed", details: Any | None = None) -> None:
         super().__init__(message, "NETWORK_ERROR", None, details)
 
 

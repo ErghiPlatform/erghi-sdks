@@ -1,19 +1,22 @@
 """Erghi SDK Client"""
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
 import uuid
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable
 from urllib.parse import urljoin
 
 import httpx
 import websockets
+from typing_extensions import Self
 from websockets.asyncio.client import ClientConnection
 
 from .errors import (
-    ErghiError,
     AuthenticationError,
+    ErghiError,
     HubException,
     NetworkError,
     NotFoundError,
@@ -48,12 +51,12 @@ class ErghiClient:
         self,
         api_url: str = "http://localhost:5000",
         ws_url: str = "ws://localhost:5002",
-        api_key: Optional[str] = None,
-        access_token: Optional[str] = None,
-        client_id: Optional[str] = None,
-        client_secret: Optional[str] = None,
-        workspace_id: Optional[str] = None,
-        account_id: Optional[str] = None,
+        api_key: str | None = None,
+        access_token: str | None = None,
+        client_id: str | None = None,
+        client_secret: str | None = None,
+        workspace_id: str | None = None,
+        account_id: str | None = None,
         timeout: float = 30.0,
         debug: bool = False,
     ) -> None:
@@ -80,7 +83,7 @@ class ErghiClient:
         self.client_secret = client_secret
         self.workspace_id = workspace_id
         self.account_id = account_id
-        self.visitor_id: Optional[str] = None
+        self.visitor_id: str | None = None
         self.timeout = timeout
         self.debug = debug
 
@@ -95,24 +98,24 @@ class ErghiClient:
         )
 
         # Real-time hub connection (SignalR protocol over a raw websocket -- see connect())
-        self._ws: Optional[ClientConnection] = None
-        self._ws_task: Optional[asyncio.Task] = None
-        self._ping_task: Optional[asyncio.Task] = None
-        self._event_handlers: Dict[str, list[Callable]] = {}
+        self._ws: ClientConnection | None = None
+        self._ws_task: asyncio.Task | None = None
+        self._ping_task: asyncio.Task | None = None
+        self._event_handlers: dict[str, list[Callable]] = {}
         self._reconnect_attempts = 0
         self._max_reconnect_attempts = 5
-        self._pending_invocations: Dict[str, "asyncio.Future[Any]"] = {}
+        self._pending_invocations: dict[str, asyncio.Future[Any]] = {}
 
         # Initialize resources
         self.auth = AuthResource(self)
         self.chat = ChatResource(self)
         self.workspace = WorkspaceResource(self)
 
-    async def __aenter__(self) -> "ErghiClient":
+    async def __aenter__(self) -> Self:
         """Async context manager entry"""
         return self
 
-    async def __aexit__(self, *args: Any) -> None:
+    async def __aexit__(self, *args: object) -> None:
         """Async context manager exit"""
         await self.close()
 
@@ -146,11 +149,11 @@ class ErghiClient:
         except httpx.HTTPStatusError as e:
             try:
                 msg = e.response.json().get("message", str(e))
-            except Exception:
+            except (ValueError, AttributeError):
                 msg = str(e)
             raise AuthenticationError(f"Failed to authenticate: {msg}")
-        except Exception as e:
-            raise AuthenticationError(f"Failed to authenticate: {str(e)}")
+        except (httpx.HTTPError, KeyError, TypeError, ValueError) as e:
+            raise AuthenticationError(f"Failed to authenticate: {e!s}")
 
     async def authenticate_visitor(self, widget_id: str, jwt_token: str) -> str:
         """Authenticate a visitor using a signed JWT from the customer's backend."""
@@ -172,15 +175,15 @@ class ErghiClient:
         except httpx.HTTPStatusError as e:
             try:
                 msg = e.response.json().get("error", str(e))
-            except Exception:
+            except (ValueError, AttributeError):
                 msg = str(e)
             raise AuthenticationError(f"Failed to authenticate visitor: {msg}")
-        except Exception as e:
-            raise AuthenticationError(f"Failed to authenticate visitor: {str(e)}")
+        except (httpx.HTTPError, KeyError, TypeError, ValueError) as e:
+            raise AuthenticationError(f"Failed to authenticate visitor: {e!s}")
 
-    def _get_headers(self) -> Dict[str, str]:
+    def _get_headers(self) -> dict[str, str]:
         """Get request headers"""
-        headers: Dict[str, str] = {}
+        headers: dict[str, str] = {}
 
         if self.api_key:
             headers["X-API-Key"] = self.api_key
@@ -206,7 +209,7 @@ class ErghiClient:
         if self.client_id and self.client_secret and not self.access_token:
             try:
                 await self.authenticate()
-            except Exception as e:
+            except AuthenticationError as e:
                 logger.error(f"Auto-authentication failed: {e}")
 
         try:
@@ -226,7 +229,7 @@ class ErghiClient:
         except httpx.HTTPStatusError as e:
             raise self._handle_error(e)
         except httpx.RequestError as e:
-            raise NetworkError(f"Network request failed: {str(e)}", details=str(e))
+            raise NetworkError(f"Network request failed: {e!s}", details=str(e))
 
     def _handle_error(self, error: httpx.HTTPStatusError) -> ErghiError:
         """Handle HTTP errors"""
@@ -236,7 +239,7 @@ class ErghiClient:
             data = response.json()
             message = data.get("message", str(error))
             details = data.get("errors")
-        except Exception:
+        except (ValueError, AttributeError):
             message = str(error)
             details = None
 
@@ -290,7 +293,7 @@ class ErghiClient:
 
             await self._emit("connected", {})
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - any failure falls back to reconnecting
             logger.error(f"Hub connection failed: {e}")
             await self._reconnect()
 
@@ -303,7 +306,9 @@ class ErghiClient:
         url = urljoin(base + "/", "hubs/chat/negotiate")
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.post(url, params={"negotiateVersion": 1}, headers=self._get_headers())
+            response = await client.post(
+                url, params={"negotiateVersion": 1}, headers=self._get_headers()
+            )
             response.raise_for_status()
             data = response.json()
 
@@ -311,11 +316,15 @@ class ErghiClient:
             # Azure SignalR-style redirect to a different endpoint -- not used by this
             # platform's self-hosted deployment, but fail clearly instead of silently
             # connecting to the wrong place if it ever is.
-            raise ErghiError("Hub negotiate returned a redirect target; not supported", "WS_NEGOTIATE_REDIRECT")
+            raise ErghiError(
+                "Hub negotiate returned a redirect target; not supported", "WS_NEGOTIATE_REDIRECT"
+            )
 
         token = data.get("connectionToken") or data.get("connectionId")
         if not token:
-            raise ErghiError("Hub negotiate response had no connection token", "WS_NEGOTIATE_FAILED")
+            raise ErghiError(
+                "Hub negotiate response had no connection token", "WS_NEGOTIATE_FAILED"
+            )
         return str(token)
 
     def _ws_is_open(self) -> bool:
@@ -370,10 +379,10 @@ class ErghiClient:
         if not self._ws_is_open():
             raise ErghiError("Hub is not connected", "WS_NOT_CONNECTED")
 
-        message: Dict[str, Any] = {"type": 1, "target": method, "arguments": list(args)}
+        message: dict[str, Any] = {"type": 1, "target": method, "arguments": list(args)}
 
-        future: Optional["asyncio.Future[Any]"] = None
-        invocation_id: Optional[str] = None
+        future: asyncio.Future[Any] | None = None
+        invocation_id: str | None = None
         if wait_for_result:
             invocation_id = str(uuid.uuid4())
             message["invocationId"] = invocation_id
@@ -398,7 +407,9 @@ class ErghiClient:
             conversation_id = (data or {}).get("conversationId")
             await self.invoke("SendTyping", conversation_id, wait_for_result=False)
         else:
-            raise ErghiError(f"Unsupported real-time event type: {event_type}", "UNSUPPORTED_EVENT_TYPE")
+            raise ErghiError(
+                f"Unsupported real-time event type: {event_type}", "UNSUPPORTED_EVENT_TYPE"
+            )
 
     async def join_conversation(self, conversation_id: str) -> None:
         """Join a conversation's real-time group -- required before UserTyping/MessageRead
@@ -418,7 +429,7 @@ class ErghiClient:
             self._event_handlers[event] = []
         self._event_handlers[event].append(handler)
 
-    def off(self, event: str, handler: Optional[Callable] = None) -> None:
+    def off(self, event: str, handler: Callable | None = None) -> None:
         """Unregister event handler"""
         if event not in self._event_handlers:
             return
@@ -436,7 +447,7 @@ class ErghiClient:
                     result = handler(data)
                     if asyncio.iscoroutine(result):
                         await result
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 - one bad handler must not stop the rest
                     logger.error(f"Error in event handler: {e}")
 
     async def _keepalive(self) -> None:
