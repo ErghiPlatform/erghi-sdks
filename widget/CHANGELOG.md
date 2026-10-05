@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Voice, when the workspace turns it on: a microphone button sends voice notes (transcribed
+  into the visitor's message), and a speaker button reads replies aloud with the device's own
+  speech engine, in the reply's language. `recordAudio`, `speak` and `stopSpeaking` hooks let
+  native apps use their own recorder and text-to-speech.
 - Mobile webviews (Capacitor, in-app browsers): after the app returns from the background or
   the device comes back online, the widget reconnects and fetches replies it missed while
   suspended. The launcher and full-screen panel respect safe-area insets, and the panel sizes

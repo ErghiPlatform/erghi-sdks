@@ -1,5 +1,8 @@
 ## Unreleased
 
+- `chat.sendVoiceMessage(conversationId, audio)` sends a visitor voice note; the platform
+  transcribes it and returns the message (`source: 'voice'`). `Message.source` added. Error
+  messages now carry the platform's `error` text, and a 400 keeps the response body in `details`.
 - `connectVisitor` restarts the visitor hub when a suspended mobile webview resumes and emits
   `conversation.resumed` so the app can reload messages missed meanwhile.
 

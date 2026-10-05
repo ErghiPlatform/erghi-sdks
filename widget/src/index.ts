@@ -43,8 +43,8 @@ export interface ErghiConfig {
    * and on the server for at most ttlSeconds, never in localStorage. */
   secureContextProvider?: () => Promise<SecureContext | null> | SecureContext | null;
   /** Reads a reply aloud in place of the browser's speech engine, e.g. a native text-to-speech
-   * plugin in a Capacitor app. `language` is the widget's language code ("en", "ar", …). Resolve
-   * when speaking ends. Used only when the workspace turned voice replies on. */
+   * plugin in a Capacitor app. `language` is the reply's language (a BCP 47 code such as "en" or
+   * "ar"; the widget's own language when the browser can't tell). Resolve when speaking ends. Used only when the workspace turned voice replies on. */
   speak?: (text: string, language: string) => Promise<void> | void;
   /** Stops speech started by `speak`. */
   stopSpeaking?: () => void;

@@ -435,11 +435,12 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
     }
 
     const data = response.data as any;
-    const message = data?.message || error.message;
+    // Platform errors are `{ error, code }`; validation errors also carry `message` and `errors`.
+    const message = data?.message || (typeof data?.error === 'string' ? data.error : undefined) || error.message;
 
     switch (response.status) {
       case 400:
-        return new ValidationError(message, data?.errors);
+        return new ValidationError(message, data?.errors ?? data);
       case 401:
         return new AuthenticationError(message);
       case 404:

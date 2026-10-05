@@ -81,6 +81,8 @@ class Message(BaseModel):
     read_at: Optional[datetime] = Field(None, alias="readAt")
     is_ai: bool = Field(alias="isAI")
     ai_model: Optional[str] = Field(None, alias="aiModel")
+    # "voice" when the visitor sent it as a voice note (content is the transcript).
+    source: Optional[str] = None
 
     class Config:
         populate_by_name = True
