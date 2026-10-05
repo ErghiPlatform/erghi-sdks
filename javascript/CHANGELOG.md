@@ -1,5 +1,8 @@
 ## Unreleased
 
+- `connectVisitor` restarts the visitor hub when a suspended mobile webview resumes and emits
+  `conversation.resumed` so the app can reload messages missed meanwhile.
+
 - `chat.createConversation(widgetId, metadata, { identityToken })`, plus
   `chat.attachIdentityToken`, `chat.setSecureContext` and `chat.clearSecureContext`.
   `Conversation.visitorToken` is now typed (returned by create only).

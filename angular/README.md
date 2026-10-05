@@ -202,6 +202,29 @@ export class RealtimeChatComponent implements OnInit, OnDestroy {
 }
 ```
 
+### Mobile apps (Capacitor, Ionic)
+
+Capacitor suspends the webview while the app is in the background, and SignalR's automatic
+reconnect gives up during that time. `connectVisitor` handles it: when the page becomes visible,
+comes back online or is restored from the back/forward cache, the hub is restarted if it closed
+and a `resumed` event is emitted. Replies sent while the app was suspended never reached the
+socket, so reload the messages when you see it:
+
+```typescript
+this.signalrService.events$.subscribe(event => {
+  if (event.type === 'resumed') {
+    this.chatService.getMessages(event.data.conversationId).subscribe(page => {
+      this.messages = page.data;
+    });
+  }
+});
+```
+
+The visitor hub and the visitor endpoints accept any origin without cookies, so the Capacitor
+origins (`capacitor://localhost` on iOS, `https://localhost` on Android) need no configuration.
+If you embed the drop-in widget instead, see the widget's README for the safe-area and keyboard
+notes.
+
 ### Widget Management
 
 ```typescript

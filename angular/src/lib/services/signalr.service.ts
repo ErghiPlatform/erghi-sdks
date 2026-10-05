@@ -8,7 +8,8 @@ import { ChatService } from './chat.service';
 
 export interface SignalREvent {
   type: 'message' | 'typing' | 'online' | 'offline' | 'read'
-    | 'closed' | 'assigned' | 'escalated' | 'inactivity-warning' | 'context-required';
+    | 'closed' | 'assigned' | 'escalated' | 'inactivity-warning' | 'context-required'
+    | 'resumed';
   data: any;
 }
 
@@ -19,6 +20,8 @@ export class SignalRService implements OnDestroy {
   private hubConnection?: HubConnection;
   private connectionStateSubject = new BehaviorSubject<HubConnectionState>(HubConnectionState.Disconnected);
   private eventsSubject = new Subject<SignalREvent>();
+  private resumeConversationId?: string;
+  private resuming = false;
   
   public connectionState$ = this.connectionStateSubject.asObservable();
   public events$ = this.eventsSubject.asObservable();
@@ -67,6 +70,12 @@ export class SignalRService implements OnDestroy {
    * the conversation's visitor token (from ChatService.createConversation or setVisitorToken)
    * instead of an access token. Emits 'message' for agent/AI replies, plus 'closed', 'assigned',
    * 'escalated', 'inactivity-warning' and 'context-required'.
+   *
+   * Mobile webviews (Capacitor, in-app browsers) suspend the page in the background and
+   * withAutomaticReconnect gives up while suspended. When the page becomes visible again, comes
+   * back online or is restored from the back/forward cache, the hub is restarted if needed and
+   * 'resumed' is emitted: refetch the conversation's messages then, since replies sent while
+   * suspended were never delivered over the socket.
    */
   async connectVisitor(conversationId: string): Promise<void> {
     const visitorToken = this.chatService.getVisitorToken(conversationId);
@@ -100,9 +109,50 @@ export class SignalRService implements OnDestroy {
       this.connectionStateSubject.next(HubConnectionState.Disconnected);
       throw error;
     }
+    this.watchResume(conversationId);
+  }
+
+  private readonly onResume = (): void => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+    void this.resumeVisitor();
+  };
+
+  private async resumeVisitor(): Promise<void> {
+    const conversationId = this.resumeConversationId;
+    const connection = this.hubConnection;
+    if (!conversationId || !connection || this.resuming) return;
+    this.resuming = true;
+    try {
+      if (connection.state === HubConnectionState.Disconnected) {
+        await connection.start();
+        this.connectionStateSubject.next(HubConnectionState.Connected);
+      }
+      this.eventsSubject.next({ type: 'resumed', data: { conversationId } });
+    } catch {
+      this.connectionStateSubject.next(HubConnectionState.Disconnected);
+    } finally {
+      this.resuming = false;
+    }
+  }
+
+  private watchResume(conversationId: string): void {
+    this.resumeConversationId = conversationId;
+    if (typeof window === 'undefined') return;
+    document.addEventListener('visibilitychange', this.onResume);
+    window.addEventListener('online', this.onResume);
+    window.addEventListener('pageshow', this.onResume);
+  }
+
+  private unwatchResume(): void {
+    this.resumeConversationId = undefined;
+    if (typeof window === 'undefined') return;
+    document.removeEventListener('visibilitychange', this.onResume);
+    window.removeEventListener('online', this.onResume);
+    window.removeEventListener('pageshow', this.onResume);
   }
 
   async disconnect(): Promise<void> {
+    this.unwatchResume();
     if (this.hubConnection) {
       await this.hubConnection.stop();
       this.connectionStateSubject.next(HubConnectionState.Disconnected);

@@ -503,7 +503,22 @@ export default class ErghiWidget {
     if (this.config.autoOpen) this.open();
   }
 
+  /** Mobile webviews (Capacitor, in-app browsers) and backgrounded tabs suspend the page, and
+   * SignalR gives up reconnecting while it is frozen. Coming back reconnects and fetches whatever
+   * arrived in the meantime. */
+  private readonly onResume = (): void => {
+    if (document.visibilityState === 'hidden' || !this.conversationId) return;
+    if (this.realtime.isConnected()) {
+      void this.fetchMissedMessages();
+    } else {
+      void this.connectRealtime();
+    }
+  };
+
   private bindEvents(): void {
+    document.addEventListener('visibilitychange', this.onResume);
+    window.addEventListener('online', this.onResume);
+    window.addEventListener('pageshow', this.onResume);
     const s = this.shadow!;
     s.getElementById('cf-bubble')?.addEventListener('click', () => this.toggle());
     s.getElementById('cf-close')?.addEventListener('click', () => this.close());
@@ -582,6 +597,9 @@ export default class ErghiWidget {
   }
 
   public destroy(): void {
+    document.removeEventListener('visibilitychange', this.onResume);
+    window.removeEventListener('online', this.onResume);
+    window.removeEventListener('pageshow', this.onResume);
     this.stopHeartbeat();
     this.stopFallbackPoll();
     this.clearReplyTimeout();
@@ -815,6 +833,7 @@ export default class ErghiWidget {
         onStateChange: (connected) => {
           if (connected) {
             this.stopFallbackPoll();
+            void this.fetchMissedMessages();
           } else {
             this.startFallbackPoll();
           }
@@ -861,6 +880,29 @@ export default class ErghiWidget {
     playMessageNotification();
   }
 
+  /** Adds replies the visitor has not seen yet, e.g. ones sent while the connection was down. */
+  private async fetchMissedMessages(): Promise<void> {
+    if (!this.conversationId) return;
+    try {
+      const res = await fetch(
+        `${this.config.apiUrl}/api/conversations/${this.conversationId}/messages`,
+        { headers: this.visitorHeaders() }
+      );
+      if (!res.ok) return;
+      const list = this.extractMessages(await res.json());
+      list.forEach(m => {
+        const id = (m as Message & { Id?: string }).id ?? (m as Message & { Id?: string }).Id ?? '';
+        const sender = m.sender ?? (m as Message & { Sender?: string }).Sender ?? '';
+        const content = m.content ?? (m as Message & { Content?: string }).Content ?? '';
+        if (id && !this.knownMessageIds.has(id) && sender !== 'visitor' && sender !== 'user') {
+          this.handleInboundMessage({ id, content, sender });
+        }
+      });
+    } catch {
+      // the next poll, reconnect or resume tries again
+    }
+  }
+
   private startFallbackPoll(): void {
     if (this.fallbackPollTimer || !this.conversationId) return;
     const poll = async () => {
@@ -868,23 +910,7 @@ export default class ErghiWidget {
         this.stopFallbackPoll();
         return;
       }
-      try {
-        const res = await fetch(
-          `${this.config.apiUrl}/api/conversations/${this.conversationId}/messages`,
-          { headers: this.visitorHeaders() }
-        );
-        const list = this.extractMessages(await res.json());
-        list.forEach(m => {
-          const id = (m as Message & { Id?: string }).id ?? (m as Message & { Id?: string }).Id ?? '';
-          const sender = m.sender ?? (m as Message & { Sender?: string }).Sender ?? '';
-          const content = m.content ?? (m as Message & { Content?: string }).Content ?? '';
-          if (id && !this.knownMessageIds.has(id) && sender !== 'visitor' && sender !== 'user') {
-            this.handleInboundMessage({ id, content, sender });
-          }
-        });
-      } catch {
-        // retry on next interval
-      }
+      await this.fetchMissedMessages();
       if (!this.realtime.isConnected() && this.conversationId) {
         this.fallbackPollTimer = setTimeout(poll, 5000);
       }

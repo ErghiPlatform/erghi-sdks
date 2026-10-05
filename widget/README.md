@@ -209,6 +209,34 @@ useEffect(() => {
 }, []);
 ```
 
+### Mobile apps (Capacitor, Ionic, in-app webviews)
+
+The widget runs unchanged inside a Capacitor webview. What to know:
+
+- **Origins.** Capacitor pages load from `capacitor://localhost` (iOS) and `https://localhost`
+  (Android). The widget's public endpoints and the visitor hub accept any origin without
+  cookies, so there is nothing to allow-list.
+- **Safe areas.** The launcher and the full-screen panel keep clear of the notch and home
+  indicator using `env(safe-area-inset-*)`, which is only non-zero when the page opts in:
+
+  ```html
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  ```
+
+- **Keyboard.** The panel sizes itself with `100dvh`, so it follows the visible area when the
+  keyboard opens. Keep the `@capacitor/keyboard` plugin's resize mode on `native` or `body`
+  (not `none`), or the input can end up behind the keyboard.
+- **Backgrounding.** The OS suspends the webview in the background and drops the socket. When the
+  app returns to the foreground (or the device comes back online) the widget reconnects and
+  fetches any replies that arrived meanwhile; no app code is needed.
+- **Links.** Footer and source links open with `target="_blank"`. Capacitor opens links to other
+  hosts in the system browser by default; don't add those hosts to `server.allowNavigation`, or
+  they will replace your app's page.
+- **Storage.** The open conversation is remembered in `localStorage`. iOS can clear webview
+  storage when the device is low on space, which only means the visitor starts a new chat.
+- **Signed-in users.** Mint the identity token on your server, never in the app bundle; see
+  [Signed-in users and integration calls](#signed-in-users-and-integration-calls).
+
 ## Features
 
 ✅ **Vanilla TypeScript** - No UI framework, bundles `@microsoft/signalr` for real-time delivery  

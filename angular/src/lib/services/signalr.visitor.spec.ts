@@ -77,4 +77,51 @@ describe('SignalRService visitor hub', () => {
     await expect(service.connectVisitor('conv-1')).rejects.toThrow('No visitor token');
     expect(withUrl).not.toHaveBeenCalled();
   });
+
+  describe('resuming a suspended webview', () => {
+    const resumed = (): SignalREvent[] => {
+      const events: SignalREvent[] = [];
+      service.events$.subscribe(e => { if (e.type === 'resumed') events.push(e); });
+      return events;
+    };
+    const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+
+    beforeEach(async () => {
+      getVisitorToken.mockReturnValue('vt-1');
+      await service.connectVisitor('conv-1');
+      hub.start.mockClear();
+    });
+
+    afterEach(async () => {
+      hub.state = 'Disconnected';
+      await service.disconnect();
+    });
+
+    it('restarts a closed hub when the page becomes visible and emits resumed', async () => {
+      const events = resumed();
+      hub.state = 'Disconnected';
+      document.dispatchEvent(new Event('visibilitychange'));
+      await flush();
+      expect(hub.start).toHaveBeenCalledTimes(1);
+      expect(events).toEqual([{ type: 'resumed', data: { conversationId: 'conv-1' } }]);
+    });
+
+    it('does not restart a live hub but still emits resumed on online', async () => {
+      const events = resumed();
+      hub.state = 'Connected';
+      window.dispatchEvent(new Event('online'));
+      await flush();
+      expect(hub.start).not.toHaveBeenCalled();
+      expect(events).toHaveLength(1);
+    });
+
+    it('stops listening after disconnect', async () => {
+      const events = resumed();
+      await service.disconnect();
+      window.dispatchEvent(new Event('pageshow'));
+      await flush();
+      expect(hub.start).not.toHaveBeenCalled();
+      expect(events).toHaveLength(0);
+    });
+  });
 });

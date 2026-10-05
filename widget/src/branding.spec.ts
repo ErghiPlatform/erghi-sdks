@@ -114,7 +114,7 @@ describe('workspace branding in the widget', () => {
     const { widget, root, css, shadow } = await mount();
     expect(root.getAttribute('data-theme')).toBe('dark');
     expect(css).toContain('--cf-primary: #0f766e');
-    expect(css).toContain('left: 20px');
+    expect(css).toContain('left: calc(20px + env(safe-area-inset-left, 0px))');
     expect(css).toContain('--cf-r-panel: 0px');
     expect(shadow.querySelector('.header-title')?.textContent).toBe('Nimbus');
     expect(shadow.querySelector('.msg.system')?.textContent).toContain('Welcome to Nimbus');
@@ -136,7 +136,7 @@ describe('workspace branding in the widget', () => {
     });
     expect(root.getAttribute('data-theme')).toBe('light');
     expect(css).toContain('--cf-primary: #ff0000');
-    expect(css).toContain('right: 20px');
+    expect(css).toContain('right: calc(20px + env(safe-area-inset-right, 0px))');
     expect(shadow.querySelector('.header-title')?.textContent).toBe('Support');
     widget.destroy();
   });
@@ -152,7 +152,7 @@ describe('workspace branding in the widget', () => {
     expect(css).toContain('--cf-primary: #3b82f6');
     expect(css).not.toContain('javascript');
     expect(css).not.toContain('expression');
-    expect(css).toContain('right: 20px');
+    expect(css).toContain('right: calc(20px + env(safe-area-inset-right, 0px))');
     expect(css).toContain('--cf-r-panel: 28px');
     widget.destroy();
   });

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Verifies the client is wired to the REAL SignalR hub method/event names
 // (SendTyping, MessageReceived, ...) that Erghi.Conversation/Api/Hubs/ChatHub.cs actually
@@ -142,5 +142,60 @@ describe('ErghiClient real-time transport', () => {
     const client = new ErghiClient({ apiUrl: 'https://api.example.test' });
     await expect(client.connectVisitor('conv-1')).rejects.toMatchObject({ code: 'VISITOR_TOKEN_MISSING' });
     expect(withUrlMock).not.toHaveBeenCalled();
+  });
+
+  describe('resuming a suspended webview', () => {
+    const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+    let page: EventTarget;
+
+    beforeEach(() => {
+      page = new EventTarget();
+      vi.stubGlobal('window', page);
+      vi.stubGlobal('document', Object.assign(page, { visibilityState: 'visible' }));
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    const connected = async () => {
+      const client = new ErghiClient({ apiUrl: 'https://api.example.test' });
+      client.setVisitorToken('conv-1', 'vt-1');
+      await client.connectVisitor('conv-1');
+      mockHubConnection.start.mockClear();
+      return client;
+    };
+
+    it('restarts a closed visitor hub on visibilitychange and emits conversation.resumed', async () => {
+      const client = await connected();
+      const resumed = vi.fn();
+      client.on('conversation.resumed', resumed);
+      mockHubConnection.state = 'Disconnected';
+      page.dispatchEvent(new Event('visibilitychange'));
+      await flush();
+      expect(mockHubConnection.start).toHaveBeenCalledTimes(1);
+      expect(resumed).toHaveBeenCalledWith({ conversationId: 'conv-1' });
+    });
+
+    it('leaves a live hub alone but still emits conversation.resumed', async () => {
+      const client = await connected();
+      const resumed = vi.fn();
+      client.on('conversation.resumed', resumed);
+      mockHubConnection.state = 'Connected';
+      page.dispatchEvent(new Event('online'));
+      await flush();
+      expect(mockHubConnection.start).not.toHaveBeenCalled();
+      expect(resumed).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops listening after disconnectVisitor', async () => {
+      const client = await connected();
+      const resumed = vi.fn();
+      client.on('conversation.resumed', resumed);
+      await client.disconnectVisitor();
+      page.dispatchEvent(new Event('pageshow'));
+      await flush();
+      expect(resumed).not.toHaveBeenCalled();
+    });
   });
 });
