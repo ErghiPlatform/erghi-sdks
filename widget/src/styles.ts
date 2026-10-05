@@ -323,6 +323,62 @@ export function buildStyles(look: WidgetLook): string {
     }
     .send-btn:disabled { opacity: .45; cursor: not-allowed; }
     .root[dir="rtl"] .send-btn svg { transform: scaleX(-1); }
+    .mic-btn, .voice-cancel-btn {
+      width: 40px; height: 40px;
+      border: 1px solid var(--cf-border);
+      border-radius: var(--cf-r-control);
+      background: var(--cf-canvas);
+      color: var(--cf-text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 20px;
+      line-height: 1;
+    }
+    .mic-btn[hidden], .voice-cancel-btn[hidden], .attach-btn[hidden] { display: none; }
+    .mic-btn:hover, .voice-cancel-btn:hover { background: var(--cf-raised); }
+    .mic-btn svg { width: 18px; height: 18px; fill: currentColor; }
+    .mic-btn.recording {
+      background: #dc2626;
+      border-color: #dc2626;
+      color: #fff;
+      animation: cf-recording 1.4s ease-in-out infinite;
+    }
+    @keyframes cf-recording {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, .45); }
+      50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .mic-btn.recording { animation: none; }
+    }
+    .composer input:disabled { opacity: .7; cursor: default; }
+    .msg-voice-badge {
+      display: inline-flex;
+      vertical-align: middle;
+      margin-inline-end: 6px;
+      opacity: .8;
+    }
+    .msg-voice-badge svg { width: 12px; height: 12px; fill: currentColor; }
+    .msg.pending .msg-text { opacity: .7; font-style: italic; }
+    .msg-speak {
+      display: none;
+      border: none;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      padding: 3px 5px;
+      margin-top: 4px;
+      border-radius: 6px;
+      opacity: .55;
+      line-height: 0;
+    }
+    .root.voice-out .msg-speak { display: inline-flex; }
+    .msg-speak svg { width: 16px; height: 16px; fill: currentColor; }
+    .msg-speak:hover, .msg-speak.speaking { opacity: 1; background: var(--cf-raised); }
+    .msg-speak.speaking { color: var(--cf-accent); }
+    .root[dir="rtl"] .msg-speak svg { transform: scaleX(-1); }
     .footer {
       display: flex;
       justify-content: center;
@@ -409,3 +465,5 @@ export function buildStyles(look: WidgetLook): string {
 
 export const ICON_CHAT = `<svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>`;
 export const ICON_SEND = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>`;
+export const ICON_MIC = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>`;
+export const ICON_SPEAKER = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05A4.5 4.5 0 0 0 16.5 12zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06a9 9 0 0 0 0-17.54z"/></svg>`;

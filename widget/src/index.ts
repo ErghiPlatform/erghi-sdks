@@ -1,8 +1,12 @@
-import { buildStyles, ICON_CHAT, ICON_SEND, WidgetPosition, WidgetTheme } from './styles';
+import { buildStyles, ICON_CHAT, ICON_MIC, ICON_SEND, ICON_SPEAKER, WidgetPosition, WidgetTheme } from './styles';
 import { DARK_SURFACE, LIGHT_SURFACE, normalizeHex, readableAccent } from './color';
 import { ConversationRealtimeClient } from './realtime';
 import { playMessageNotification } from './notification';
 import { bundledTranslations, interpolate, isRtlLocale, WidgetDirection } from './locale';
+import {
+  BrowserSpeaker, canRecordInBrowser, canSpeakInBrowser, detectLanguage, fileExtension,
+  MAX_VOICE_NOTE_BYTES, MAX_VOICE_NOTE_SECONDS, speakableText, VoiceRecorder,
+} from './voice';
 
 export interface ErghiConfig {
   /** Widget UUID from admin portal */
@@ -38,6 +42,16 @@ export interface ErghiConfig {
    * to expire, and when the server reports they were rejected. Values are kept in memory
    * and on the server for at most ttlSeconds, never in localStorage. */
   secureContextProvider?: () => Promise<SecureContext | null> | SecureContext | null;
+  /** Reads a reply aloud in place of the browser's speech engine, e.g. a native text-to-speech
+   * plugin in a Capacitor app. `language` is the widget's language code ("en", "ar", …). Resolve
+   * when speaking ends. Used only when the workspace turned voice replies on. */
+  speak?: (text: string, language: string) => Promise<void> | void;
+  /** Stops speech started by `speak`. */
+  stopSpeaking?: () => void;
+  /** Records a voice note in place of the browser's MediaRecorder, for webviews without it.
+   * Resolve with the clip (WebM, Ogg, MP4/M4A or WAV, at most 60 seconds), or null if the visitor
+   * cancelled. Used only when the workspace turned voice input on. */
+  recordAudio?: () => Promise<Blob | null>;
 }
 
 export interface SecureContext {
@@ -62,10 +76,14 @@ interface Message {
   sender: string;
   createdAt?: string;
   sources?: MessageSource[];
+  /** "voice" when the visitor sent it as a voice note. */
+  source?: string | null;
 }
 
 export default class ErghiWidget {
-  private config: Required<Omit<ErghiConfig, 'workspace' | 'visitorContext' | 'greeting' | 'identityToken' | 'secureContextProvider'>> & {
+  private config: Required<Omit<ErghiConfig,
+    'workspace' | 'visitorContext' | 'greeting' | 'identityToken' | 'secureContextProvider'
+    | 'speak' | 'stopSpeaking' | 'recordAudio'>> & {
     workspace?: string;
     greeting?: string;
     visitorContext: Record<string, unknown>;
@@ -114,7 +132,16 @@ export default class ErghiWidget {
     showAiLabel: true,
     showAgentName: true,
     assignedAgentName: '',
+    voiceInputEnabled: false,
+    voiceOutputEnabled: false,
   };
+  private readonly voiceHooks: Pick<ErghiConfig, 'speak' | 'stopSpeaking' | 'recordAudio'>;
+  private recorder: VoiceRecorder | null = null;
+  private recordingTimer: ReturnType<typeof setInterval> | null = null;
+  private recordingStartedAt = 0;
+  private voiceBusy = false;
+  private readonly speaker = new BrowserSpeaker();
+  private speakingMessageId: string | null = null;
   // Populated from WidgetEmbedConfigDto's TermsUrl/PrivacyUrl/SupportUrl (workspace branding
   // settings, admin portal's "Contact & Legal" card) — empty string means "not configured",
   // in which case that link is simply omitted from the footer, not rendered blank.
@@ -154,6 +181,7 @@ export default class ErghiWidget {
     };
     this.identityToken = config.identityToken || null;
     this.secureContextProvider = config.secureContextProvider ?? null;
+    this.voiceHooks = { speak: config.speak, stopSpeaking: config.stopSpeaking, recordAudio: config.recordAudio };
 
     this.bootstrap();
   }
@@ -240,6 +268,8 @@ export default class ErghiWidget {
       showAiLabel: boolOr(data.showAiLabel ?? data.ShowAiLabel, true),
       showAgentName: boolOr(data.showAgentName ?? data.ShowAgentName, true),
       assignedAgentName: this.displayConfig.assignedAgentName,
+      voiceInputEnabled: boolOr(data.voiceInputEnabled ?? data.VoiceInputEnabled, false),
+      voiceOutputEnabled: boolOr(data.voiceOutputEnabled ?? data.VoiceOutputEnabled, false),
     };
     this.footerLinks = {
       termsUrl: safeHttpsUrl(data.termsUrl ?? data.TermsUrl),
@@ -486,6 +516,8 @@ export default class ErghiWidget {
           <input type="file" id="cf-file" accept="image/*,.pdf,.txt" hidden />
           <button type="button" class="attach-btn" id="cf-attach" aria-label="${escapeHtml(this.tr('widget.aria.attach', 'Attach file'))}">📎</button>
           <input type="text" id="cf-input" placeholder="${escapeHtml(this.tr('widget.input.placeholder', 'Type a message…'))}" autocomplete="off" maxlength="4000" />
+          <button type="button" class="voice-cancel-btn" id="cf-mic-cancel" hidden aria-label="${escapeHtml(this.tr('widget.aria.micCancel', 'Cancel recording'))}">&times;</button>
+          <button type="button" class="mic-btn" id="cf-mic" hidden aria-label="${escapeHtml(this.tr('widget.aria.mic', 'Record a voice message'))}">${ICON_MIC}</button>
           <button type="button" class="send-btn" id="cf-send" aria-label="${escapeHtml(this.tr('widget.aria.send', 'Send'))}">${ICON_SEND}</button>
         </div>
         ${this.buildFooterHtml()}
@@ -497,6 +529,7 @@ export default class ErghiWidget {
 
     document.body.appendChild(this.host);
     this.bindEvents();
+    this.applyVoiceSettings();
     this.addSystemMessage(this.greetingText());
     void this.tryRestoreSession();
 
@@ -530,6 +563,8 @@ export default class ErghiWidget {
       const input = e.target as HTMLInputElement;
       this.pendingFile = input.files?.[0] ?? null;
     });
+    s.getElementById('cf-mic')?.addEventListener('click', () => void this.onMicClick());
+    s.getElementById('cf-mic-cancel')?.addEventListener('click', () => this.cancelRecording());
     s.getElementById('cf-input')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -603,6 +638,8 @@ export default class ErghiWidget {
     this.stopHeartbeat();
     this.stopFallbackPoll();
     this.clearReplyTimeout();
+    this.cancelRecording();
+    this.stopSpeaking();
     void this.realtime.disconnect();
     this.host?.remove();
     this.host = null;
@@ -741,6 +778,280 @@ export default class ErghiWidget {
     }
   }
 
+  /** Shows the mic when the workspace turned voice input on and this device can record, and
+   * marks the root so the read-aloud buttons show only when voice replies are on. */
+  private applyVoiceSettings(): void {
+    const mic = this.$('cf-mic');
+    if (mic) mic.hidden = !this.voiceInputAvailable();
+    if (!this.voiceInputAvailable()) this.cancelRecording();
+    this.shadow?.querySelector('.root')?.classList.toggle('voice-out', this.voiceOutputAvailable());
+    if (!this.voiceOutputAvailable()) this.stopSpeaking();
+  }
+
+  private voiceInputAvailable(): boolean {
+    return this.displayConfig.voiceInputEnabled && (!!this.voiceHooks.recordAudio || canRecordInBrowser());
+  }
+
+  private voiceOutputAvailable(): boolean {
+    return this.displayConfig.voiceOutputEnabled && (!!this.voiceHooks.speak || canSpeakInBrowser());
+  }
+
+  /** First tap starts recording, second tap stops and sends. */
+  private async onMicClick(): Promise<void> {
+    if (this.recorder) {
+      await this.finishRecording();
+      return;
+    }
+    if (this.voiceBusy) return;
+    this.stopSpeaking();
+
+    if (this.voiceHooks.recordAudio) {
+      this.voiceBusy = true;
+      let clip: Blob | null = null;
+      try {
+        clip = await this.voiceHooks.recordAudio();
+      } catch (err) {
+        console.warn('[Erghi] recordAudio failed:', err);
+        this.addSystemMessage(this.voiceErrorText(null));
+      } finally {
+        this.voiceBusy = false;
+      }
+      if (clip) await this.sendVoiceNote(clip);
+      return;
+    }
+
+    const recorder = new VoiceRecorder();
+    this.voiceBusy = true;
+    const error = await recorder.start();
+    this.voiceBusy = false;
+    if (error) {
+      this.addSystemMessage(error === 'denied'
+        ? this.tr('widget.voice.permission', 'Microphone access is blocked. Allow it in your browser to send voice messages.')
+        : this.voiceErrorText(null));
+      return;
+    }
+    this.recorder = recorder;
+    this.recordingStartedAt = Date.now();
+    this.setRecordingUi(true);
+    this.recordingTimer = setInterval(() => {
+      const elapsed = (Date.now() - this.recordingStartedAt) / 1000;
+      if (elapsed >= MAX_VOICE_NOTE_SECONDS) {
+        void this.finishRecording();
+        return;
+      }
+      this.updateRecordingLabel(elapsed);
+    }, 250);
+  }
+
+  private async finishRecording(): Promise<void> {
+    const recorder = this.recorder;
+    if (!recorder) return;
+    this.recorder = null;
+    this.stopRecordingTimer();
+    this.setRecordingUi(false);
+    const clip = await recorder.stop();
+    if (clip) await this.sendVoiceNote(clip);
+  }
+
+  private cancelRecording(): void {
+    const recorder = this.recorder;
+    if (!recorder) return;
+    this.recorder = null;
+    this.stopRecordingTimer();
+    this.setRecordingUi(false);
+    recorder.cancel();
+  }
+
+  private stopRecordingTimer(): void {
+    if (this.recordingTimer) {
+      clearInterval(this.recordingTimer);
+      this.recordingTimer = null;
+    }
+  }
+
+  private setRecordingUi(recording: boolean): void {
+    const input = this.$('cf-input') as HTMLInputElement | null;
+    const mic = this.$('cf-mic');
+    const cancel = this.$('cf-mic-cancel');
+    const send = this.$('cf-send') as HTMLButtonElement | null;
+    const attach = this.$('cf-attach');
+    mic?.classList.toggle('recording', recording);
+    mic?.setAttribute('aria-label', recording
+      ? this.tr('widget.aria.micStop', 'Stop and send voice message')
+      : this.tr('widget.aria.mic', 'Record a voice message'));
+    if (cancel) cancel.hidden = !recording;
+    if (attach) attach.hidden = recording;
+    if (send) send.disabled = recording;
+    if (input) {
+      input.disabled = recording;
+      input.placeholder = recording
+        ? this.trf('widget.voice.recording', 'Recording… {time}', { time: formatClock(0) })
+        : this.tr('widget.input.placeholder', 'Type a message…');
+    }
+  }
+
+  private updateRecordingLabel(elapsedSeconds: number): void {
+    const input = this.$('cf-input') as HTMLInputElement | null;
+    if (input) input.placeholder = this.trf('widget.voice.recording', 'Recording… {time}', { time: formatClock(elapsedSeconds) });
+  }
+
+  /** Uploads a clip; the server transcribes it and posts the text as the visitor's message. */
+  private async sendVoiceNote(clip: Blob): Promise<void> {
+    if (clip.size === 0) return;
+    if (clip.size > MAX_VOICE_NOTE_BYTES) {
+      this.addSystemMessage(this.voiceErrorText('voice_too_large'));
+      return;
+    }
+    this.voiceBusy = true;
+    try {
+      if (!this.conversationId) {
+        await this.startConversation();
+        if (!this.conversationId) return;
+      }
+      await this.refreshSecureContext();
+
+      const tempId = `temp-voice-${Date.now()}`;
+      this.appendMessageEl({
+        id: tempId,
+        content: this.tr('widget.voice.transcribing', 'Transcribing…'),
+        sender: 'visitor',
+        source: 'voice',
+      });
+      this.shadow?.querySelector(`[data-id="${tempId}"]`)?.classList.add('pending');
+      this.setTyping(true);
+
+      const form = new FormData();
+      form.append('file', clip, `voice-note.${fileExtension(clip.type)}`);
+      let res: Response | null = null;
+      try {
+        res = await fetch(`${this.config.apiUrl}/api/conversations/${this.conversationId}/voice`, {
+          method: 'POST',
+          headers: this.visitorHeaders(),
+          body: form,
+        });
+      } catch (err) {
+        console.warn('[Erghi] Voice note upload failed:', err);
+      }
+
+      if (res?.ok) {
+        const saved = await res.json();
+        const serverId = String(saved.id ?? saved.Id);
+        this.replaceTempId(tempId, serverId);
+        this.setMessageText(serverId, String(saved.content ?? saved.Content ?? ''));
+        this.awaitReply();
+        return;
+      }
+
+      this.removeMessage(tempId);
+      this.setTyping(false);
+      const code = res ? await readErrorCode(res) : null;
+      if (code === 'voice_disabled') {
+        this.displayConfig.voiceInputEnabled = false;
+        this.applyVoiceSettings();
+      }
+      this.addSystemMessage(this.voiceErrorText(code));
+    } finally {
+      this.voiceBusy = false;
+    }
+  }
+
+  private voiceErrorText(code: string | null): string {
+    switch (code) {
+      case 'voice_no_speech':
+        return this.tr('widget.voice.noSpeech', "We couldn't hear anything. Please try again.");
+      case 'voice_too_large':
+        return this.tr('widget.voice.tooLong', 'That voice message is too long. Please keep it under a minute.');
+      case 'voice_limit_reached':
+      case 'voice_disabled':
+        return this.tr('widget.voice.unavailable', "Voice messages aren't available right now. Please type your message.");
+      default:
+        return this.tr('widget.voice.failed', "Your voice message couldn't be sent. Please try again or type it.");
+    }
+  }
+
+  private setMessageText(id: string, content: string): void {
+    const msg = this.messages.find(m => m.id === id);
+    if (msg) msg.content = content;
+    const el = this.shadow?.querySelector(`[data-id="${id}"]`);
+    el?.classList.remove('pending');
+    const text = el?.querySelector('.msg-text');
+    if (text) text.textContent = content;
+  }
+
+  private removeMessage(id: string): void {
+    this.messages = this.messages.filter(m => m.id !== id);
+    this.knownMessageIds.delete(id);
+    this.shadow?.querySelector(`[data-id="${id}"]`)?.remove();
+  }
+
+  private buildSpeakButton(): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'msg-speak';
+    button.innerHTML = ICON_SPEAKER;
+    button.setAttribute('aria-label', this.tr('widget.aria.listen', 'Listen'));
+    button.setAttribute('aria-pressed', 'false');
+    button.addEventListener('click', () => {
+      const id = button.closest('.msg')?.getAttribute('data-id');
+      if (id) void this.toggleSpeak(id);
+    });
+    return button;
+  }
+
+  private async toggleSpeak(messageId: string): Promise<void> {
+    if (this.speakingMessageId === messageId) {
+      this.stopSpeaking();
+      return;
+    }
+    this.stopSpeaking();
+    const msg = this.messages.find(m => m.id === messageId);
+    const text = msg ? speakableText(msg.content) : '';
+    if (!text || !this.voiceOutputAvailable()) return;
+
+    this.speakingMessageId = messageId;
+    this.setSpeakingUi(messageId, true);
+    const done = () => {
+      if (this.speakingMessageId !== messageId) return;
+      this.speakingMessageId = null;
+      this.setSpeakingUi(messageId, false);
+    };
+    const language = await detectLanguage(text, this.locale);
+    if (this.speakingMessageId !== messageId) return; // stopped while detecting
+    const speak = this.voiceHooks.speak;
+    if (speak) {
+      Promise.resolve()
+        .then(() => speak(text, language))
+        .then(done, (err: unknown) => {
+          console.warn('[Erghi] speak failed:', err);
+          done();
+        });
+    } else {
+      this.speaker.speak(text, language, done);
+    }
+  }
+
+  private stopSpeaking(): void {
+    const id = this.speakingMessageId;
+    if (!id) return;
+    this.speakingMessageId = null;
+    this.setSpeakingUi(id, false);
+    if (this.voiceHooks.speak) {
+      this.voiceHooks.stopSpeaking?.();
+    } else {
+      this.speaker.stop();
+    }
+  }
+
+  private setSpeakingUi(messageId: string, speaking: boolean): void {
+    const button = this.shadow?.querySelector(`[data-id="${messageId}"] .msg-speak`);
+    if (!button) return;
+    button.classList.toggle('speaking', speaking);
+    button.setAttribute('aria-pressed', String(speaking));
+    button.setAttribute('aria-label', speaking
+      ? this.tr('widget.aria.stopListening', 'Stop reading')
+      : this.tr('widget.aria.listen', 'Listen'));
+  }
+
   private replaceTempId(tempId: string, serverId: string): void {
     this.knownMessageIds.delete(tempId);
     this.knownMessageIds.add(serverId);
@@ -796,7 +1107,10 @@ export default class ErghiWidget {
         showAiLabel: boolOr(data.showAiLabel ?? data.ShowAiLabel, true),
         showAgentName: boolOr(data.showAgentName ?? data.ShowAgentName, true),
         assignedAgentName: this.displayConfig.assignedAgentName,
+        voiceInputEnabled: boolOr(data.voiceInputEnabled ?? data.VoiceInputEnabled, this.displayConfig.voiceInputEnabled),
+        voiceOutputEnabled: boolOr(data.voiceOutputEnabled ?? data.VoiceOutputEnabled, this.displayConfig.voiceOutputEnabled),
       };
+      this.applyVoiceSettings();
     } catch {
       // optional
     }
@@ -1014,6 +1328,20 @@ export default class ErghiWidget {
     textEl.textContent = msg.content;
     el.appendChild(textEl);
 
+    if (role === 'visitor' && msg.source === 'voice') {
+      const badge = document.createElement('span');
+      badge.className = 'msg-voice-badge';
+      badge.innerHTML = ICON_MIC;
+      badge.setAttribute('role', 'img');
+      badge.setAttribute('aria-label', this.tr('widget.voice.badge', 'Voice message'));
+      el.insertBefore(badge, textEl);
+    }
+    // Always built and shown by the .voice-out root class, so turning voice replies on later
+    // (branding arrives after the first messages) lights up the messages already on screen.
+    if ((role === 'bot' || role === 'agent') && (this.voiceHooks.speak || canSpeakInBrowser())) {
+      el.appendChild(this.buildSpeakButton());
+    }
+
     if (msg.sources && msg.sources.length > 0) {
       el.appendChild(this.buildSourcesEl(msg.sources));
     }
@@ -1212,9 +1540,10 @@ export default class ErghiWidget {
         const id = (m as Message & { Id?: string }).id ?? (m as Message & { Id?: string }).Id ?? '';
         const sender = String(m.sender ?? (m as Message & { Sender?: string }).Sender ?? 'bot').toLowerCase();
         const content = String(m.content ?? (m as Message & { Content?: string }).Content ?? '');
+        const source = m.source ?? (m as Message & { Source?: string | null }).Source ?? null;
         if (!id || !content) continue;
         this.knownMessageIds.add(id);
-        this.appendMessageEl({ id, content, sender });
+        this.appendMessageEl({ id, content, sender, source });
       }
       if (sorted.length === 0) this.addSystemMessage(this.greetingText());
       this.scrollMessages(true);
@@ -1242,9 +1571,26 @@ type PublicWidgetConfig = Partial<Record<
   | 'primaryColor' | 'secondaryColor' | 'widgetPosition' | 'widgetTheme' | 'widgetCornerRadius'
   | 'welcomeMessage' | 'companyName' | 'logoUrl'
   | 'aiAssistantName' | 'AiAssistantName' | 'showAiLabel' | 'ShowAiLabel' | 'showAgentName' | 'ShowAgentName'
-  | 'termsUrl' | 'TermsUrl' | 'privacyUrl' | 'PrivacyUrl' | 'supportUrl' | 'SupportUrl',
+  | 'termsUrl' | 'TermsUrl' | 'privacyUrl' | 'PrivacyUrl' | 'supportUrl' | 'SupportUrl'
+  | 'voiceInputEnabled' | 'VoiceInputEnabled' | 'voiceOutputEnabled' | 'VoiceOutputEnabled',
   unknown
 >>;
+
+/** m:ss for the recording timer. */
+function formatClock(seconds: number): string {
+  const whole = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+}
+
+/** The stable `code` from an Erghi error body, or null. */
+async function readErrorCode(res: Response): Promise<string | null> {
+  try {
+    const body = await res.json();
+    return typeof body?.code === 'string' ? body.code : null;
+  } catch {
+    return null;
+  }
+}
 
 function stringOr(value: unknown, fallback: string): string {
   return typeof value === 'string' ? value : fallback;

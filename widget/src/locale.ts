@@ -38,6 +38,19 @@ const EN: Record<string, string> = {
   'widget.footer.terms': 'Terms',
   'widget.footer.privacy': 'Privacy',
   'widget.footer.support': 'Support',
+  'widget.aria.mic': 'Record a voice message',
+  'widget.aria.micStop': 'Stop and send voice message',
+  'widget.aria.micCancel': 'Cancel recording',
+  'widget.aria.listen': 'Listen',
+  'widget.aria.stopListening': 'Stop reading',
+  'widget.voice.recording': 'Recording… {time}',
+  'widget.voice.transcribing': 'Transcribing…',
+  'widget.voice.badge': 'Voice message',
+  'widget.voice.permission': 'Microphone access is blocked. Allow it in your browser to send voice messages.',
+  'widget.voice.noSpeech': "We couldn't hear anything. Please try again.",
+  'widget.voice.tooLong': 'That voice message is too long. Please keep it under a minute.',
+  'widget.voice.unavailable': "Voice messages aren't available right now. Please type your message.",
+  'widget.voice.failed': "Your voice message couldn't be sent. Please try again or type it.",
 };
 
 const AR: Record<string, string> = {
@@ -65,6 +78,19 @@ const AR: Record<string, string> = {
   'widget.footer.terms': 'الشروط',
   'widget.footer.privacy': 'الخصوصية',
   'widget.footer.support': 'الدعم',
+  'widget.aria.mic': 'تسجيل رسالة صوتية',
+  'widget.aria.micStop': 'إيقاف وإرسال الرسالة الصوتية',
+  'widget.aria.micCancel': 'إلغاء التسجيل',
+  'widget.aria.listen': 'استماع',
+  'widget.aria.stopListening': 'إيقاف القراءة',
+  'widget.voice.recording': 'جارٍ التسجيل… {time}',
+  'widget.voice.transcribing': 'جارٍ تحويل الصوت إلى نص…',
+  'widget.voice.badge': 'رسالة صوتية',
+  'widget.voice.permission': 'الوصول إلى الميكروفون محظور. اسمح به في المتصفح لإرسال رسائل صوتية.',
+  'widget.voice.noSpeech': 'لم نتمكن من سماع أي شيء. يُرجى المحاولة مرة أخرى.',
+  'widget.voice.tooLong': 'الرسالة الصوتية طويلة جدًا. يُرجى أن تكون أقل من دقيقة.',
+  'widget.voice.unavailable': 'الرسائل الصوتية غير متاحة حاليًا. يُرجى كتابة رسالتك.',
+  'widget.voice.failed': 'تعذّر إرسال رسالتك الصوتية. يُرجى المحاولة مرة أخرى أو كتابتها.',
 };
 
 const ES: Record<string, string> = {
@@ -92,6 +118,19 @@ const ES: Record<string, string> = {
   'widget.footer.terms': 'Términos',
   'widget.footer.privacy': 'Privacidad',
   'widget.footer.support': 'Soporte',
+  'widget.aria.mic': 'Grabar un mensaje de voz',
+  'widget.aria.micStop': 'Detener y enviar el mensaje de voz',
+  'widget.aria.micCancel': 'Cancelar grabación',
+  'widget.aria.listen': 'Escuchar',
+  'widget.aria.stopListening': 'Dejar de leer',
+  'widget.voice.recording': 'Grabando… {time}',
+  'widget.voice.transcribing': 'Transcribiendo…',
+  'widget.voice.badge': 'Mensaje de voz',
+  'widget.voice.permission': 'El acceso al micrófono está bloqueado. Permítelo en tu navegador para enviar mensajes de voz.',
+  'widget.voice.noSpeech': 'No pudimos oír nada. Inténtalo de nuevo.',
+  'widget.voice.tooLong': 'El mensaje de voz es demasiado largo. Debe durar menos de un minuto.',
+  'widget.voice.unavailable': 'Los mensajes de voz no están disponibles ahora. Escribe tu mensaje.',
+  'widget.voice.failed': 'No se pudo enviar tu mensaje de voz. Inténtalo de nuevo o escríbelo.',
 };
 
 const DE: Record<string, string> = {
@@ -119,6 +158,19 @@ const DE: Record<string, string> = {
   'widget.footer.terms': 'AGB',
   'widget.footer.privacy': 'Datenschutz',
   'widget.footer.support': 'Support',
+  'widget.aria.mic': 'Sprachnachricht aufnehmen',
+  'widget.aria.micStop': 'Aufnahme beenden und senden',
+  'widget.aria.micCancel': 'Aufnahme abbrechen',
+  'widget.aria.listen': 'Vorlesen',
+  'widget.aria.stopListening': 'Vorlesen beenden',
+  'widget.voice.recording': 'Aufnahme… {time}',
+  'widget.voice.transcribing': 'Wird transkribiert…',
+  'widget.voice.badge': 'Sprachnachricht',
+  'widget.voice.permission': 'Der Mikrofonzugriff ist blockiert. Erlaube ihn im Browser, um Sprachnachrichten zu senden.',
+  'widget.voice.noSpeech': 'Wir konnten nichts hören. Bitte versuche es erneut.',
+  'widget.voice.tooLong': 'Die Sprachnachricht ist zu lang. Bitte halte sie unter einer Minute.',
+  'widget.voice.unavailable': 'Sprachnachrichten sind gerade nicht verfügbar. Bitte schreibe deine Nachricht.',
+  'widget.voice.failed': 'Deine Sprachnachricht konnte nicht gesendet werden. Bitte versuche es erneut oder schreibe sie.',
 };
 
 const FR: Record<string, string> = {
@@ -146,6 +198,19 @@ const FR: Record<string, string> = {
   'widget.footer.terms': 'Conditions',
   'widget.footer.privacy': 'Confidentialité',
   'widget.footer.support': 'Support',
+  'widget.aria.mic': 'Enregistrer un message vocal',
+  'widget.aria.micStop': 'Arrêter et envoyer le message vocal',
+  'widget.aria.micCancel': "Annuler l'enregistrement",
+  'widget.aria.listen': 'Écouter',
+  'widget.aria.stopListening': 'Arrêter la lecture',
+  'widget.voice.recording': 'Enregistrement… {time}',
+  'widget.voice.transcribing': 'Transcription…',
+  'widget.voice.badge': 'Message vocal',
+  'widget.voice.permission': "L'accès au micro est bloqué. Autorisez-le dans votre navigateur pour envoyer des messages vocaux.",
+  'widget.voice.noSpeech': "Nous n'avons rien entendu. Veuillez réessayer.",
+  'widget.voice.tooLong': "Ce message vocal est trop long. Il doit durer moins d'une minute.",
+  'widget.voice.unavailable': 'Les messages vocaux ne sont pas disponibles pour le moment. Veuillez écrire votre message.',
+  'widget.voice.failed': "Votre message vocal n'a pas pu être envoyé. Réessayez ou écrivez-le.",
 };
 
 const NL: Record<string, string> = {
@@ -173,6 +238,19 @@ const NL: Record<string, string> = {
   'widget.footer.terms': 'Voorwaarden',
   'widget.footer.privacy': 'Privacy',
   'widget.footer.support': 'Support',
+  'widget.aria.mic': 'Spraakbericht opnemen',
+  'widget.aria.micStop': 'Stoppen en spraakbericht versturen',
+  'widget.aria.micCancel': 'Opname annuleren',
+  'widget.aria.listen': 'Voorlezen',
+  'widget.aria.stopListening': 'Stoppen met voorlezen',
+  'widget.voice.recording': 'Opnemen… {time}',
+  'widget.voice.transcribing': 'Bezig met uitschrijven…',
+  'widget.voice.badge': 'Spraakbericht',
+  'widget.voice.permission': 'Toegang tot de microfoon is geblokkeerd. Sta deze toe in je browser om spraakberichten te versturen.',
+  'widget.voice.noSpeech': 'We konden niets horen. Probeer het opnieuw.',
+  'widget.voice.tooLong': 'Dit spraakbericht is te lang. Houd het korter dan een minuut.',
+  'widget.voice.unavailable': 'Spraakberichten zijn nu niet beschikbaar. Typ je bericht.',
+  'widget.voice.failed': 'Je spraakbericht kon niet worden verstuurd. Probeer het opnieuw of typ het.',
 };
 
 /**
