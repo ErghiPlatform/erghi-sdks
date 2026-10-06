@@ -49,6 +49,19 @@ describe('ConversationRealtimeClient', () => {
     registeredHandlers.get('MessageReceived')?.(raw);
   }
 
+  it('reports AssistantTyping in camelCase and PascalCase', async () => {
+    const typing: boolean[] = [];
+    await client.connect('https://api.test.com', 'conv-1', 'visitor-token-abc', {
+      onMessage: () => undefined,
+      onAssistantTyping: (isTyping) => typing.push(isTyping),
+    });
+
+    registeredHandlers.get('AssistantTyping')?.({ conversationId: 'conv-1', isTyping: true });
+    registeredHandlers.get('AssistantTyping')?.({ ConversationId: 'conv-1', IsTyping: false });
+
+    expect(typing).toEqual([true, false]);
+  });
+
   it('normalizes camelCase sources into MessageSource objects', () => {
     emitMessageReceived({
       id: 'm1',

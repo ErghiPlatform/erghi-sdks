@@ -24,6 +24,8 @@ export type RealtimeHandlers = {
   /** An AI tool call needed the host app's session context (setSecureContext) and it was
    * missing or rejected; the widget asks secureContextProvider for fresh values. */
   onContextRequired?: () => void;
+  /** The server started (true) or finished (false) generating an AI reply for this turn. */
+  onAssistantTyping?: (isTyping: boolean) => void;
 };
 
 export class ConversationRealtimeClient {
@@ -84,6 +86,10 @@ export class ConversationRealtimeClient {
     });
 
     this.hub.on('ContextRequired', () => handlers.onContextRequired?.());
+
+    this.hub.on('AssistantTyping', (raw: Record<string, unknown>) => {
+      handlers.onAssistantTyping?.(Boolean(raw?.['isTyping'] ?? raw?.['IsTyping']));
+    });
 
     this.hub.on('ConversationInactivityWarning', (raw: Record<string, unknown>) => {
       handlers.onInactivityWarning?.({
