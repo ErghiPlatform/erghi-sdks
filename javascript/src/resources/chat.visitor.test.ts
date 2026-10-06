@@ -99,6 +99,29 @@ describe('ChatResource visitor calls', () => {
     expect(http.post.mock.calls[1][1]).toEqual({ content: 'see file', type: 'text', attachments: [uploaded] });
   });
 
+  it('sends a voice note as the visitor and returns the transcribed message', async () => {
+    const { http, tokens, chat } = makeClient();
+    tokens.set('conv-1', 'vt-1');
+    http.post.mockResolvedValueOnce({ data: { id: 'm-1', content: 'hello', source: 'voice' } });
+    const clip = new Blob(['RIFF'], { type: 'audio/webm' });
+
+    const message = await chat.sendVoiceMessage('conv-1', clip);
+
+    const [url, form, config] = http.post.mock.calls[0];
+    expect(url).toBe('/api/conversations/conv-1/voice');
+    expect(((form as FormData).get('file') as File).name).toBe('voice-note.webm');
+    expect(config).toEqual(VT);
+    expect(message.source).toBe('voice');
+  });
+
+  it('refuses to send a voice note without a visitor token', async () => {
+    const { http, chat } = makeClient();
+    await expect(chat.sendVoiceMessage('conv-9', new Blob(['x']), 'clip.m4a')).rejects.toMatchObject({
+      code: 'VISITOR_TOKEN_MISSING',
+    });
+    expect(http.post).not.toHaveBeenCalled();
+  });
+
   it('reads messages and the conversation with the visitor token', async () => {
     const { http, tokens, chat } = makeClient();
     tokens.set('conv-1', 'vt-1');

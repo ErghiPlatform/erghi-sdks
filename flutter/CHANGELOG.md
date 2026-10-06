@@ -1,3 +1,7 @@
+## Unreleased
+
+- `Message.source` ('voice' for a visitor voice note, whose `content` is the transcript).
+
 ## 1.0.1
 
 - Fix package description metadata (no functional changes).

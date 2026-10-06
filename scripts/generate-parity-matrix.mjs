@@ -37,6 +37,7 @@ const CHAT_COLS = [
   ['mark_read', 'Mark read'],
   ['typing_indicator', 'Typing'],
   ['tool_context', 'Identity + secure ctx'],
+  ['voice_note', 'Voice note'],
 ];
 const AUTH_COLS = [
   ['login', 'Login'],

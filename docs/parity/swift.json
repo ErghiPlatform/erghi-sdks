@@ -30,6 +30,7 @@
       "mark_read": true,
       "typing_indicator": false,
       "tool_context": false,
+      "voice_note": false,
       "evidence": "Sources/ErghiSDK/Resources/ChatResource.swift:19-100 -- getConversation/createConversation/getMessages/sendMessage/markAsRead; no listConversations, closeConversation, or sendTyping. Same gap shape as flutter."
     },
     "widgets": { "create": false, "list": false, "get": false, "update": false, "note": "No widget resource file." },

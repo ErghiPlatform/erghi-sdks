@@ -28,6 +28,7 @@
       "mark_read": false,
       "typing_indicator": true,
       "tool_context": false,
+      "voice_note": false,
       "evidence": "react/src/useChat.ts:17,58,74 -- useChat only covers an existing conversation (getMessages/sendMessage/sendTyping); conversation lifecycle (create/list/close) has no hook, callers must reach into client.chat.* directly via useErghi()."
     },
     "widgets": { "create": false, "list": false, "get": false, "update": false, "evidence": "no widget hook exists" },

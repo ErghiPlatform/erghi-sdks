@@ -101,7 +101,9 @@ public record Message(
     DateTime CreatedAt,
     DateTime? ReadAt,
     bool IsAI,
-    string? AIModel
+    string? AIModel,
+    // "voice" when the visitor sent it as a voice note (Content is the transcript).
+    string? Source = null
 );
 
 public record SendMessageRequest(

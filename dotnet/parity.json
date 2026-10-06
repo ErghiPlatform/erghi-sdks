@@ -28,6 +28,7 @@
       "mark_read": true,
       "typing_indicator": true,
       "tool_context": false,
+      "voice_note": false,
       "evidence": "dotnet/Erghi.SDK/Resources/ChatResource.cs:29-118, plus SendMessageWithAttachmentAsync (line 95) and AssignConversationAsync (line 66) that no other SDK has."
     },
     "widgets": {

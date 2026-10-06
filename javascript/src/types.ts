@@ -71,6 +71,8 @@ export interface Message {
   readAt?: string;
   isAI: boolean;
   aiModel?: string;
+  /** 'voice' when the visitor sent it as a voice note (content is the transcript). */
+  source?: string;
 }
 
 export interface Attachment {

@@ -28,6 +28,7 @@
       "mark_read": false,
       "typing_indicator": true,
       "tool_context": true,
+      "voice_note": true,
       "evidence": "widget/src/realtime.ts, widget/src/index.ts"
     },
     "widgets": { "create": false, "list": false, "get": false, "update": false, "note": "N/A -- the widget IS the widget instance, it doesn't manage other widgets." },

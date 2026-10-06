@@ -10,7 +10,7 @@
   "verification_method": "string -- how (grep/read of what, against what)",
   "capabilities": {
     "auth": "{login, register, refresh, logout, password_reset, email_verification}: bool, plus 'evidence' or 'note'",
-    "chat": "{create_conversation, list_conversations, get_conversation, close_conversation, send_message, get_messages, mark_read, typing_indicator, tool_context}: bool (tool_context = signed identity token + secure context for integration calls), plus 'evidence' or 'note'",
+    "chat": "{create_conversation, list_conversations, get_conversation, close_conversation, send_message, get_messages, mark_read, typing_indicator, tool_context, voice_note}: bool (tool_context = signed identity token + secure context for integration calls; voice_note = visitor voice note sent for transcription), plus 'evidence' or 'note'",
     "widgets": "{create, list, get, update}: bool, plus 'evidence' or 'note'",
     "realtime": "{supported: bool, protocol: string}, plus 'evidence'",
     "rag": "{supported: bool}, plus 'note' -- true for zero SDKs today; RagController.cs exists platform-side and nothing wraps it yet",

@@ -63,6 +63,48 @@ and `data-greeting`.
 If the API doesn't answer within 3 seconds the widget appears anyway, with the overrides and the
 defaults, rather than leaving the page without chat.
 
+### Voice
+
+Two workspace settings (admin portal, AI settings → Voice) turn on voice in the widget; nothing in
+the embed is needed:
+
+- **Voice input** adds a microphone button. The visitor records up to 60 seconds; the clip is
+  transcribed and sent as their message (the agent sees a "voice note" badge). The audio is not
+  stored. Usage counts against the plan's monthly voice minutes.
+- **Read replies aloud** adds a speaker button to each reply. Speech is generated on the visitor's
+  device by the browser's own engine, so it costs nothing and the text never leaves the device. The
+  reply's language is detected on the device where the browser supports it, so an Arabic answer on
+  an English page is still read with an Arabic voice.
+
+What the host page needs for the microphone:
+
+1. **HTTPS.** Browsers only allow microphone access on secure pages (`localhost` is exempt).
+2. **No policy blocking it.** If your site sends a `Permissions-Policy` header, it must allow the
+   microphone for your own origin, e.g. `Permissions-Policy: microphone=(self)`;
+   with `microphone=()` the visitor gets a "microphone blocked" message instead of recording.
+3. **Inside an iframe**, the iframe needs `allow="microphone"`.
+
+The visitor's browser asks for permission the first time they press the button. When a browser
+can't record (no `MediaRecorder`) the button doesn't appear.
+
+**Native apps.** In a Capacitor or other webview you can hand recording and speech to native
+plugins:
+
+```javascript
+new ErghiWidget({
+  widgetId: 'w_xxxxx',
+  // Return the clip (WebM, Ogg, MP4/M4A or WAV, at most 60 s), or null if cancelled.
+  recordAudio: async () => myRecorderPlugin.recordClip(),
+  // `language` is the reply's BCP 47 code; resolve when speaking finishes.
+  speak: (text, language) => TextToSpeech.speak({ text, lang: language }),
+  stopSpeaking: () => TextToSpeech.stop(),
+});
+```
+
+Without hooks the widget uses the webview's `MediaRecorder` and `speechSynthesis`. Either way, on iOS add
+`NSMicrophoneUsageDescription` to `Info.plist`, and on Android declare `RECORD_AUDIO` in the
+manifest.
+
 ### Localization & RTL
 
 The widget ships with built-in English, Arabic, and Spanish UI strings and full

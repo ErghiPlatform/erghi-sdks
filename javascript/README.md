@@ -167,6 +167,25 @@ const message = await client.chat.sendMessage({
 });
 ```
 
+### Send a Voice Note
+
+Visitors can send a recorded clip instead of typing, when the workspace has voice input turned on
+(admin portal, AI settings → Voice). The platform transcribes it and posts the transcript as the
+visitor's message, marked `source: 'voice'`; the audio itself is not stored.
+
+```typescript
+// A clip from MediaRecorder or a native recorder: WebM, Ogg, MP4/M4A, MP3 or WAV,
+// at most 60 seconds and 2 MB.
+const message = await client.chat.sendVoiceMessage(conv.id, clip);
+console.log(message.content); // the transcript
+```
+
+It is visitor-only, so the conversation must have been created (or resumed with
+`setVisitorToken`) by this client. Failures carry the platform's code in `error.details.code`:
+`voice_disabled` (turned off for the workspace), `voice_no_speech` (nothing audible),
+`voice_too_large`, `voice_unsupported_type`, `voice_unavailable` (try again later). The
+workspace's monthly voice minutes running out arrives as a `RateLimitError`.
+
 ### Get Messages
 
 ```typescript

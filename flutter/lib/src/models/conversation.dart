@@ -71,6 +71,9 @@ class Message extends Equatable {
   final DateTime createdAt;
   final bool isRead;
 
+  /// 'voice' when the visitor sent it as a voice note (content is the transcript).
+  final String? source;
+
   const Message({
     required this.id,
     required this.conversationId,
@@ -81,6 +84,7 @@ class Message extends Equatable {
     this.metadata,
     required this.createdAt,
     this.isRead = false,
+    this.source,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) =>
@@ -98,6 +102,7 @@ class Message extends Equatable {
         metadata,
         createdAt,
         isRead,
+        source,
       ];
 }
 

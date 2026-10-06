@@ -156,6 +156,24 @@ export class ChatResource {
   }
 
   /**
+   * Send a recorded voice note as the visitor. The platform transcribes it and posts the
+   * transcript as the visitor's message (`source: 'voice'`); the audio itself is not stored.
+   * Up to 60 seconds / 2 MB of WebM, Ogg, MP4/M4A, MP3 or WAV. On failure the server's code
+   * (`voice_disabled`, `voice_no_speech`, ...) is in `ErghiError.details.code`; the monthly
+   * voice-minute limit arrives as a `RateLimitError` (429).
+   */
+  async sendVoiceMessage(conversationId: string, audio: Blob, filename?: string): Promise<Message> {
+    const form = new FormData();
+    form.append('file', audio, filename ?? (audio as File).name ?? 'voice-note.webm');
+    const response = await this.client.getHttpClient().post<Message>(
+      `/api/conversations/${conversationId}/voice`,
+      form,
+      { headers: this.requireVisitorHeaders(conversationId) }
+    );
+    return response.data;
+  }
+
+  /**
    * Get messages for a conversation
    */
   async getMessages(
