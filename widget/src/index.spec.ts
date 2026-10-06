@@ -689,6 +689,78 @@ describe('ErghiWidget', () => {
     });
   });
 
+  describe('Assistant typing (one reply per turn)', () => {
+    const REPLY_TIMEOUT_MS = 30_000;
+    const GENERATION_TIMEOUT_MS = 90_000;
+
+    beforeEach(async () => {
+      jest.useFakeTimers();
+      widget.open();
+      await jest.advanceTimersByTimeAsync(0);
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    const typingVisible = () =>
+      getShadowRoot()?.getElementById('cf-typing')?.classList.contains('visible');
+
+    const sendTestMessage = async (content: string) => {
+      const input = getShadowRoot()?.getElementById('cf-input') as HTMLInputElement;
+      input.value = content;
+      (getShadowRoot()?.getElementById('cf-send') as HTMLButtonElement).click();
+      await jest.advanceTimersByTimeAsync(0);
+    };
+
+    const timedOut = () =>
+      Array.from(getShadowRoot()?.querySelectorAll('.msg.system .msg-text') ?? [])
+        .some((el) => el.textContent === "We're having trouble getting a response. Please try again.");
+
+    it('gives a generation the server budget instead of the pre-turn timeout', async () => {
+      await sendTestMessage('hello');
+      await jest.advanceTimersByTimeAsync(3_000);
+      (widget as any).handleAssistantTyping(true);
+
+      await jest.advanceTimersByTimeAsync(REPLY_TIMEOUT_MS + 10_000);
+      expect(timedOut()).toBe(false);
+      expect(typingVisible()).toBe(true);
+
+      await jest.advanceTimersByTimeAsync(GENERATION_TIMEOUT_MS);
+      expect(timedOut()).toBe(true);
+      expect(typingVisible()).toBe(false);
+    });
+
+    it('keeps the indicator on when a generation ends without a reply (superseded by a new message)', async () => {
+      await sendTestMessage('first');
+      (widget as any).handleAssistantTyping(true);
+      await sendTestMessage('second');
+      (widget as any).handleAssistantTyping(false);
+
+      expect(typingVisible()).toBe(true);
+      expect((widget as any).awaitingReply).toBe(true);
+
+      (widget as any).handleAssistantTyping(true);
+      (widget as any).handleInboundMessage({ id: 'turn-reply', content: 'One answer', sender: 'bot' });
+
+      expect(typingVisible()).toBe(false);
+      await jest.advanceTimersByTimeAsync(GENERATION_TIMEOUT_MS);
+      expect(timedOut()).toBe(false);
+    });
+
+    it('shows the indicator for a turn the server starts on its own (e.g. after a reload)', () => {
+      (widget as any).handleAssistantTyping(true);
+      expect(typingVisible()).toBe(true);
+      expect((widget as any).awaitingReply).toBe(true);
+    });
+
+    it('a stop with nothing pending hides the indicator', () => {
+      (widget as any).setTyping(true);
+      (widget as any).handleAssistantTyping(false);
+      expect(typingVisible()).toBe(false);
+    });
+  });
+
   describe('Message Display', () => {
     it('should display greeting message', async () => {
       const customWidget = new ErghiWidget({

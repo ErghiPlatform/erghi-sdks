@@ -121,7 +121,10 @@ export default class ErghiWidget {
   // Bounded failure state: if no reply arrives within this window after a message is sent,
   // stop spinning the typing indicator and surface a recoverable error instead (AC-1).
   private replyTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+  // Until the server starts the turn (it waits for the visitor to pause, at most a few seconds).
   private static readonly REPLY_TIMEOUT_MS = 30_000;
+  // Once the server reports it is generating: its own budget for one reply.
+  private static readonly GENERATION_TIMEOUT_MS = 90_000;
   private lastInactivityWarningAt = 0;
   private pendingFile: File | null = null;
   private translations: Record<string, string> = {};
@@ -1068,11 +1071,24 @@ export default class ErghiWidget {
     return Array.isArray(list) ? (list as Message[]) : [];
   }
 
-  private awaitReply(): void {
+  private awaitReply(timeoutMs: number = ErghiWidget.REPLY_TIMEOUT_MS): void {
     this.awaitingReply = true;
     this.setTyping(true);
     this.clearReplyTimeout();
-    this.replyTimeoutTimer = setTimeout(() => this.handleReplyTimeout(), ErghiWidget.REPLY_TIMEOUT_MS);
+    this.replyTimeoutTimer = setTimeout(() => this.handleReplyTimeout(), timeoutMs);
+  }
+
+  /** The server answers a burst of visitor messages as one turn. The indicator stays on from the
+   * first message until that turn's reply (or a notice) arrives; a generation that ends without a
+   * reply was superseded or will be retried, so it only shortens the timer back. */
+  private handleAssistantTyping(isTyping: boolean): void {
+    if (isTyping) {
+      this.awaitReply(ErghiWidget.GENERATION_TIMEOUT_MS);
+    } else if (this.awaitingReply) {
+      this.awaitReply();
+    } else {
+      this.setTyping(false);
+    }
   }
 
   /** Cancels the pending no-reply timer, if any. Called from every path that legitimately
@@ -1124,6 +1140,7 @@ export default class ErghiWidget {
         onMessage: (msg) => this.handleInboundMessage(msg),
         onClosed: () => this.handleSessionEnded(),
         onContextRequired: () => this.handleContextRequired(),
+        onAssistantTyping: (isTyping) => this.handleAssistantTyping(isTyping),
         onEscalated: (payload) => {
           if (payload.queuePosition > 1) {
             this.addSystemMessage(this.trf(

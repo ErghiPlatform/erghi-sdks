@@ -1,5 +1,9 @@
 ## Unreleased
 
+- The typing indicator follows the server's reply turn: it stays on while the visitor sends
+  several messages in a row and disappears with the single reply to all of them. Once the
+  server reports it is generating, the widget waits up to 90 s (the server's budget) before
+  showing the "trouble getting a response" notice, instead of 30 s from the last message.
 - Voice, when the workspace turns it on: a microphone button sends voice notes (transcribed
   into the visitor's message), and a speaker button reads replies aloud with the device's own
   speech engine, in the reply's language. `recordAudio`, `speak` and `stopSpeaking` hooks let
