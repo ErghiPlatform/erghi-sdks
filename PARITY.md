@@ -9,7 +9,7 @@ What each of the 7 Erghi SDKs actually implements right now, verified against re
 `docs/parity/swift.json` (a manually-synced reference copy, since Swift lives in
 [`erghi-sdk-swift`](https://github.com/ErghiPlatform/erghi-sdk-swift), a separate repo).
 
-Regenerated on: 2026-10-05
+Regenerated on: 2026-10-12
 
 ## Maintenance tier
 
@@ -20,13 +20,13 @@ Regenerated on: 2026-10-05
 
 | SDK | Tier | Last verified | Reason |
 |---|---|---|---|
-| JavaScript / TypeScript | 🟢 active | 2026-09-03 | Canonical HTTP+realtime client. Every other SDK either wraps this one (react) or ports its wire contract (dotnet/python/flutter/angular). |
+| JavaScript / TypeScript | 🟢 active | 2026-10-12 | Canonical HTTP+realtime client. Every other SDK either wraps this one (react) or ports its wire contract (dotnet/python/flutter/angular). |
 | React | 🟡 maintenance | 2026-09-03 | Founder decision 2026-09-03: deprioritized alongside angular. Neither Chatwoot nor Intercom -- the closest comparable competitors at Erghi's stage -- maintain framework wrappers around their vanilla widget. Kept as real, working, tested code; not getting further active build investment. Bug fixes and security issues still land. |
-| Angular | 🟡 maintenance | 2026-09-03 | Founder decision 2026-09-03: deprioritized alongside react. Neither Chatwoot nor Intercom -- the closest comparable competitors at Erghi's stage -- maintain framework wrappers around their vanilla widget. Kept as real, working, tested code; not getting further active build investment. Bug fixes and security issues still land. |
+| Angular | 🟡 maintenance | 2026-10-12 | Founder decision 2026-09-03: deprioritized alongside react. Neither Chatwoot nor Intercom -- the closest comparable competitors at Erghi's stage -- maintain framework wrappers around their vanilla widget. Kept as real, working, tested code; not getting further active build investment. Bug fixes and security issues still land. |
 | Widget (Vanilla JS, embeddable) | 🟢 active | 2026-09-03 | The product's actual customer-facing embed. Not a wrapper -- this is the surface Chatwoot/Intercom-style comparisons are against, so it stays fully invested regardless of the react/angular call. |
-| .NET / C# | 🟢 active | 2026-09-03 | Independent full client, richest single surface of any SDK today (attachments, conversation assignment, widget CRUD). |
-| Python | 🟢 active | 2026-09-03 | Full independent client, near-1:1 parity with javascript on auth+chat. |
-| Flutter / Dart | 🟢 active | 2026-09-03 | Real independent client for a platform with no wrapper alternative (no vanilla-widget equivalent exists for native mobile) -- unlike react/angular this SDK is not redundant with anything, so it stays actively invested even though it currently has the widest gaps of the 5 'core' SDKs. |
+| .NET / C# | 🟢 active | 2026-10-12 | Independent full client, richest single surface of any SDK today (attachments, conversation assignment, widget CRUD). |
+| Python | 🟢 active | 2026-10-12 | Full independent client, near-1:1 parity with javascript on auth+chat. |
+| Flutter / Dart | 🟢 active | 2026-10-12 | Real independent client for a platform with no wrapper alternative (no vanilla-widget equivalent exists for native mobile) -- unlike react/angular this SDK is not redundant with anything, so it stays actively invested even though it currently has the widest gaps of the 5 'core' SDKs. |
 | Swift | 🟢 active | 2026-09-03 | Real independent client, no wrapper alternative for native Apple platforms. |
 
 ## Capability matrix
@@ -41,7 +41,7 @@ Regenerated on: 2026-10-05
 | Widget (Vanilla JS, embeddable) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | .NET / C# | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 | Python | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Flutter / Dart | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Flutter / Dart | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Swift | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 
 ### Chat / conversations
@@ -54,7 +54,7 @@ Regenerated on: 2026-10-05
 | Widget (Vanilla JS, embeddable) | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
 | .NET / C# | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Python | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Flutter / Dart | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Flutter / Dart | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Swift | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 
 ### Widget management

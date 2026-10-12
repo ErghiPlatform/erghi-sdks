@@ -5,8 +5,8 @@
   "display_name": ".NET / C#",
   "tier": "active",
   "tier_reason": "Independent full client, richest single surface of any SDK today (attachments, conversation assignment, widget CRUD).",
-  "last_verified_against_api": "2026-09-03",
-  "last_verified_by": "erghi-sdk agent (source read, not docs)",
+  "last_verified_against_api": "2026-10-12",
+  "last_verified_by": "contract audit: every SDK path diffed against server routes + gateway map, plus per-SDK wire tests",
   "verification_method": "Read dotnet/Erghi.SDK/Resources/*.cs directly.",
   "capabilities": {
     "auth": {
@@ -16,7 +16,7 @@
       "logout": true,
       "password_reset": true,
       "email_verification": false,
-      "evidence": "dotnet/Erghi.SDK/Resources/AuthResource.cs:26-89 -- Register/Login/Refresh/Logout/Me/ForgotPassword/ResetPassword; no VerifyEmailAsync."
+      "evidence": "dotnet/Erghi.SDK/Resources/AuthResource.cs:26-89 -- 2026-10-12: auth now targets the real GoTrue routes behind /api/auth/* (/token, /user, /recover, /verify) and maps its snake_case session; earlier refresh/me/password-reset paths did not exist on the platform."
     },
     "chat": {
       "create_conversation": true,

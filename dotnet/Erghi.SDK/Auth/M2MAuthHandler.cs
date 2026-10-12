@@ -37,7 +37,9 @@ internal sealed class M2MAuthHandler : DelegatingHandler
             }
         }
 
-        if (!string.IsNullOrEmpty(_config.AccessToken))
+        // A token already on the request wins: the client's default header (set
+        // after a login/refresh) or a per-request one (password recovery).
+        if (request.Headers.Authorization is null && !string.IsNullOrEmpty(_config.AccessToken))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _config.AccessToken);
         }

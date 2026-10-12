@@ -436,7 +436,13 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
 
     const data = response.data as any;
     // Platform errors are `{ error, code }`; validation errors also carry `message` and `errors`.
-    const message = data?.message || (typeof data?.error === 'string' ? data.error : undefined) || error.message;
+    // The auth server (GoTrue, behind /api/auth/*) uses `msg` or `error_description`.
+    const message =
+      data?.message ||
+      (typeof data?.error === 'string' ? data.error : undefined) ||
+      data?.msg ||
+      data?.error_description ||
+      error.message;
 
     switch (response.status) {
       case 400:

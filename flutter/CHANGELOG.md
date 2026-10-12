@@ -1,5 +1,12 @@
 ## Unreleased
 
+- Fix: `AuthResource` now talks to the platform's real auth endpoints (`refresh` and `me`
+  called paths that do not exist) and maps the auth server's snake_case session, which
+  `login` could not parse before.
+- New: `verifyEmail`, `forgotPassword`, `resetPassword`, `ChatResource.listConversations`
+  and `closeConversation`.
+- Fix: `markAsRead` used PUT; the endpoint is POST.
+
 - `Message.source` ('voice' for a visitor voice note, whose `content` is the transcript).
 
 ## 1.0.1

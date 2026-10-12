@@ -110,7 +110,7 @@ public sealed class ChatResource
     public async Task MarkAsReadAsync(string conversationId, CancellationToken ct = default)
     {
         var response = await _http.PostAsync(
-            $"/api/conversations/{conversationId}/messages/read", null, ct);
+            $"/api/conversations/{conversationId}/read", null, ct);
         await EnsureSuccessAsync(response, ct);
     }
 
@@ -187,8 +187,11 @@ public sealed class ChatResource
         try
         {
             using var doc = JsonDocument.Parse(body);
-            if (doc.RootElement.TryGetProperty("message", out var prop))
-                return prop.GetString();
+            foreach (var key in new[] { "message", "error" })
+            {
+                if (doc.RootElement.TryGetProperty(key, out var prop) && prop.ValueKind == JsonValueKind.String)
+                    return prop.GetString();
+            }
         }
         catch { }
         return null;

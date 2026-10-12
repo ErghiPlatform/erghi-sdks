@@ -279,7 +279,7 @@ const workspaces = await client.workspace.list();
 // Create workspace
 const workspace = await client.workspace.create({
   name: 'My Company',
-  slug: 'my-company',
+  companyWebsite: 'https://example.com', // optional
 });
 
 // Switch workspace

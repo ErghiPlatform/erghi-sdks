@@ -1,5 +1,16 @@
 ## Unreleased
 
+- Fix: `auth` now talks to the platform's real auth endpoints. `refresh`, `me`,
+  `verifyEmail`, `forgotPassword` and `resetPassword` called paths that do not exist
+  (`/api/auth/refresh`, `/me`, ...), and `login`/`register` read camelCase tokens from a
+  snake_case response, so the access token was never set. `resetPassword(token, password)`
+  takes the token from the reset email link. While signup awaits email confirmation,
+  `register` returns empty tokens.
+- Fix: `workspace.list/get/create` use `/api/v1/accounts/workspaces`. `Workspace` is now
+  `{ id, name, slug, isCurrent }` and `CreateWorkspaceRequest` is `{ name, companyWebsite? }`.
+  `update` and `delete` are deprecated and throw `NOT_SUPPORTED`; the API has no such endpoints.
+- Errors from the auth server carry its message (`msg` / `error_description`).
+
 - `chat.sendVoiceMessage(conversationId, audio)` sends a visitor voice note; the platform
   transcribes it and returns the message (`source: 'voice'`). `Message.source` added. Error
   messages now carry the platform's `error` text, and a 400 keeps the response body in `details`.

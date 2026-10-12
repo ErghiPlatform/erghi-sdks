@@ -145,15 +145,13 @@ export interface Workspace {
   id: string;
   name: string;
   slug: string;
-  ownerId: string;
-  plan: 'free' | 'starter' | 'growth' | 'enterprise';
-  role: string;
-  createdAt: string;
+  /** True for the workspace the current token is scoped to */
+  isCurrent: boolean;
 }
 
 export interface CreateWorkspaceRequest {
   name: string;
-  slug?: string;
+  companyWebsite?: string;
 }
 
 export interface WebSocketMessage {

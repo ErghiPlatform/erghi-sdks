@@ -61,6 +61,67 @@ class ChatResource {
     }
   }
 
+  /// List the workspace's conversations (agent/API-key auth), newest first.
+  Future<PaginatedResponse<Conversation>> listConversations({
+    int page = 1,
+    int limit = 50,
+    String? status,
+  }) async {
+    try {
+      final uri = Uri.parse('${config.apiUrl}/api/conversations').replace(
+        queryParameters: {
+          'page': '$page',
+          'limit': '$limit',
+          if (status != null) 'status': status,
+        },
+      );
+      final response = await client.get(uri, headers: _headers).timeout(config.timeout);
+
+      if (response.statusCode == 200) {
+        return PaginatedResponse<Conversation>.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>,
+          (json) => Conversation.fromJson(json as Map<String, dynamic>),
+        );
+      }
+      final error = jsonDecode(response.body);
+      throw ErghiException(
+        error['message'] ?? error['error'] ?? 'Failed to list conversations',
+        statusCode: response.statusCode,
+        details: error,
+      );
+    } catch (e) {
+      if (e is ErghiException) rethrow;
+      throw NetworkException('Network error: $e');
+    }
+  }
+
+  /// Close a conversation.
+  Future<void> closeConversation(String conversationId) async {
+    try {
+      final response = await client
+          .post(
+            Uri.parse('${config.apiUrl}/api/conversations/$conversationId/close'),
+            headers: _headers,
+          )
+          .timeout(config.timeout);
+
+      if (response.statusCode == 404) {
+        throw NotFoundException('Conversation not found');
+      }
+      if (response.statusCode >= 300) {
+        final error = response.body.isEmpty ? <String, dynamic>{} : jsonDecode(response.body);
+        throw ErghiException(
+          error['message'] ?? error['error'] ?? 'Failed to close conversation',
+          statusCode: response.statusCode,
+          details: error,
+        );
+      }
+    } catch (e) {
+      if (e is ErghiException) rethrow;
+      throw NetworkException('Network error: $e');
+    }
+  }
+
   /// Create a new conversation
   Future<Conversation> createConversation({
     required String widgetId,
@@ -177,7 +238,7 @@ class ChatResource {
   Future<void> markAsRead(String conversationId) async {
     try {
       await client
-          .put(
+          .post(
             Uri.parse(
               '${config.apiUrl}/api/conversations/$conversationId/read',
             ),

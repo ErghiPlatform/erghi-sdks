@@ -2,12 +2,29 @@ import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { AuthService } from './auth.service';
 import { ERGHI_CONFIG } from '../erghi.config';
-import { AuthResponse, LoginRequest, RegisterRequest } from '../models';
+import { AuthResponse, LoginRequest, RegisterRequest, User } from '../models';
 
 describe('AuthService', () => {
   let service: AuthService;
   let httpMock: HttpTestingController;
   const mockConfig = { apiUrl: 'http://localhost:5000' };
+
+  // What the gateway actually returns: GoTrue's snake_case session.
+  const gotrueUser = {
+    id: '123',
+    email: 'test@example.com',
+    role: 'authenticated',
+    created_at: '2026-01-16T00:00:00Z',
+    user_metadata: { first_name: 'Test', last_name: 'User' },
+    app_metadata: { role: 'user', workspace_id: 'ws-123' }
+  };
+  const gotrueSession = {
+    access_token: 'mock-token',
+    refresh_token: 'mock-refresh-token',
+    expires_in: 3600,
+    token_type: 'bearer',
+    user: gotrueUser
+  };
 
   const mockAuthResponse: AuthResponse = {
     accessToken: 'mock-token',
@@ -65,7 +82,7 @@ describe('AuthService', () => {
       const req = httpMock.expectOne(`${mockConfig.apiUrl}/api/auth/login`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(credentials);
-      req.flush(mockAuthResponse);
+      req.flush(gotrueSession);
     });
 
     it('should handle login error', (done) => {
@@ -105,7 +122,23 @@ describe('AuthService', () => {
 
       const req = httpMock.expectOne(`${mockConfig.apiUrl}/api/auth/register`);
       expect(req.request.method).toBe('POST');
-      req.flush(mockAuthResponse);
+      expect(req.request.body).toEqual({
+        email: 'new@example.com',
+        password: 'password123',
+        data: { first_name: 'New', last_name: 'User' }
+      });
+      req.flush(gotrueSession);
+    });
+
+    it('should not store a session while email confirmation is pending', (done) => {
+      service.register({ email: 'new@example.com', password: 'p', firstName: 'N', lastName: 'U' }).subscribe(response => {
+        expect(response.accessToken).toBe('');
+        expect(response.user.id).toBe('123');
+        expect(service.isAuthenticated).toBe(false);
+        done();
+      });
+
+      httpMock.expectOne(`${mockConfig.apiUrl}/api/auth/register`).flush(gotrueUser);
     });
   });
 
@@ -113,7 +146,7 @@ describe('AuthService', () => {
     it('should refresh token successfully', (done) => {
       localStorage.setItem('erghi_refresh_token', 'old-refresh-token');
 
-      const newAuthResponse = { ...mockAuthResponse, accessToken: 'new-token' };
+      const newSession = { ...gotrueSession, access_token: 'new-token' };
 
       service.refreshToken().subscribe(response => {
         expect(response.accessToken).toBe('new-token');
@@ -121,10 +154,10 @@ describe('AuthService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${mockConfig.apiUrl}/api/auth/refresh`);
+      const req = httpMock.expectOne(`${mockConfig.apiUrl}/api/auth/token?grant_type=refresh_token`);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ refreshToken: 'old-refresh-token' });
-      req.flush(newAuthResponse);
+      expect(req.request.body).toEqual({ refresh_token: 'old-refresh-token' });
+      req.flush(newSession);
     });
 
     it('should fail if no refresh token exists', async () => {
@@ -177,14 +210,14 @@ describe('AuthService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${mockConfig.apiUrl}/api/auth/me`);
-      req.flush(mockAuthResponse.user);
+      const req = httpMock.expectOne(`${mockConfig.apiUrl}/api/auth/user`);
+      req.flush(gotrueUser);
     });
   });
 
   describe('currentUser$', () => {
     it('should emit user changes', (done) => {
-      const users: any[] = [];
+      const users: (User | null)[] = [];
       
       service.currentUser$.subscribe(user => {
         users.push(user);
@@ -199,7 +232,7 @@ describe('AuthService', () => {
       service.login({ email: 'test@test.com', password: 'pass' }).subscribe();
       
       const req = httpMock.expectOne(`${mockConfig.apiUrl}/api/auth/login`);
-      req.flush(mockAuthResponse);
+      req.flush(gotrueSession);
     });
   });
 });

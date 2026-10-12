@@ -196,7 +196,7 @@ workspaces = await client.workspace.list()
 # Create workspace
 workspace = await client.workspace.create(
     name="My Company",
-    slug="my-company",
+    company_website="https://example.com",  # optional
 )
 
 # Switch workspace
