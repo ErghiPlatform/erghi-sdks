@@ -1,5 +1,5 @@
 import ErghiWidget, { escapeHtml } from './index';
-import { ConversationRealtimeClient } from './realtime';
+import { ConversationRealtimeClient, RealtimeHandlers } from './realtime';
 
 const getShadowRoot = () => document.getElementById('erghi-widget-root')?.shadowRoot;
 
@@ -758,6 +758,41 @@ describe('ErghiWidget', () => {
       (widget as any).setTyping(true);
       (widget as any).handleAssistantTyping(false);
       expect(typingVisible()).toBe(false);
+    });
+  });
+
+  describe('Handoff notices (one per event)', () => {
+    const systemTexts = () =>
+      Array.from(getShadowRoot()?.querySelectorAll('.msg.system .msg-text') ?? []).map((el) => el.textContent);
+
+    const connectAndCaptureHandlers = async (): Promise<RealtimeHandlers> => {
+      let captured: RealtimeHandlers | undefined;
+      jest.spyOn(ConversationRealtimeClient.prototype, 'connect')
+        .mockImplementation(async (_url, _id, _token, handlers) => { captured = handlers; });
+      widget.open();
+      (widget as any).conversationId = 'conv-handoff';
+      await (widget as any).connectRealtime();
+      return captured as RealtimeHandlers;
+    };
+
+    it('renders only the server notice when an agent is assigned', async () => {
+      const handlers = await connectAndCaptureHandlers();
+      const before = systemTexts();
+
+      handlers.onMessage({ id: 'srv-1', content: 'تم توصيلك مع Sara.', sender: 'system' } as Parameters<RealtimeHandlers['onMessage']>[0]);
+      handlers.onAssigned?.({ agentName: 'Sara' });
+
+      expect(systemTexts()).toEqual([...before, 'تم توصيلك مع Sara.']);
+      expect((widget as any).displayConfig.assignedAgentName).toBe('Sara');
+    });
+
+    it('adds no local notice when the conversation is queued', async () => {
+      const handlers = await connectAndCaptureHandlers();
+      const before = systemTexts();
+
+      handlers.onEscalated?.({ queuePosition: 3 });
+
+      expect(systemTexts()).toEqual(before);
     });
   });
 
