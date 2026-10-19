@@ -223,7 +223,7 @@ export default class ErghiWidget {
     return this.translations[key] || fallback;
   }
 
-  /** Translate with `{token}` interpolation, e.g. trf('widget.queue.position', '…#{position}…', { position: 3 }). */
+  /** Translate with `{token}` interpolation, e.g. trf('widget.voice.recording', 'Recording… {time}', { time: '0:03' }). */
   private trf(key: string, fallback: string, params: Record<string, string | number>): string {
     return interpolate(this.tr(key, fallback), params);
   }
@@ -1141,22 +1141,10 @@ export default class ErghiWidget {
         onClosed: () => this.handleSessionEnded(),
         onContextRequired: () => this.handleContextRequired(),
         onAssistantTyping: (isTyping) => this.handleAssistantTyping(isTyping),
-        onEscalated: (payload) => {
-          if (payload.queuePosition > 1) {
-            this.addSystemMessage(this.trf(
-              'widget.queue.position',
-              "You're #{position} in the queue. An agent will join shortly.",
-              { position: payload.queuePosition }
-            ));
-          }
-        },
+        // The server posts the queue and agent-connected notices as system messages in the
+        // visitor's language (handled by onMessage); assignment only updates widget state.
         onAssigned: (payload) => {
           this.displayConfig.assignedAgentName = payload.agentName;
-          this.addSystemMessage(this.trf(
-            'widget.agent.connected',
-            "You're connected with {name}.",
-            { name: payload.agentName }
-          ));
           this.awaitingReply = false;
           this.clearReplyTimeout();
           this.setTyping(false);
