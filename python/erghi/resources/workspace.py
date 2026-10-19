@@ -54,15 +54,11 @@ class WorkspaceResource:
         slug: str | None = None,
     ) -> Workspace:
         """Deprecated: the API has no workspace update endpoint. Always raises."""
-        raise ErghiError(
-            "Updating a workspace is not supported by the API", "NOT_SUPPORTED"
-        )
+        raise ErghiError("Updating a workspace is not supported by the API", "NOT_SUPPORTED")
 
     async def delete(self, workspace_id: str) -> None:
         """Deprecated: the API has no workspace delete endpoint. Always raises."""
-        raise ErghiError(
-            "Deleting a workspace is not supported by the API", "NOT_SUPPORTED"
-        )
+        raise ErghiError("Deleting a workspace is not supported by the API", "NOT_SUPPORTED")
 
     def switch_workspace(self, workspace_id: str) -> None:
         """Switch current workspace context"""
