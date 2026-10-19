@@ -32,66 +32,28 @@ class AuthResource {
     return headers;
   }
 
-  /// Register a new user
+  /// Register a new user.
+  ///
+  /// `/api/auth/*` is the platform's GoTrue auth server behind the gateway, so
+  /// bodies are GoTrue's snake_case shapes. Tokens are empty while the platform
+  /// waits for email confirmation (see [verifyEmail]).
   Future<AuthResponse> register(RegisterRequest request) async {
-    try {
-      final response = await client
-          .post(
-            Uri.parse('${config.apiUrl}/api/auth/register'),
-            headers: _headers,
-            body: jsonEncode(request.toJson()),
-          )
-          .timeout(config.timeout);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        final authResponse = AuthResponse.fromJson(data);
-        _accessToken = authResponse.accessToken;
-        _refreshToken = authResponse.refreshToken;
-        return authResponse;
-      } else {
-        final error = jsonDecode(response.body);
-        throw ValidationException(
-          error['message'] ?? 'Registration failed',
-          statusCode: response.statusCode,
-          details: error,
-        );
-      }
-    } catch (e) {
-      if (e is ErghiException) rethrow;
-      throw NetworkException('Network error: $e');
-    }
+    final data = await _send('POST', '/api/auth/register', {
+      'email': request.email,
+      'password': request.password,
+      if (request.phoneNumber != null) 'phone': request.phoneNumber,
+      'data': {'first_name': request.firstName, 'last_name': request.lastName},
+    });
+    return _store(AuthResponse.fromGoTrue(data));
   }
 
   /// Login with email and password
   Future<AuthResponse> login(LoginRequest request) async {
-    try {
-      final response = await client
-          .post(
-            Uri.parse('${config.apiUrl}/api/auth/login'),
-            headers: _headers,
-            body: jsonEncode(request.toJson()),
-          )
-          .timeout(config.timeout);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final authResponse = AuthResponse.fromJson(data);
-        _accessToken = authResponse.accessToken;
-        _refreshToken = authResponse.refreshToken;
-        return authResponse;
-      } else {
-        final error = jsonDecode(response.body);
-        throw AuthenticationException(
-          error['message'] ?? 'Login failed',
-          statusCode: response.statusCode,
-          details: error,
-        );
-      }
-    } catch (e) {
-      if (e is ErghiException) rethrow;
-      throw NetworkException('Network error: $e');
-    }
+    final data = await _send('POST', '/api/auth/login', {
+      'email': request.email,
+      'password': request.password,
+    });
+    return _store(AuthResponse.fromGoTrue(data));
   }
 
   /// Refresh access token
@@ -99,61 +61,18 @@ class AuthResource {
     if (_refreshToken == null) {
       throw AuthenticationException('No refresh token available');
     }
-
-    try {
-      final response = await client
-          .post(
-            Uri.parse('${config.apiUrl}/api/auth/refresh'),
-            headers: _headers,
-            body: jsonEncode({'refreshToken': _refreshToken}),
-          )
-          .timeout(config.timeout);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final authResponse = AuthResponse.fromJson(data);
-        _accessToken = authResponse.accessToken;
-        _refreshToken = authResponse.refreshToken;
-        return authResponse;
-      } else {
-        final error = jsonDecode(response.body);
-        throw AuthenticationException(
-          error['message'] ?? 'Token refresh failed',
-          statusCode: response.statusCode,
-          details: error,
-        );
-      }
-    } catch (e) {
-      if (e is ErghiException) rethrow;
-      throw NetworkException('Network error: $e');
-    }
+    final data = await _send(
+      'POST',
+      '/api/auth/token?grant_type=refresh_token',
+      {'refresh_token': _refreshToken},
+    );
+    return _store(AuthResponse.fromGoTrue(data));
   }
 
   /// Get current user
   Future<User> me() async {
-    try {
-      final response = await client
-          .get(
-            Uri.parse('${config.apiUrl}/api/auth/me'),
-            headers: _headers,
-          )
-          .timeout(config.timeout);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return User.fromJson(data);
-      } else {
-        final error = jsonDecode(response.body);
-        throw AuthenticationException(
-          error['message'] ?? 'Failed to get user',
-          statusCode: response.statusCode,
-          details: error,
-        );
-      }
-    } catch (e) {
-      if (e is ErghiException) rethrow;
-      throw NetworkException('Network error: $e');
-    }
+    final data = await _send('GET', '/api/auth/user', null);
+    return User.fromGoTrue(data);
   }
 
   /// Logout
@@ -163,13 +82,93 @@ class AuthResource {
           .post(
             Uri.parse('${config.apiUrl}/api/auth/logout'),
             headers: _headers,
-            body: jsonEncode({'refreshToken': _refreshToken}),
           )
           .timeout(config.timeout);
     } finally {
       _accessToken = null;
       _refreshToken = null;
     }
+  }
+
+  /// Confirm a signup with the token from the confirmation email link.
+  Future<void> verifyEmail(String token) async {
+    final data = await _send('POST', '/api/auth/verify', {
+      'type': 'signup',
+      'token_hash': token,
+    });
+    _store(AuthResponse.fromGoTrue(data));
+  }
+
+  /// Send a password reset email.
+  Future<void> forgotPassword(String email) async {
+    await _send('POST', '/api/auth/recover', {'email': email});
+  }
+
+  /// Set a new password using the token from the reset email link: the token
+  /// is exchanged for a recovery session, which then updates the password.
+  Future<void> resetPassword(String token, String newPassword) async {
+    final session = await _send('POST', '/api/auth/verify', {
+      'type': 'recovery',
+      'token_hash': token,
+    });
+    final recoveryToken = session['access_token'];
+    if (recoveryToken is! String || recoveryToken.isEmpty) {
+      throw AuthenticationException('Password reset token was not accepted');
+    }
+    await _send(
+      'PUT',
+      '/api/auth/user',
+      {'password': newPassword},
+      bearer: recoveryToken,
+    );
+  }
+
+  AuthResponse _store(AuthResponse auth) {
+    if (auth.accessToken.isNotEmpty) {
+      _accessToken = auth.accessToken;
+      _refreshToken = auth.refreshToken;
+    }
+    return auth;
+  }
+
+  Future<Map<String, dynamic>> _send(
+    String method,
+    String path,
+    Map<String, dynamic>? body, {
+    String? bearer,
+  }) async {
+    final request = http.Request(method, Uri.parse('${config.apiUrl}$path'))
+      ..headers.addAll(_headers);
+    if (bearer != null) {
+      request.headers.remove('X-API-Key');
+      request.headers['Authorization'] = 'Bearer $bearer';
+    }
+    if (body != null) request.body = jsonEncode(body);
+
+    final http.Response response;
+    try {
+      response = await http.Response.fromStream(
+        await client.send(request).timeout(config.timeout),
+      );
+    } catch (e) {
+      throw NetworkException('Network error: $e');
+    }
+
+    final decoded = response.body.isEmpty ? null : jsonDecode(response.body);
+    final json = decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
+    if (response.statusCode >= 200 && response.statusCode < 300) return json;
+
+    // GoTrue reports errors as `msg` / `error_description`.
+    final message = (json['msg'] ?? json['error_description'] ?? json['message'] ?? json['error'])
+            ?.toString() ??
+        'Request failed';
+    if (response.statusCode == 400 || response.statusCode == 422) {
+      throw ValidationException(message, statusCode: response.statusCode, details: json);
+    }
+    if (response.statusCode == 404) {
+      throw NotFoundException(message, details: json);
+    }
+    throw AuthenticationException(message, statusCode: response.statusCode, details: json);
   }
 
   /// Authenticate using Client Credentials to obtain a JWT token

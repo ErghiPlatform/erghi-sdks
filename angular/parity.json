@@ -5,8 +5,8 @@
   "display_name": "Angular",
   "tier": "maintenance",
   "tier_reason": "Founder decision 2026-09-03: deprioritized alongside react. Neither Chatwoot nor Intercom -- the closest comparable competitors at Erghi's stage -- maintain framework wrappers around their vanilla widget. Kept as real, working, tested code; not getting further active build investment. Bug fixes and security issues still land.",
-  "last_verified_against_api": "2026-09-03",
-  "last_verified_by": "erghi-sdk agent (source read, not docs)",
+  "last_verified_against_api": "2026-10-12",
+  "last_verified_by": "contract audit: every SDK path diffed against server routes + gateway map, plus per-SDK wire tests",
   "verification_method": "Read angular/src/lib/services/*.ts directly. Unlike react, angular has NO dependency on @erghi-ai/sdk (angular/package.json:37-40 lists only @microsoft/signalr and tslib) -- it reimplements auth/chat as its own HttpClient calls (angular/src/lib/services/auth.service.ts, chat.service.ts). That is a real, independent client, not a thin hook layer, and it carries its own drift risk: it can silently diverge from the platform's wire contract in ways react structurally cannot.",
   "capabilities": {
     "auth": {
@@ -16,7 +16,7 @@
       "logout": true,
       "password_reset": false,
       "email_verification": false,
-      "evidence": "angular/src/lib/services/auth.service.ts:47,55,68,105,116 (login/register/refresh/logout/me); no forgotPassword/resetPassword/verifyEmail calls anywhere in the service."
+      "evidence": "angular/src/lib/services/auth.service.ts -- login/register/refresh/logout/me against GoTrue's /token, /signup, /user (mapped via toAuthResponse/toUser); no forgotPassword/resetPassword/verifyEmail."
     },
     "chat": {
       "create_conversation": true,

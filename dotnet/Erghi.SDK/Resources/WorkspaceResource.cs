@@ -6,7 +6,8 @@ using Erghi.SDK.Models;
 namespace Erghi.SDK.Resources;
 
 /// <summary>
-/// Provides workspace CRUD operations.
+/// Workspaces of the signed-in user's account. The platform exposes list and
+/// create; renaming and deleting a workspace are done in the admin portal.
 /// </summary>
 public sealed class WorkspaceResource
 {
@@ -20,41 +21,45 @@ public sealed class WorkspaceResource
         _http = http;
     }
 
-    /// <summary>Get the current workspace.</summary>
+    /// <summary>Get one of the account's workspaces by ID.</summary>
     public async Task<Workspace> GetAsync(string workspaceId, CancellationToken ct = default)
     {
-        var response = await _http.GetAsync($"/api/workspaces/{workspaceId}", ct);
-        return await ReadAsync<Workspace>(response, ct);
+        var workspaces = await ListAsync(ct);
+        return workspaces.FirstOrDefault(w => w.Id == workspaceId)
+            ?? throw new NotFoundException($"Workspace {workspaceId} not found in this account");
     }
 
-    /// <summary>List all accessible workspaces.</summary>
+    /// <summary>List the workspaces of the signed-in user's account.</summary>
     public async Task<List<Workspace>> ListAsync(CancellationToken ct = default)
     {
-        var response = await _http.GetAsync("/api/workspaces", ct);
-        return await ReadAsync<List<Workspace>>(response, ct);
+        var response = await _http.GetAsync("/api/v1/accounts/workspaces", ct);
+        var rows = await ReadAsync<List<AccountWorkspaceSummary>>(response, ct);
+        return rows.Select(r => new Workspace(r.WorkspaceId, r.Name, r.Slug ?? "", r.IsCurrent)).ToList();
     }
 
-    /// <summary>Create a new workspace.</summary>
+    /// <summary>Create a new workspace in the signed-in user's account.</summary>
     public async Task<Workspace> CreateAsync(CreateWorkspaceRequest request, CancellationToken ct = default)
     {
-        var response = await _http.PostAsJsonAsync("/api/workspaces", request, ct);
-        return await ReadAsync<Workspace>(response, ct);
+        var response = await _http.PostAsJsonAsync("/api/v1/accounts/workspaces",
+            new { workspaceName = request.Name, companyWebsite = request.CompanyWebsite }, ct);
+        var created = await ReadAsync<CreateWorkspaceResult>(response, ct);
+        return new Workspace(created.WorkspaceId, created.WorkspaceName, "", false);
     }
 
-    /// <summary>Update workspace properties.</summary>
-    public async Task<Workspace> UpdateAsync(
-        string workspaceId, UpdateWorkspaceRequest request, CancellationToken ct = default)
-    {
-        var response = await _http.PutAsJsonAsync($"/api/workspaces/{workspaceId}", request, ct);
-        return await ReadAsync<Workspace>(response, ct);
-    }
+    /// <summary>Not supported: the API has no workspace update endpoint. Always throws.</summary>
+    [Obsolete("The platform API has no workspace update endpoint; rename a workspace in the admin portal.")]
+    public Task<Workspace> UpdateAsync(
+        string workspaceId, UpdateWorkspaceRequest request, CancellationToken ct = default) =>
+        throw new ErghiException("Updating a workspace is not supported by the API", "NOT_SUPPORTED");
 
-    /// <summary>Delete a workspace by ID.</summary>
-    public async Task DeleteAsync(string workspaceId, CancellationToken ct = default)
-    {
-        var response = await _http.DeleteAsync($"/api/workspaces/{workspaceId}", ct);
-        await EnsureSuccessAsync(response, ct);
-    }
+    /// <summary>Not supported: the API has no workspace delete endpoint. Always throws.</summary>
+    [Obsolete("The platform API has no workspace delete endpoint; delete a workspace in the admin portal.")]
+    public Task DeleteAsync(string workspaceId, CancellationToken ct = default) =>
+        throw new ErghiException("Deleting a workspace is not supported by the API", "NOT_SUPPORTED");
+
+    private sealed record AccountWorkspaceSummary(string WorkspaceId, string Name, string? Slug, bool IsCurrent);
+
+    private sealed record CreateWorkspaceResult(string WorkspaceId, string WorkspaceName);
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -70,15 +75,6 @@ public sealed class WorkspaceResource
 
         ThrowForStatus(response.StatusCode, body);
         throw new ErghiException($"HTTP {(int)response.StatusCode}", "HTTP_ERROR");
-    }
-
-    private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken ct)
-    {
-        if (!response.IsSuccessStatusCode)
-        {
-            var body = await response.Content.ReadAsStringAsync(ct);
-            ThrowForStatus(response.StatusCode, body);
-        }
     }
 
     private static void ThrowForStatus(System.Net.HttpStatusCode status, string body)
@@ -100,8 +96,11 @@ public sealed class WorkspaceResource
         try
         {
             using var doc = JsonDocument.Parse(body);
-            if (doc.RootElement.TryGetProperty("message", out var prop))
-                return prop.GetString();
+            foreach (var key in new[] { "message", "error" })
+            {
+                if (doc.RootElement.TryGetProperty(key, out var prop) && prop.ValueKind == JsonValueKind.String)
+                    return prop.GetString();
+            }
         }
         catch { }
         return null;

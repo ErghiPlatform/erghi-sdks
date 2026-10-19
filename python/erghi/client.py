@@ -237,7 +237,16 @@ class ErghiClient:
 
         try:
             data = response.json()
-            message = data.get("message", str(error))
+            # Erghi APIs put human text in "error"/"message"; the auth server
+            # (GoTrue) uses "msg" or "error_description".
+            message = next(
+                (
+                    data[key]
+                    for key in ("message", "error", "msg", "error_description")
+                    if isinstance(data.get(key), str)
+                ),
+                str(error),
+            )
             details = data.get("errors")
         except (ValueError, AttributeError):
             message = str(error)

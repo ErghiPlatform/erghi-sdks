@@ -30,6 +30,36 @@ class User extends Equatable {
   });
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
+
+  /// Build from the auth server's (GoTrue) snake_case user object. The
+  /// workspace role is read from `app_metadata.role` and defaults to member.
+  factory User.fromGoTrue(Map<String, dynamic> json) {
+    final metadata = json['user_metadata'] is Map<String, dynamic>
+        ? json['user_metadata'] as Map<String, dynamic>
+        : const <String, dynamic>{};
+    final appMetadata = json['app_metadata'] is Map<String, dynamic>
+        ? json['app_metadata'] as Map<String, dynamic>
+        : const <String, dynamic>{};
+    String? text(String key) => metadata[key] is String ? metadata[key] as String : null;
+    final createdAt = DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+    final phone = json['phone']?.toString();
+    return User(
+      id: json['id'] as String,
+      email: json['email']?.toString() ?? '',
+      firstName: text('first_name') ?? '',
+      lastName: text('last_name') ?? '',
+      phoneNumber: phone == null || phone.isEmpty ? null : phone,
+      avatarUrl: text('avatar_url'),
+      role: UserRole.values.firstWhere(
+        (r) => r.name == appMetadata['role'],
+        orElse: () => UserRole.member,
+      ),
+      emailVerified: json['email_confirmed_at'] != null,
+      createdAt: createdAt,
+      updatedAt: DateTime.tryParse(json['updated_at']?.toString() ?? '') ?? createdAt,
+    );
+  }
   Map<String, dynamic> toJson() => _$UserToJson(this);
 
   String get fullName => '$firstName $lastName';
@@ -74,6 +104,20 @@ class AuthResponse extends Equatable {
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) =>
       _$AuthResponseFromJson(json);
+
+  /// Build from a GoTrue session, or from the bare user `/signup` returns while
+  /// email confirmation is pending (tokens are then empty).
+  factory AuthResponse.fromGoTrue(Map<String, dynamic> json) {
+    final user = json['user'] is Map<String, dynamic>
+        ? json['user'] as Map<String, dynamic>
+        : json;
+    return AuthResponse(
+      accessToken: json['access_token']?.toString() ?? '',
+      refreshToken: json['refresh_token']?.toString() ?? '',
+      user: User.fromGoTrue(user),
+      expiresIn: json['expires_in'] is int ? json['expires_in'] as int : 0,
+    );
+  }
   Map<String, dynamic> toJson() => _$AuthResponseToJson(this);
 
   @override

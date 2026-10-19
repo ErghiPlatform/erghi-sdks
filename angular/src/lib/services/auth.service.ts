@@ -5,6 +5,55 @@ import { tap, catchError, map } from 'rxjs/operators';
 import { ERGHI_CONFIG, ErghiConfig } from '../erghi.config';
 import { AuthResponse, LoginRequest, RegisterRequest, User } from '../models';
 
+/**
+ * Raw shapes of the platform's GoTrue auth server. The gateway forwards
+ * `/api/auth/*` to it unchanged, so responses are snake_case and are mapped
+ * onto the SDK's camelCase models here.
+ */
+interface GoTrueUser {
+  id: string;
+  email?: string;
+  role?: string;
+  created_at?: string;
+  user_metadata?: Record<string, unknown> | null;
+  app_metadata?: Record<string, unknown> | null;
+}
+
+interface GoTrueSession {
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  user?: GoTrueUser;
+}
+
+function text(source: Record<string, unknown> | null | undefined, key: string): string | undefined {
+  const value = source?.[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+export function toUser(user: GoTrueUser): User {
+  return {
+    id: user.id,
+    email: user.email ?? '',
+    firstName: text(user.user_metadata, 'first_name') ?? '',
+    lastName: text(user.user_metadata, 'last_name') ?? '',
+    role: text(user.app_metadata, 'role') ?? user.role ?? 'authenticated',
+    workspaceId: text(user.app_metadata, 'workspace_id') ?? '',
+    createdAt: user.created_at ?? '',
+  };
+}
+
+/** `/signup` returns a bare user while email confirmation is pending: tokens are then empty. */
+export function toAuthResponse(body: GoTrueSession | GoTrueUser): AuthResponse {
+  const session = body as GoTrueSession;
+  return {
+    accessToken: session.access_token ?? '',
+    refreshToken: session.refresh_token ?? '',
+    expiresIn: session.expires_in ?? 0,
+    user: toUser(session.user ?? (body as GoTrueUser)),
+  };
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -44,16 +93,25 @@ export class AuthService {
   }
 
   login(credentials: LoginRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.config.apiUrl}/api/auth/login`, credentials)
+    return this.http.post<GoTrueSession>(`${this.config.apiUrl}/api/auth/login`, {
+      email: credentials.email,
+      password: credentials.password
+    })
       .pipe(
+        map(toAuthResponse),
         tap(response => this.handleAuthResponse(response)),
         catchError(this.handleError)
       );
   }
 
   register(data: RegisterRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.config.apiUrl}/api/auth/register`, data)
+    return this.http.post<GoTrueSession | GoTrueUser>(`${this.config.apiUrl}/api/auth/register`, {
+      email: data.email,
+      password: data.password,
+      data: { first_name: data.firstName, last_name: data.lastName }
+    })
       .pipe(
+        map(toAuthResponse),
         tap(response => this.handleAuthResponse(response)),
         catchError(this.handleError)
       );
@@ -65,8 +123,13 @@ export class AuthService {
       return throwError(() => new Error('No refresh token available'));
     }
 
-    return this.http.post<AuthResponse>(`${this.config.apiUrl}/api/auth/refresh`, { refreshToken })
+    return this.http.post<GoTrueSession>(
+      `${this.config.apiUrl}/api/auth/token`,
+      { refresh_token: refreshToken },
+      { params: { grant_type: 'refresh_token' } }
+    )
       .pipe(
+        map(toAuthResponse),
         tap(response => this.handleAuthResponse(response)),
         catchError(this.handleError)
       );
@@ -113,8 +176,9 @@ export class AuthService {
   }
 
   me(): Observable<User> {
-    return this.http.get<User>(`${this.config.apiUrl}/api/auth/me`)
+    return this.http.get<GoTrueUser>(`${this.config.apiUrl}/api/auth/user`)
       .pipe(
+        map(toUser),
         tap(user => {
           localStorage.setItem(this.USER_KEY, JSON.stringify(user));
           this.currentUserSubject.next(user);
@@ -124,6 +188,10 @@ export class AuthService {
   }
 
   private handleAuthResponse(response: AuthResponse): void {
+    if (!response.accessToken) {
+      // Signup pending email confirmation: no session yet.
+      return;
+    }
     localStorage.setItem(this.TOKEN_KEY, response.accessToken);
     localStorage.setItem(this.REFRESH_TOKEN_KEY, response.refreshToken);
     localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));

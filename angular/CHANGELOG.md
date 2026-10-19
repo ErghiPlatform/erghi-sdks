@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Fix: `AuthService.refreshToken` and `me` called paths that do not exist, and every auth
+  call read camelCase tokens from the auth server's snake_case response. `User.workspaceId`
+  and `role` now come from the token's `app_metadata`.
+
 - `SignalRService.connectVisitor` restarts the hub when a suspended mobile webview resumes
   (visible, online, or restored from the back/forward cache) and emits a `resumed` event so the
   app can reload messages missed meanwhile.

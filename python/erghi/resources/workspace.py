@@ -5,6 +5,7 @@ from __future__ import annotations
 import builtins
 from typing import TYPE_CHECKING
 
+from ..errors import ErghiError, NotFoundError
 from ..types import Workspace
 
 if TYPE_CHECKING:
@@ -12,37 +13,39 @@ if TYPE_CHECKING:
 
 
 class WorkspaceResource:
-    """Workspace resource"""
+    """Workspaces of the signed-in user's account.
+
+    The platform exposes list and create; renaming and deleting a workspace are
+    done in the admin portal.
+    """
 
     def __init__(self, client: ErghiClient) -> None:
         self.client = client
 
     async def get(self, workspace_id: str) -> Workspace:
-        """Get workspace by ID"""
-        response = await self.client.request(
-            "GET",
-            f"/api/workspaces/{workspace_id}",
-        )
-        return Workspace.model_validate(response.json())
+        """Get one of the account's workspaces by ID"""
+        for workspace in await self.list():
+            if workspace.id == workspace_id:
+                return workspace
+        raise NotFoundError(f"Workspace {workspace_id} not found in this account")
 
     async def list(self) -> builtins.list[Workspace]:
-        """List user's workspaces"""
-        response = await self.client.request("GET", "/api/workspaces")
-        data = response.json()
-        return [Workspace.model_validate(w) for w in data]
+        """List the workspaces of the signed-in user's account"""
+        response = await self.client.request("GET", "/api/v1/accounts/workspaces")
+        return [Workspace.from_summary(w) for w in response.json()]
 
-    async def create(self, name: str, slug: str | None = None) -> Workspace:
-        """Create a new workspace"""
+    async def create(self, name: str, company_website: str | None = None) -> Workspace:
+        """Create a new workspace in the signed-in user's account"""
         response = await self.client.request(
             "POST",
-            "/api/workspaces",
-            json={"name": name, "slug": slug},
+            "/api/v1/accounts/workspaces",
+            json={"workspaceName": name, "companyWebsite": company_website},
         )
-
-        workspace = Workspace.model_validate(response.json())
-        self.client.set_workspace_id(workspace.id)
-
-        return workspace
+        data = response.json()
+        self.client.set_workspace_id(data["workspaceId"])
+        return Workspace.model_validate(
+            {"workspaceId": data["workspaceId"], "name": data["workspaceName"]}
+        )
 
     async def update(
         self,
@@ -50,23 +53,12 @@ class WorkspaceResource:
         name: str | None = None,
         slug: str | None = None,
     ) -> Workspace:
-        """Update workspace"""
-        data = {}
-        if name is not None:
-            data["name"] = name
-        if slug is not None:
-            data["slug"] = slug
-
-        response = await self.client.request(
-            "PUT",
-            f"/api/workspaces/{workspace_id}",
-            json=data,
-        )
-        return Workspace.model_validate(response.json())
+        """Deprecated: the API has no workspace update endpoint. Always raises."""
+        raise ErghiError("Updating a workspace is not supported by the API", "NOT_SUPPORTED")
 
     async def delete(self, workspace_id: str) -> None:
-        """Delete workspace"""
-        await self.client.request("DELETE", f"/api/workspaces/{workspace_id}")
+        """Deprecated: the API has no workspace delete endpoint. Always raises."""
+        raise ErghiError("Deleting a workspace is not supported by the API", "NOT_SUPPORTED")
 
     def switch_workspace(self, workspace_id: str) -> None:
         """Switch current workspace context"""

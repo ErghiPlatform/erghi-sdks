@@ -44,23 +44,21 @@ public record LoginRequest(
     string Password
 );
 
-public record RefreshTokenRequest(string RefreshToken);
 
 // ── Workspace ─────────────────────────────────────────────────────────────────
 
+/// <summary>A workspace of the signed-in user's account.</summary>
+/// <param name="IsCurrent">True for the workspace the current token is scoped to.</param>
 public record Workspace(
     string Id,
     string Name,
     string Slug,
-    string? Description,
-    string Plan,
-    string Status,
-    DateTime CreatedAt
+    bool IsCurrent
 );
 
 public record CreateWorkspaceRequest(
     string Name,
-    string? Description = null
+    string? CompanyWebsite = null
 );
 
 public record UpdateWorkspaceRequest(
