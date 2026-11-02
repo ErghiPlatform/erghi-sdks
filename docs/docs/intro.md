@@ -19,8 +19,10 @@ Erghi provides a suite of SDKs that allow you to integrate real-time chat, AI as
 
 New here? Start with the [**User Guide**](./USER_GUIDE.md) for the full sign-up-to-live-widget walkthrough before diving into a specific SDK.
 
+Prefer to let an AI assistant do the setup? The [**Erghi MCP server**](./guides/MCP_SERVER.md) connects Claude, Cursor or any MCP client to your workspace with an API key and works through the dashboard checklist for you.
+
 ## Key Features
 - **Real-time Messaging**: Powered by SignalR under the hood, but abstracted into easy-to-use event streams in every language.
 - **AI Integration**: Chat directly with your Erghi AI agent.
 - **Multi-Tenant Support**: Manage isolated environments securely using `X-Workspace-Id` and `X-Account-Id`.
-- **Machine-to-Machine (M2M) Auth**: Securely connect backend systems to Erghi without user credentials.
+- **API keys**: Connect backend systems and AI assistants to Erghi with scoped [client credentials](./guides/CLIENT_CREDENTIALS_INTEGRATION.md), no user login needed.

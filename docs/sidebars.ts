@@ -18,7 +18,7 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Guides',
-      items: ['guides/CLIENT_CREDENTIALS_INTEGRATION'],
+      items: ['guides/MCP_SERVER', 'guides/CLIENT_CREDENTIALS_INTEGRATION'],
     },
     {
       type: 'category',
