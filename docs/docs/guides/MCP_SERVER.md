@@ -35,13 +35,13 @@ You need [Docker](https://docs.docker.com/get-docker/) installed.
 
 ### Claude Code
 
-Export the key in your shell, then add the server:
+Replace `YOUR_CLIENT_ID` and `YOUR_CLIENT_SECRET` with the full values from step 1, then run:
 
 ```bash
-export ERGHI_CLIENT_ID="cf_client_live_…"
-export ERGHI_CLIENT_SECRET="…"
-claude mcp add erghi -- docker run -i --rm -e ERGHI_CLIENT_ID -e ERGHI_CLIENT_SECRET ghcr.io/erghiplatform/erghi-mcp:latest
+claude mcp add erghi -e ERGHI_CLIENT_ID=YOUR_CLIENT_ID -e ERGHI_CLIENT_SECRET=YOUR_CLIENT_SECRET -- docker run -i --rm -e ERGHI_CLIENT_ID -e ERGHI_CLIENT_SECRET ghcr.io/erghiplatform/erghi-mcp:latest
 ```
+
+Run `claude mcp list` and check that `erghi` shows **Connected**. The key is stored in Claude Code's config, which is what you need when Claude Code runs inside the desktop app: it doesn't see variables you `export` in a terminal.
 
 ### Claude Desktop, Cursor and other clients
 
@@ -56,8 +56,8 @@ Add this to the client's MCP configuration file (for Claude Desktop: **Settings 
                "-e", "ERGHI_CLIENT_ID", "-e", "ERGHI_CLIENT_SECRET",
                "ghcr.io/erghiplatform/erghi-mcp:latest"],
       "env": {
-        "ERGHI_CLIENT_ID": "cf_client_live_…",
-        "ERGHI_CLIENT_SECRET": "…"
+        "ERGHI_CLIENT_ID": "YOUR_CLIENT_ID",
+        "ERGHI_CLIENT_SECRET": "YOUR_CLIENT_SECRET"
       }
     }
   }
@@ -65,6 +65,20 @@ Add this to the client's MCP configuration file (for Claude Desktop: **Settings 
 ```
 
 Restart the client. Ask *"What can my Erghi key do?"* to check the connection: the assistant calls `get_api_key_info` and lists the key's scopes.
+
+### Using Podman
+
+Use Podman's full path as the command instead of `docker`, for example `/opt/podman/bin/podman` on macOS (`which podman` prints yours). An alias like `alias docker=podman` doesn't work, because MCP clients don't start the server through your shell.
+
+### If it doesn't connect
+
+| What you see | Fix |
+|---|---|
+| `Executable not found in $PATH: "docker"` | Use the full path to Docker (`which docker`) or Podman as the command. |
+| `401 (invalid_client)`, or "Connection closed" | The client ID or secret is wrong, incomplete or still the placeholder, or the key was revoked. The secret is shown only once: if you don't have it, revoke the key and create a new one. |
+| The server starts without a key | Put the key in the client's config (`-e` before `--`, or `env` in the JSON), not only in your shell. |
+
+To see why the server stopped, run its command in a terminal with `ERGHI_CLIENT_ID` and `ERGHI_CLIENT_SECRET` set.
 
 ## 3. Finish the dashboard checklist
 
