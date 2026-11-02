@@ -1,92 +1,78 @@
-# Machine-to-Machine (M2M) API Authentication & SDK Integration Guide
+# API keys (client credentials)
 
-This guide details how to securely connect backend applications to the Erghi API using the **Client Credentials Flow** (Machine-to-Machine authentication).
+A workspace API key lets a backend service, script or AI assistant call Erghi without a user's login. It uses the OAuth2 **client credentials** flow: you exchange a client ID and secret for a short-lived bearer token.
 
----
+:::tip
+To set up a workspace from Claude, Cursor or another AI assistant, you don't need to call this API yourself. Use the [Erghi MCP server](./MCP_SERVER.md).
+:::
 
-## Overview
+## Create a key
 
-For backend services, cron jobs, or server-side integrations, using standard user login credentials is not secure or practical. Erghi supports the OAuth2 **Client Credentials** grant type, allowing you to authenticate using a `clientId` and `clientSecret`.
+The easiest way is the admin app: **Settings → Agent API keys → Create key**. Copy the secret when it is shown; it isn't shown again and the server stores only a hash.
 
-When you authenticate with client credentials:
-1. Your server sends the `clientId` and `clientSecret` to the token exchange endpoint.
-2. The server returns a JWT signed with the GoTrue JWT signing secret.
-3. The SDKs automatically handle caching and refreshing this token so your requests remain authenticated.
-
----
-
-## Key Management API
-
-Before using M2M authentication, you must generate credentials for your workspace.
-
-> [!NOTE]
-> Key management endpoints require standard user authentication with an **Admin** role.
-
-### 1. Generate Client Credentials
-Create a new Client ID and Client Secret pair for a workspace.
+You can also use the API, signed in as a user with the **Manage integrations** permission. The key is created in that user's current workspace.
 
 ```http
 POST /api/v1/auth/keys
-Authorization: Bearer <user-jwt-token>
+Authorization: Bearer <user token>
 Content-Type: application/json
 
 {
-  "workspaceId": "ws-uuid",
-  "label": "Billing Service Sync Integration"
+  "name": "Support inbox sync",
+  "scopes": ["chat:read", "chat:write"],
+  "expiresInDays": 90
 }
 ```
 
-**Response `201 Created`**
+`201 Created`:
+
 ```json
 {
-  "id": "cred-uuid",
-  "workspaceId": "ws-uuid",
-  "label": "Billing Service Sync Integration",
-  "clientId": "cf_cl_9ab7c8e...",
-  "clientSecret": "cf_sk_a2b9d8e7c6f5g4h3i2j1...",
-  "createdAt": "2026-06-23T08:00:00Z"
+  "clientId": "cf_client_live_3f1c…",
+  "clientSecret": "cf_secret_live_9a7e…",
+  "name": "Support inbox sync",
+  "createdAt": "2026-11-02T10:00:00Z",
+  "expiresAt": "2027-01-31T10:00:00Z",
+  "scopes": ["chat:read", "chat:write"]
 }
 ```
 
-> [!WARNING]
-> The `clientSecret` is only returned once upon generation. Save it securely. It is hashed on the server using PBKDF2.
+- `scopes` defaults to `["chat:read", "chat:write"]` when it's left out. An unknown scope returns `400 invalid_scope`.
+- You can't give a key a scope you don't have yourself (`403 scope_exceeds_creator`).
+- `expiresInDays` is optional. Without it the key never expires.
 
-### 2. List Client Credentials
-Retrieve all active credential pairs for your workspace.
+### Scopes
 
-```http
-GET /api/v1/auth/keys?workspaceId=ws-uuid
-Authorization: Bearer <user-jwt-token>
-```
+| Scope | Allows |
+|---|---|
+| `chat:read` | Read conversations and messages |
+| `chat:write` | Reply to and resolve conversations |
+| `configure_ai` | Assistant model and persona, knowledge base, website crawls, channels, action policies |
+| `manage_workspace_identity` | Company name, colours, widget theme, legal and support links |
+| `manage_widgets` | Create, configure and deactivate widgets |
+| `view_audit_logs` | Read the audit log |
 
-**Response `200 OK`**
-```json
-[
-  {
-    "id": "cred-uuid",
-    "workspaceId": "ws-uuid",
-    "label": "Billing Service Sync Integration",
-    "clientId": "cf_cl_9ab7c8e...",
-    "createdAt": "2026-06-23T08:00:00Z"
-  }
-]
-```
+Billing, team members, integrations and account deletion are human-only and can't be granted to a key.
 
-### 3. Revoke Client Credentials
-Immediately deactivate a credential pair. Any API calls using the revoked credentials will return `401 Unauthorized`.
+### List and revoke keys
 
 ```http
-DELETE /api/v1/auth/keys/cred-uuid
-Authorization: Bearer <user-jwt-token>
+GET /api/v1/auth/keys
+Authorization: Bearer <user token>
 ```
 
-**Response `204 No Content`**
+Returns each key's `id`, `clientId`, `name`, `createdAt`, `expiresAt`, `isActive` and `scopes`. Secrets are never returned.
 
----
+```http
+DELETE /api/v1/auth/keys/{id}
+Authorization: Bearer <user token>
+```
 
-## Token Exchange Endpoint
+Returns `204 No Content`. Revocation takes effect within about 30 seconds, including tokens that were already issued.
 
-This public endpoint is used by SDKs and external applications to exchange client credentials for a bearer token.
+Creating and revoking keys is recorded in the workspace audit log.
+
+## Get a token
 
 ```http
 POST /api/v1/auth/token
@@ -94,186 +80,48 @@ Content-Type: application/json
 
 {
   "grant_type": "client_credentials",
-  "client_id": "cf_cl_9ab7c8e...",
-  "client_secret": "cf_sk_a2b9d8e7c6f5g4h3i2j1..."
+  "client_id": "cf_client_live_3f1c…",
+  "client_secret": "cf_secret_live_9a7e…"
 }
 ```
 
-**Response `200 OK`**
+The endpoint also accepts `application/x-www-form-urlencoded`. Response:
+
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "access_token": "eyJhbGciOi…",
   "token_type": "Bearer",
-  "expires_in": 3600
+  "expires_in": 7200
 }
 ```
 
----
+Send the token as `Authorization: Bearer <access_token>`. It is scoped to the key's workspace, so no workspace header is needed. Request a new one before it expires; the SDKs below do this for you.
 
-## SDK Integration Examples
+## What a key can call
 
-Official SDKs natively support client credentials. They will automatically intercept requests, retrieve a JWT, cache it, and transparently handle token expiration.
+Keys are closed by default. A key can reach:
 
-### 1. JavaScript/TypeScript (Node.js)
+- **The MCP endpoint** (`/api/mcp`) for conversations: listing and reading them (`chat:read`), replying and resolving (`chat:write`). Any MCP client library can connect to it with the bearer token.
+- **Setup endpoints opened to a scope**: branding and assistant persona, AI settings, the knowledge base and crawls, channels, action policies, widgets and the audit log. The [MCP server's source](https://github.com/ErghiPlatform/erghi-mcp/blob/main/internal/tools/catalog.go) lists the exact paths it uses.
+
+Everything else, including the member REST endpoints such as `/api/conversations`, returns `403` to a key. Those endpoints are for signed-in users of the admin app.
+
+Every change made through a key is checked against its scopes and recorded in the audit log under the key's client ID.
+
+## Using the SDKs
+
+The JavaScript, Python, .NET, Flutter and Swift SDKs accept a client ID and secret instead of a user token. They exchange them for a token, cache it and renew it automatically. For example, in JavaScript:
 
 ```typescript
-import { ErghiClient } from '@erghi-sdk/javascript';
+import { ErghiClient } from '@erghi-ai/sdk';
 
 const client = new ErghiClient({
   apiUrl: 'https://api.erghi.ai',
-  clientId: 'cf_cl_9ab7c8e...',
-  clientSecret: 'cf_sk_a2b9d8e7c6f5g4h3i2j1...',
-  workspaceId: 'ws-uuid'
+  clientId: process.env.ERGHI_CLIENT_ID,
+  clientSecret: process.env.ERGHI_CLIENT_SECRET,
 });
-
-// The client automatically fetches the token on the first request
-const conversations = await client.chat.getConversations();
-console.log(conversations);
 ```
 
----
+Only call endpoints a key can reach (see above). The SDKs' conversation methods use the member endpoints, so with a key, read and answer conversations through the MCP endpoint instead.
 
-### 2. Python
-
-```python
-import asyncio
-from erghi import ErghiClient, ErghiConfig
-
-async def main():
-    config = ErghiConfig(
-        api_url="https://api.erghi.ai",
-        client_id="cf_cl_9ab7c8e...",
-        client_secret="cf_sk_a2b9d8e7c6f5g4h3i2j1...",
-        workspace_id="ws-uuid"
-    )
-    
-    async with ErghiClient(config) as client:
-        conversations = await client.chat.get_conversations()
-        for conv in conversations:
-            print(f"Conversation: {conv.id} - Status: {conv.status}")
-
-asyncio.run(main())
-```
-
----
-
-### 3. .NET (C#)
-
-```csharp
-using Erghi.SDK;
-
-var config = new ErghiConfig
-{
-    ApiUrl = "https://api.erghi.ai",
-    ClientId = "cf_cl_9ab7c8e...",
-    ClientSecret = "cf_sk_a2b9d8e7c6f5g4h3i2j1...",
-    WorkspaceId = "ws-uuid"
-};
-
-await using var client = new ErghiClient(config);
-
-// The client manages token acquisition and refreshing asynchronously
-var conversations = await client.Chat.GetConversationsAsync();
-foreach (var conv in conversations.Data)
-{
-    Console.WriteLine($"ID: {conv.Id}, Status: {conv.Status}");
-}
-```
-
----
-
-### 4. Flutter / Dart
-
-```dart
-import 'package:aichat_sdk/aichat_sdk.dart';
-
-void main() async {
-  final config = AIChatConfig(
-    apiUrl: 'https://api.erghi.ai',
-    clientId: 'cf_cl_9ab7c8e...',
-    clientSecret: 'cf_sk_a2b9d8e7c6f5g4h3i2j1...',
-    workspaceId: 'ws-uuid',
-  );
-
-  final client = AIChatClient(config);
-
-  try {
-    final response = await client.chat.getConversations();
-    for (var conversation in response.data) {
-      print('Conversation ID: ${conversation.id}');
-    }
-  } catch (e) {
-    print('Failed to get conversations: $e');
-  }
-}
-```
-
----
-
-### 5. Swift
-
-```swift
-import Foundation
-import AIChatSDK
-
-let config = AIChatConfig(
-    apiURL: URL(string: "https://api.erghi.ai")!,
-    clientId: "cf_cl_9ab7c8e...",
-    clientSecret: "cf_sk_a2b9d8e7c6f5g4h3i2j1..."
-)
-
-let client = AIChatClient(config: config)
-
-Task {
-    do {
-        let conversations = try await client.chat.getConversations()
-        for conversation in conversations.data {
-            print("Conversation ID: \(conversation.id)")
-        }
-    } catch {
-        print("Error: \(error)")
-    }
-}
-```
-
----
-
-## Webhooks
-
-Webhooks notify your backend of real-time events, such as when a new message is received or a conversation is closed.
-
-### Event Payload Structure
-All webhook events use a standard envelope structure:
-
-```json
-{
-  "event": "message.created",
-  "timestamp": "2026-06-23T08:05:00Z",
-  "workspaceId": "ws-uuid",
-  "data": {
-    "id": "msg-uuid",
-    "conversationId": "conv-uuid",
-    "senderId": "visitor-uuid",
-    "senderType": "visitor",
-    "content": "Hi! Can you help me?",
-    "createdAt": "2026-06-23T08:05:00Z"
-  }
-}
-```
-
-### Verifying Signatures
-Erghi includes a signature in the request headers (`X-Erghi-Signature`) using HMAC-SHA256 to ensure payloads originate from our platform.
-
-To verify a webhook signature in Node.js:
-```javascript
-import crypto from 'crypto';
-
-function verifyWebhook(payload, signature, secret) {
-  const hash = crypto
-    .createHmac('sha256', secret)
-    .update(JSON.stringify(payload))
-    .digest('hex');
-    
-  return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature));
-}
-```
+Keep the secret on your server. Never ship it to a browser or mobile app.
