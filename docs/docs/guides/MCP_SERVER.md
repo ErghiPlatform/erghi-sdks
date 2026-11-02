@@ -14,7 +14,7 @@ It runs on your machine as a small Docker container and signs in with a **worksp
 In the admin app, open **Settings → Agent API keys** and choose **Create key**.
 
 1. Give the key a name, for example *Claude setup*.
-2. Pick the scopes it needs. For a full setup, choose `configure_ai`, `manage_workspace_identity`, `manage_widgets` and `chat:read`.
+2. Pick the scopes it needs. For a full setup, choose `configure_ai`, `manage_workspace_identity`, `manage_widgets` and `chat:read`, plus `manage_integrations` if the assistant should call your product's API.
 3. Optionally set an expiry. A short one is a good idea for a one-off setup.
 4. Copy the client ID and secret. **The secret is shown only once.**
 
@@ -25,9 +25,10 @@ In the admin app, open **Settings → Agent API keys** and choose **Create key**
 | `configure_ai` | Configure the assistant's model and persona, the knowledge base and website crawls, Telegram/Slack/WhatsApp channels and action policies |
 | `manage_workspace_identity` | Set the company name, colours, widget theme and legal/support links |
 | `manage_widgets` | Create, configure and deactivate chat widgets, and get the embed code |
+| `manage_integrations` | Connect your product's APIs from OpenAPI documents, decide which values come from the signed-in user, write instructions for each endpoint, test and switch them on or off. Not their credentials. |
 | `view_audit_logs` | Read the security and configuration audit log |
 
-You can only give a key permissions you have yourself. Billing, team members, integrations and account deletion can never be given to a key.
+You can only give a key permissions you have yourself. Billing, team members, API keys, integration credentials, the identity-verification secret and account deletion can never be given to a key.
 
 ## 2. Connect your MCP client
 
@@ -113,12 +114,40 @@ You can ask *"Show me my Erghi setup checklist"* at any time to see what's left.
 - *"List open conversations, summarise each one and draft replies. Don't send anything until I approve it."* (needs `chat:read` and `chat:write`)
 - *"Connect our Telegram bot."* The assistant asks you for the bot token; it never makes up secrets.
 
+## Plan the assistant around your product
+
+Ask your AI client to study your product and set Erghi up around it:
+
+> *"Analyse https://example.com and our help centre, list the questions customers ask and where each answer should come from, and propose a plan for the assistant. Don't change anything until I approve it."*
+
+In clients that support MCP prompts, the `analyze_product` prompt does this step by step. The assistant:
+
+1. Reads Erghi's own guide to how replies are built (`get_erghi_guide`) and reviews your current setup (`review_chat_setup`).
+2. Builds a question map: each kind of customer question, whether it's answered from the knowledge base, your API, or a person, and whether Erghi covers it today.
+3. Proposes persona and instructions, knowledge to add, API integrations, action policies and hand-off settings, and applies them only after you agree.
+4. Tests with realistic questions, including one in each language your customers use and one that tries to get another customer's data.
+
+### Connect your API
+
+With `manage_integrations`, the assistant can connect an API from its OpenAPI document (the `connect_integration` prompt). It recommends which endpoints to expose and, for each one:
+
+- **binds** every parameter that identifies the user, such as `user_id`, to `{{identity.sub}}`, the signed-in user from your app's identity token, so the model can never choose whose data it reads;
+- passes the user's own access token as `{{secret.<key>}}` when your API is user-scoped (your app supplies it through the SDK, and the model never sees it);
+- writes **AI instructions**: when to call the endpoint, units and formats, what to tell the visitor;
+- adds **action policies**, such as a verified identity or a confirmation step before anything that changes data.
+
+You add the API's credentials yourself under **Integrations** in the admin app. A key can't read or set them, and can't move an integration with saved credentials to another server. See [Integration tool context](https://github.com/ErghiPlatform/Erghi/blob/main/docs/INTEGRATION_TOOL_CONTEXT.md) for the details.
+
+### Review what affects chat
+
+*"Review my Erghi setup"* runs `review_chat_setup`. It checks persona, knowledge base, AI settings, integrations, policies and widgets and lists problems by severity, each with a fix. For example, an endpoint where the model picks the user id itself, a token stored as plain text in a binding, or an action with no policy.
+
 More examples: [example prompts](https://github.com/ErghiPlatform/erghi-mcp/blob/main/docs/example-prompts.md).
 
 ## Safety
 
 - **The key is the limit.** The server only offers tools the key's scopes allow, and the Erghi API checks every scope again.
-- **Nothing is removed without you.** Deleting, disconnecting or deactivating something needs an explicit confirmation, and the assistant is told to ask you first.
+- **Nothing is removed without you.** Deleting, disconnecting or deactivating something, replacing an API's spec, or testing an API call that could change data needs an explicit confirmation, and the assistant is told to ask you first.
 - **Fast revocation.** Revoke the key in **Settings → Agent API keys** and the assistant loses access within about 30 seconds, including tokens it already has.
 - **Audited.** Changes made through a key appear in the workspace audit log under the key's client ID.
 - **Read-only mode.** Add `-e ERGHI_MCP_READ_ONLY=true` to the Docker arguments to offer only tools that change nothing.
@@ -126,7 +155,7 @@ More examples: [example prompts](https://github.com/ErghiPlatform/erghi-mcp/blob
 
 ## What stays in the admin app
 
-Billing and plan changes, inviting team members and changing roles, OpenAPI integrations, logo upload, custom domains and account deletion. The assistant will point you to [app.erghi.ai](https://app.erghi.ai) for these.
+Billing and plan changes, inviting team members and changing roles, API keys, integration credentials, the identity-verification secret, logo upload, custom domains and account deletion. The assistant will point you to [app.erghi.ai](https://app.erghi.ai) for these.
 
 ## Configuration
 
