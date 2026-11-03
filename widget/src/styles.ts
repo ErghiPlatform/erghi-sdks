@@ -440,11 +440,11 @@ export function buildStyles(look: WidgetLook): string {
       .panel, .bubble, .bubble.has-unread, .typing span { animation: none; transition: none; }
     }
     @media (max-width: 480px) {
+      /* Only the launcher's corner: a full-width root would block taps across the page's bottom
+         edge while the chat is closed. The open panel covers the screen on its own (fixed). */
       .root {
         ${position === 'bottom-right' ? 'right: 0;' : 'left: 0;'}
         bottom: 0;
-        left: 0;
-        right: 0;
       }
       .panel.open {
         position: fixed;
