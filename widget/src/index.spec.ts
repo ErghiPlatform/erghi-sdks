@@ -541,6 +541,28 @@ describe('ErghiWidget', () => {
 
       expect(findCall('/conv-sc-1/secure-context', 'DELETE')).toBeDefined();
     });
+
+    it('destroy({ clearSession: true }) forgets the session and clears the secure context', async () => {
+      await widget.open();
+      await flushPromises();
+      expect(localStorage.getItem('erghi:session:test-widget-uuid')).not.toBeNull();
+
+      await widget.destroy({ clearSession: true });
+
+      expect(localStorage.getItem('erghi:session:test-widget-uuid')).toBeNull();
+      expect(findCall('/conv-sc-1/secure-context', 'DELETE')).toBeDefined();
+      expect(document.getElementById('erghi-widget-root')).toBeNull();
+    });
+
+    it('plain destroy() keeps the session on the device', async () => {
+      await widget.open();
+      await flushPromises();
+
+      await widget.destroy();
+
+      expect(localStorage.getItem('erghi:session:test-widget-uuid')).not.toBeNull();
+      expect(findCall('/conv-sc-1/secure-context', 'DELETE')).toBeUndefined();
+    });
   });
 
   describe('Message Sending', () => {

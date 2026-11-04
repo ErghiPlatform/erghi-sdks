@@ -634,7 +634,13 @@ export default class ErghiWidget {
     brand.insertBefore(img, brand.firstChild);
   }
 
-  public destroy(): void {
+  /**
+   * Removes the widget from the page. Pass `{ clearSession: true }` when the user signs out:
+   * it also forgets the stored conversation on this device and clears the secure context on
+   * the server, so the next user to sign in on a shared device cannot reopen it. The returned
+   * promise settles once the secure context is cleared; the widget is gone before that.
+   */
+  public async destroy(options: { clearSession?: boolean } = {}): Promise<void> {
     document.removeEventListener('visibilitychange', this.onResume);
     window.removeEventListener('online', this.onResume);
     window.removeEventListener('pageshow', this.onResume);
@@ -647,6 +653,11 @@ export default class ErghiWidget {
     this.host?.remove();
     this.host = null;
     this.shadow = null;
+    if (!options.clearSession) return;
+    this.clearSession();
+    await this.clearSecureContext();
+    this.conversationId = null;
+    this.visitorToken = null;
   }
 
   private buildMetadata(): Record<string, unknown> {
@@ -829,7 +840,7 @@ export default class ErghiWidget {
     this.voiceBusy = false;
     if (error) {
       this.addSystemMessage(error === 'denied'
-        ? this.tr('widget.voice.permission', 'Microphone access is blocked. Allow it in your browser to send voice messages.')
+        ? this.tr('widget.voice.permission', 'Microphone access is blocked. Allow it in your browser or device settings to send voice messages.')
         : this.voiceErrorText(null));
       return;
     }

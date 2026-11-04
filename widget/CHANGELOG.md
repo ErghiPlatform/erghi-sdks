@@ -1,5 +1,11 @@
 ## Unreleased
 
+- `destroy({ clearSession: true })` also removes the stored conversation from the device and
+  clears the secure context on the server, for sign-out on shared devices. `destroy()` now
+  returns a promise; calling it without `await` works as before.
+- The "microphone blocked" message now points to browser *or device* settings, since in an app
+  the permission lives in the device's settings. The README lists what an app needs for voice.
+
 - The typing indicator follows the server's reply turn: it stays on while the visitor sends
   several messages in a row and disappears with the single reply to all of them. Once the
   server reports it is generating, the widget waits up to 90 s (the server's budget) before

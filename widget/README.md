@@ -102,8 +102,20 @@ new ErghiWidget({
 ```
 
 Without hooks the widget uses the webview's `MediaRecorder` and `speechSynthesis`. Either way, on iOS add
-`NSMicrophoneUsageDescription` to `Info.plist`, and on Android declare `RECORD_AUDIO` in the
-manifest.
+`NSMicrophoneUsageDescription` to `Info.plist`, and on Android declare `RECORD_AUDIO` and
+`MODIFY_AUDIO_SETTINGS` in the manifest.
+
+If the visitor sees "Microphone access is blocked" in an app, the webview refused the microphone
+before any audio was recorded, so nothing reaches Erghi. Check, in order:
+
+1. The manifest or `Info.plist` entry above is in the build that is installed.
+2. **Android:** the app was granted the microphone at runtime. Capacitor asks for it when the page
+   first requests the microphone; a plain `WebView` only does if your `WebChromeClient` handles
+   `onPermissionRequest` and grants `RESOURCE_AUDIO_CAPTURE` after the runtime permission.
+3. The user did not deny it earlier. After a denial, Android and iOS stop asking, and the user has
+   to allow it in the device's settings for your app.
+
+If you can't change the webview, pass `recordAudio` and record with a native plugin instead.
 
 ### Localization & RTL
 
@@ -131,6 +143,10 @@ widget.toggle();
 
 // Destroy the widget
 widget.destroy();
+
+// On sign-out: also forget the conversation on this device and clear the secure context,
+// so the next user on a shared device can't reopen it
+await widget.destroy({ clearSession: true });
 ```
 
 ## Signed-in users and integration calls
@@ -276,6 +292,8 @@ The widget runs unchanged inside a Capacitor webview. What to know:
   they will replace your app's page.
 - **Storage.** The open conversation is remembered in `localStorage`. iOS can clear webview
   storage when the device is low on space, which only means the visitor starts a new chat.
+  When a user signs out, call `widget.destroy({ clearSession: true })` so the next user on the
+  same device starts a new conversation.
 - **Signed-in users.** Mint the identity token on your server, never in the app bundle; see
   [Signed-in users and integration calls](#signed-in-users-and-integration-calls).
 
