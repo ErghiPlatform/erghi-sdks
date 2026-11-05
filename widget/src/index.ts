@@ -1,6 +1,9 @@
 import { buildStyles, ICON_CHAT, ICON_MIC, ICON_SEND, ICON_SPEAKER, WidgetPosition, WidgetTheme } from './styles';
 import { DARK_SURFACE, LIGHT_SURFACE, normalizeHex, readableAccent } from './color';
 import { ConversationRealtimeClient } from './realtime';
+import { ChatAction, isOpenableUrl, normalizeActions } from './actions';
+
+export type { ChatAction, ChatActionKind } from './actions';
 import { playMessageNotification } from './notification';
 import { bundledTranslations, interpolate, isRtlLocale, WidgetDirection } from './locale';
 import {
@@ -59,6 +62,14 @@ export interface ErghiConfig {
    * Resolve with the clip (WebM, Ogg, MP4/M4A or WAV, at most 60 seconds), or null if the visitor
    * cancelled. Used only when the workspace turned voice input on. */
   recordAudio?: () => Promise<Blob | null>;
+  /** Called when the visitor taps a button under an AI reply, before the widget's own handling.
+   * Return true (or a promise of true) to say the host app handled it, e.g. by routing an `app`
+   * deep link such as `moneyfellows://wallet` inside a Capacitor app. Otherwise the widget
+   * sends `reply` text and `handoff` requests as the visitor, opens `link` URLs in a new tab and
+   * navigates to `app` URLs. The same tap is also dispatched as a cancelable `erghi:action`
+   * window event (`event.detail` is the action); calling `preventDefault()` on it counts as
+   * handled too. Buttons appear only when the workspace turned them on. */
+  onAction?: (action: ChatAction) => boolean | void | Promise<boolean | void>;
 }
 
 export interface SecureContext {
@@ -85,12 +96,13 @@ interface Message {
   sources?: MessageSource[];
   /** "voice" when the visitor sent it as a voice note. */
   source?: string | null;
+  actions?: ChatAction[];
 }
 
 export default class ErghiWidget {
   private config: Required<Omit<ErghiConfig,
     'workspace' | 'visitorContext' | 'greeting' | 'identityToken' | 'secureContextProvider'
-    | 'speak' | 'stopSpeaking' | 'recordAudio' | 'locale'>> & {
+    | 'speak' | 'stopSpeaking' | 'recordAudio' | 'locale' | 'onAction'>> & {
     workspace?: string;
     greeting?: string;
     locale?: string;
@@ -147,6 +159,7 @@ export default class ErghiWidget {
     voiceOutputEnabled: false,
   };
   private readonly voiceHooks: Pick<ErghiConfig, 'speak' | 'stopSpeaking' | 'recordAudio'>;
+  private readonly onAction: ErghiConfig['onAction'] | null;
   private recorder: VoiceRecorder | null = null;
   private recordingTimer: ReturnType<typeof setInterval> | null = null;
   private recordingStartedAt = 0;
@@ -194,6 +207,7 @@ export default class ErghiWidget {
     this.identityToken = config.identityToken || null;
     this.secureContextProvider = config.secureContextProvider ?? null;
     this.voiceHooks = { speak: config.speak, stopSpeaking: config.stopSpeaking, recordAudio: config.recordAudio };
+    this.onAction = typeof config.onAction === 'function' ? config.onAction : null;
 
     this.bootstrap();
   }
@@ -743,10 +757,16 @@ export default class ErghiWidget {
     }
   }
 
-  private async sendMessage(): Promise<void> {
+  /** Sends what is in the input (and any picked file), or `text` alone when given (a tapped
+   * reply button), leaving the input and the picked file untouched. */
+  private async sendMessage(text?: string): Promise<void> {
     const input = this.$('cf-input') as HTMLInputElement | null;
-    const content = input?.value.trim() || (this.pendingFile ? `[${this.pendingFile.name}]` : '');
-    if (!content && !this.pendingFile) return;
+    const fromInput = text === undefined;
+    const file = fromInput ? this.pendingFile : null;
+    const content = fromInput
+      ? input?.value.trim() || (file ? `[${file.name}]` : '')
+      : text.trim();
+    if (!content && !file) return;
 
     if (!this.conversationId) {
       await this.startConversation();
@@ -756,15 +776,15 @@ export default class ErghiWidget {
     await this.refreshSecureContext();
 
     const tempId = `temp-${Date.now()}`;
-    this.appendMessageEl({ id: tempId, content: content || `📎 ${this.pendingFile!.name}`, sender: 'visitor' });
-    if (input) input.value = '';
+    this.appendMessageEl({ id: tempId, content: content || `📎 ${file!.name}`, sender: 'visitor' });
+    if (input && fromInput) input.value = '';
     this.setTyping(true);
 
     try {
       let attachments: Array<{ id: string; filename: string; contentType: string; size: number; url: string }> | undefined;
-      if (this.pendingFile) {
+      if (file) {
         const fd = new FormData();
-        fd.append('file', this.pendingFile);
+        fd.append('file', file);
         const up = await fetch(
           `${this.config.apiUrl}/api/conversations/${this.conversationId}/attachments`,
           { method: 'POST', headers: this.visitorHeaders(), body: fd }
@@ -1195,7 +1215,9 @@ export default class ErghiWidget {
     }
   }
 
-  private handleInboundMessage(msg: { id: string; content: string; sender: string; sources?: MessageSource[] }): void {
+  private handleInboundMessage(msg: {
+    id: string; content: string; sender: string; sources?: MessageSource[]; actions?: ChatAction[];
+  }): void {
     const sender = msg.sender.toLowerCase();
     if (sender === 'system') {
       if (this.knownMessageIds.has(msg.id)) return;
@@ -1212,7 +1234,9 @@ export default class ErghiWidget {
     }
     if (this.knownMessageIds.has(msg.id)) return;
     this.knownMessageIds.add(msg.id);
-    this.appendMessageEl({ id: msg.id, content: msg.content, sender: msg.sender, sources: msg.sources });
+    this.appendMessageEl({
+      id: msg.id, content: msg.content, sender: msg.sender, sources: msg.sources, actions: msg.actions,
+    });
     this.awaitingReply = false;
     this.clearReplyTimeout();
     this.setTyping(false);
@@ -1237,7 +1261,8 @@ export default class ErghiWidget {
         const sender = m.sender ?? (m as Message & { Sender?: string }).Sender ?? '';
         const content = m.content ?? (m as Message & { Content?: string }).Content ?? '';
         if (id && !this.knownMessageIds.has(id) && sender !== 'visitor' && sender !== 'user') {
-          this.handleInboundMessage({ id, content, sender });
+          const actions = normalizeActions(m.actions ?? (m as Message & { Actions?: unknown }).Actions);
+          this.handleInboundMessage({ id, content, sender, actions });
         }
       });
     } catch {
@@ -1331,6 +1356,9 @@ export default class ErghiWidget {
 
     const box = this.$('cf-messages');
     if (!box) return;
+    // Only the newest message's buttons stay tappable: once the thread moves on, an old
+    // suggestion would answer a question nobody is asking any more.
+    if (msg.sender !== 'system') this.retireActions();
 
     const el = document.createElement('div');
     const role = msg.sender === 'visitor' || msg.sender === 'user' ? 'visitor'
@@ -1374,12 +1402,86 @@ export default class ErghiWidget {
       el.appendChild(this.buildSourcesEl(msg.sources));
     }
 
+    if (role === 'bot' && msg.actions && msg.actions.length > 0) {
+      el.appendChild(this.buildActionsEl(msg.actions));
+    }
+
     if (role === 'bot') {
       el.appendChild(this.buildFeedbackEl(msg.id));
     }
 
     box.appendChild(el);
     this.scrollMessages(true);
+  }
+
+  private buildActionsEl(actions: ChatAction[]): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg-actions';
+    wrap.setAttribute('role', 'group');
+    for (const action of actions) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'msg-action-btn';
+      btn.setAttribute('data-kind', action.kind);
+      btn.setAttribute('dir', 'auto');
+      // Model-written text: textContent only, never innerHTML.
+      btn.textContent = action.label;
+      if (action.kind === 'link') {
+        btn.title = action.url ?? '';
+      }
+      btn.addEventListener('click', () => void this.handleAction(action, wrap, btn));
+      wrap.appendChild(btn);
+    }
+    return wrap;
+  }
+
+  /** Disables every button row on screen. */
+  private retireActions(): void {
+    this.shadow?.querySelectorAll<HTMLButtonElement>('.msg-action-btn').forEach(b => { b.disabled = true; });
+  }
+
+  private async handleAction(action: ChatAction, row: HTMLElement, btn: HTMLButtonElement): Promise<void> {
+    if (btn.disabled) return;
+    // Links can be opened again later; everything else is a one-time answer.
+    if (action.kind !== 'link') {
+      row.querySelectorAll<HTMLButtonElement>('.msg-action-btn').forEach(b => { b.disabled = true; });
+      btn.classList.add('chosen');
+    }
+    if (await this.hostHandledAction(action)) return;
+
+    switch (action.kind) {
+      case 'reply':
+        await this.sendMessage(action.text || action.label);
+        break;
+      case 'handoff':
+        // The server treats a request for a person in the visitor's words like any other.
+        await this.sendMessage(action.label);
+        break;
+      case 'link':
+        if (action.url && isOpenableUrl(action.url, 'link')) {
+          window.open(action.url, '_blank', 'noopener,noreferrer');
+        }
+        break;
+      case 'app':
+        if (action.url && isOpenableUrl(action.url, 'app')) {
+          window.location.assign(action.url);
+        }
+        break;
+    }
+  }
+
+  /** Gives the host page the first say: the `erghi:action` event, then the onAction callback. */
+  private async hostHandledAction(action: ChatAction): Promise<boolean> {
+    const detail: ChatAction = { ...action };
+    const event = new CustomEvent<ChatAction>('erghi:action', { detail, cancelable: true });
+    if (!window.dispatchEvent(event)) return true;
+    if (!this.onAction) return false;
+    try {
+      return (await this.onAction({ ...action })) === true;
+    } catch (err) {
+      console.warn('[Erghi] onAction threw; using the default handling:', err);
+      return false;
+    }
   }
 
   private buildFeedbackEl(messageId: string): HTMLElement {
@@ -1570,8 +1672,9 @@ export default class ErghiWidget {
         const content = String(m.content ?? (m as Message & { Content?: string }).Content ?? '');
         const source = m.source ?? (m as Message & { Source?: string | null }).Source ?? null;
         if (!id || !content) continue;
+        const actions = normalizeActions(m.actions ?? (m as Message & { Actions?: unknown }).Actions);
         this.knownMessageIds.add(id);
-        this.appendMessageEl({ id, content, sender, source });
+        this.appendMessageEl({ id, content, sender, source, actions });
       }
       if (sorted.length === 0) this.addSystemMessage(this.greetingText());
       this.scrollMessages(true);
