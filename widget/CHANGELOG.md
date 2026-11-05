@@ -1,5 +1,9 @@
 ## Unreleased
 
+- Reply buttons: AI replies can carry up to four buttons (`reply`, `link`, `app`, `handoff`)
+  when the workspace turns them on. New `onAction` config callback and cancelable
+  `erghi:action` window event let the host app handle a tap, e.g. route an `app` deep link.
+  Labels are rendered as text; script and plain-http URLs are never opened.
 - `destroy({ clearSession: true })` also removes the stored conversation from the device and
   clears the secure context on the server, for sign-out on shared devices. `destroy()` now
   returns a promise; calling it without `await` works as before.

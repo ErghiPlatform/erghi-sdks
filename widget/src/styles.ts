@@ -229,6 +229,33 @@ export function buildStyles(look: WidgetLook): string {
       white-space: nowrap;
     }
     .msg-source-chip:hover { background: var(--cf-raised); }
+    .msg-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .msg-action-btn {
+      font: inherit;
+      font-size: 13px;
+      line-height: 1.3;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--cf-accent);
+      background: transparent;
+      color: var(--cf-accent);
+      cursor: pointer;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .msg-action-btn[data-kind="link"]::after,
+    .msg-action-btn[data-kind="app"]::after { content: " \\2197"; }
+    .msg-action-btn:hover:not(:disabled) { background: var(--cf-raised); }
+    .msg-action-btn:focus-visible { outline: 2px solid var(--cf-accent); outline-offset: 2px; }
+    .msg-action-btn:disabled { cursor: default; opacity: 0.5; }
+    .msg-action-btn.chosen { opacity: 1; background: var(--cf-raised); font-weight: 600; }
     .msg-feedback {
       display: flex;
       gap: 4px;

@@ -1,4 +1,5 @@
 import * as signalR from '@microsoft/signalr';
+import { ChatAction, normalizeActions } from './actions';
 
 export type RealtimeMessageSource = {
   url: string | null;
@@ -12,6 +13,8 @@ export type RealtimeMessage = {
   createdAt?: string;
   isAI?: boolean;
   sources?: RealtimeMessageSource[];
+  /** Buttons under an AI reply, already checked by the server. */
+  actions?: ChatAction[];
 };
 
 export type RealtimeHandlers = {
@@ -155,5 +158,6 @@ function normalizeMessage(raw: Record<string, unknown>): RealtimeMessage | null 
     createdAt: String(raw['createdAt'] ?? raw['CreatedAt'] ?? ''),
     isAI: Boolean(raw['isAI'] ?? raw['IsAI'] ?? false),
     sources: normalizeSources(raw['sources'] ?? raw['Sources']),
+    actions: normalizeActions(raw['actions'] ?? raw['Actions']),
   };
 }
