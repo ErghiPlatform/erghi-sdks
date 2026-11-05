@@ -91,8 +91,12 @@ jobs:
           npm run build
           cd ../react
       
+      # Use the SDK from this checkout, not the registry: a version bump of both
+      # packages in one PR would otherwise fail until the new SDK is published.
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm pkg set "dependencies.@erghi-ai/sdk=file:../javascript"
+          npm install
       
       - name: Run tests
         run: npx vitest run --passWithNoTests

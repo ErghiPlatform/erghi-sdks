@@ -123,14 +123,21 @@ jobs:
           npm run build
           cd ../react
 
+      # Build and test against the SDK from this checkout (it may not be on npm
+      # yet), then restore package.json so the published range stays a normal one.
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm pkg set "dependencies.@erghi-ai/sdk=file:../javascript"
+          npm install
 
       - name: Run tests
         run: npx vitest run --passWithNoTests
 
       - name: Build
         run: npm run build
+
+      - name: Restore package.json
+        run: git checkout -- package.json
 
       - name: Publish @erghi/react
         run: npm publish --provenance --access public ${NPM_OTP:+--otp="$NPM_OTP"}
