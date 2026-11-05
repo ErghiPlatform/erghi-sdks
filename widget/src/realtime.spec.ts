@@ -106,6 +106,20 @@ describe('ConversationRealtimeClient', () => {
     expect(received[0].sources).toEqual([{ url: 'https://x.com/valid', title: 'valid' }]);
   });
 
+  it('carries PascalCase actions from the SignalR payload and drops unsafe ones', () => {
+    emitMessageReceived({
+      Id: 'm-act', Content: 'hi', Sender: 'bot',
+      Actions: [
+        { Id: 'a1', Kind: 'reply', Label: 'Pricing', Text: 'What are your prices?' },
+        { Id: 'a2', Kind: 'app', Label: 'Script', Url: 'javascript:alert(1)' },
+      ],
+    });
+
+    expect(received[0].actions).toEqual([
+      { id: 'a1', kind: 'reply', label: 'Pricing', text: 'What are your prices?' },
+    ]);
+  });
+
   it('leaves sources undefined when the payload has none', () => {
     emitMessageReceived({ id: 'm5', content: 'hi', sender: 'bot' });
 

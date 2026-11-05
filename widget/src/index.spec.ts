@@ -952,6 +952,142 @@ describe('ErghiWidget', () => {
     });
   });
 
+  describe('Reply buttons', () => {
+    const actions = [
+      { id: 'a1', kind: 'reply', label: 'Pricing', text: 'What are your prices?' },
+      { id: 'a2', kind: 'link', label: 'Refunds', url: 'https://acme.com/refunds' },
+      { id: 'a3', kind: 'app', label: 'Wallet', url: 'moneyfellows://wallet' },
+      { id: 'a4', kind: 'handoff', label: 'Talk to a person' },
+    ];
+    const buttons = () =>
+      Array.from(getShadowRoot()?.querySelectorAll<HTMLButtonElement>('.msg-action-btn') ?? []);
+    const posts = () => (global.fetch as jest.Mock).mock.calls.filter((c: unknown[]) =>
+      String(c[0]).includes('/messages') && (c[1] as RequestInit | undefined)?.method === 'POST');
+
+    beforeEach(async () => {
+      await widget.open();
+      await flushPromises();
+    });
+
+    it('renders labels as text, never as HTML', () => {
+      (widget as any).handleInboundMessage({
+        id: 'b1', content: 'Pick one', sender: 'bot',
+        actions: [{ id: 'a1', kind: 'reply', label: '<img src=x onerror=alert(1)>', text: 'x' }],
+      });
+      const btn = buttons()[0];
+      expect(btn.textContent).toBe('<img src=x onerror=alert(1)>');
+      expect(btn.querySelector('img')).toBeNull();
+    });
+
+    it('renders up to four buttons on a bot reply only', () => {
+      (widget as any).handleInboundMessage({ id: 'b2', content: 'Hi', sender: 'agent', actions });
+      expect(buttons()).toHaveLength(0);
+      (widget as any).handleInboundMessage({ id: 'b3', content: 'Hi', sender: 'bot', actions });
+      expect(buttons().map(b => b.textContent)).toEqual(['Pricing', 'Refunds', 'Wallet', 'Talk to a person']);
+    });
+
+    it('a reply button sends its text as the visitor and disables the row', async () => {
+      (widget as any).conversationId = 'conv-123';
+      (widget as any).handleInboundMessage({ id: 'b4', content: 'Hi', sender: 'bot', actions });
+      buttons()[0].click();
+      await flushPromises();
+
+      const sent = posts().map(c => JSON.parse(String((c[1] as RequestInit).body)).content);
+      expect(sent).toContain('What are your prices?');
+      expect(buttons().every(b => b.disabled)).toBe(true);
+    });
+
+    it('a handoff button sends its label', async () => {
+      (widget as any).conversationId = 'conv-123';
+      (widget as any).handleInboundMessage({ id: 'b5', content: 'Hi', sender: 'bot', actions });
+      buttons()[3].click();
+      await flushPromises();
+      const sent = posts().map(c => JSON.parse(String((c[1] as RequestInit).body)).content);
+      expect(sent).toContain('Talk to a person');
+    });
+
+    it('a link button opens a new tab without an opener', async () => {
+      const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+      (widget as any).handleInboundMessage({ id: 'b6', content: 'Hi', sender: 'bot', actions });
+      buttons()[1].click();
+      await flushPromises();
+      expect(open).toHaveBeenCalledWith('https://acme.com/refunds', '_blank', 'noopener,noreferrer');
+      open.mockRestore();
+    });
+
+    it('the onAction callback gets the tap first and can handle it', async () => {
+      widget.destroy();
+      const onAction = jest.fn().mockResolvedValue(true);
+      widget = new ErghiWidget({ ...mockConfig, onAction });
+      await flushPromises();
+      await widget.open();
+      await flushPromises();
+      (widget as any).conversationId = 'conv-123';
+      (widget as any).handleInboundMessage({ id: 'b7', content: 'Hi', sender: 'bot', actions });
+      (global.fetch as jest.Mock).mockClear();
+
+      buttons()[2].click();
+      await flushPromises();
+      expect(onAction).toHaveBeenCalledWith({ id: 'a3', kind: 'app', label: 'Wallet', url: 'moneyfellows://wallet' });
+
+      buttons()[0].click(); // already disabled
+      await flushPromises();
+      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(posts()).toHaveLength(0);
+    });
+
+    it('a cancelled erghi:action event counts as handled', async () => {
+      (widget as any).conversationId = 'conv-123';
+      const listener = (e: Event) => e.preventDefault();
+      window.addEventListener('erghi:action', listener);
+      (widget as any).handleInboundMessage({ id: 'b8', content: 'Hi', sender: 'bot', actions });
+      (global.fetch as jest.Mock).mockClear();
+      buttons()[0].click();
+      await flushPromises();
+      window.removeEventListener('erghi:action', listener);
+      expect(posts()).toHaveLength(0);
+    });
+
+    it('drops script and plain-http URLs even if the server sent them', () => {
+      (widget as any).handleInboundMessage({
+        id: 'b9', content: 'Hi', sender: 'bot',
+        actions: [
+          { id: 'a1', kind: 'app', label: 'JS', url: 'javascript:alert(1)' },
+          { id: 'a2', kind: 'link', label: 'Plain', url: 'http://acme.com' },
+          { id: 'a3', kind: 'app', label: 'Data', url: 'DATA:text/html,x' },
+        ].map(x => x),
+      });
+      // handleInboundMessage trusts its caller; the payload readers filter. Check the reader.
+      const { normalizeActions } = jest.requireActual('./actions');
+      expect(normalizeActions([
+        { id: 'a1', kind: 'app', label: 'JS', url: 'javascript:alert(1)' },
+        { id: 'a2', kind: 'link', label: 'Plain', url: 'http://acme.com' },
+        { id: 'a3', kind: 'app', label: 'Data', url: 'DATA:text/html,x' },
+      ])).toBeUndefined();
+    });
+
+    it('a newer message retires older buttons', () => {
+      (widget as any).handleInboundMessage({ id: 'b10', content: 'Hi', sender: 'bot', actions });
+      (widget as any).handleInboundMessage({ id: 'b11', content: 'More', sender: 'bot' });
+      expect(buttons().every(b => b.disabled)).toBe(true);
+    });
+
+    it('history keeps buttons and only the newest stay active', async () => {
+      (widget as any).conversationId = 'conv-123';
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ([
+          { Id: 'h1', Sender: 'bot', Content: 'Old', CreatedAt: '2026-01-01T00:00:00Z',
+            Actions: [{ Id: 'a1', Kind: 'reply', Label: 'Old one', Text: 'x' }] },
+          { Id: 'h2', Sender: 'bot', Content: 'New', CreatedAt: '2026-01-01T00:01:00Z',
+            Actions: [{ Id: 'a1', Kind: 'reply', Label: 'New one', Text: 'y' }] },
+        ]),
+      });
+      await (widget as any).loadMessageHistory();
+      expect(buttons().map(b => [b.textContent, b.disabled])).toEqual([['Old one', true], ['New one', false]]);
+    });
+  });
+
   describe('Message Feedback', () => {
     it('should render thumbs up/down buttons on bot messages', async () => {
       await widget.open();

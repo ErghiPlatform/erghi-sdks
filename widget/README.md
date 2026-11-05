@@ -117,6 +117,43 @@ before any audio was recorded, so nothing reaches Erghi. Check, in order:
 
 If you can't change the webview, pass `recordAudio` and record with a native plugin instead.
 
+### Reply buttons
+
+When the workspace turns on **Reply buttons** (admin portal → AI settings), the assistant can
+add up to four buttons under a reply. The server checks every button against the workspace's
+settings first; the widget renders labels as plain text and never opens `javascript:`,
+`data:` or plain `http:` URLs.
+
+| Kind | Default when tapped |
+|---|---|
+| `reply` | sends the button's text as the visitor's message |
+| `handoff` | sends the label as the visitor's message, asking for a person |
+| `link` | opens the `https` URL (an allowed host) in a new tab |
+| `app` | navigates to the deep link (it starts with one of the workspace's app links) |
+
+The host page gets each tap first, as a cancelable `erghi:action` window event and then the
+`onAction` callback. Handle it there to route `app` deep links inside your own app:
+
+```javascript
+new ErghiWidget({
+  widgetId: 'YOUR_WIDGET_ID',
+  onAction: (action) => {
+    if (action.kind === 'app') {
+      router.navigateByUrl(action.url.replace('moneyfellows://', '/'));
+      return true; // handled: the widget does nothing else
+    }
+    // return nothing to keep the default handling
+  },
+});
+
+// or, without a reference to the config:
+window.addEventListener('erghi:action', (e) => {
+  if (e.detail.kind === 'app') { e.preventDefault(); openScreen(e.detail.url); }
+});
+```
+
+After a tap the row is disabled (links stay tappable), and a newer message disables older rows.
+
 ### Localization & RTL
 
 The widget ships with built-in English, Arabic, and Spanish UI strings and full
