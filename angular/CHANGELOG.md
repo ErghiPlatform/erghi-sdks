@@ -1,4 +1,5 @@
-## Unreleased
+## 1.1.0 (2026-11-05)
+
 
 - Fix: `AuthService.refreshToken` and `me` called paths that do not exist, and every auth
   call read camelCase tokens from the auth server's snake_case response. `User.workspaceId`

@@ -1,4 +1,6 @@
-## Unreleased
+## 3.0.0 (2026-11-05)
+
+- Breaking: `Workspace` and `CreateWorkspaceRequest` records changed and `UpdateAsync`/`DeleteAsync` are obsolete and throw. The old calls hit endpoints that never existed.
 
 - Fix: `Auth` now talks to the platform's real auth endpoints. `RefreshAsync`, `MeAsync`,
   `ForgotPasswordAsync` and `ResetPasswordAsync` called paths that do not exist, and

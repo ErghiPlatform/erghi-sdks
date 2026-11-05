@@ -1,4 +1,6 @@
-## Unreleased
+## 2.0.0 (2026-11-05)
+
+- Breaking: `Workspace` fields and `workspace.create(name, company_website=None)` changed; `update`/`delete` raise. The old calls hit endpoints that never existed.
 
 - Fix: `auth` now talks to the platform's real auth endpoints. `refresh`, `me`,
   `verify_email`, `forgot_password` and `reset_password` called paths that do not exist, and

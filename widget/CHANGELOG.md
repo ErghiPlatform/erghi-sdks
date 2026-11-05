@@ -1,4 +1,10 @@
-## Unreleased
+## 1.1.0 (2026-11-05)
+
+- `locale` option (`data-locale` on the script tag): the widget's language, e.g. your app's
+  chosen language. It wins over the page's `lang` and the browser language, sets the widget's
+  text and direction, and is the language the assistant replies in when it can't tell the
+  visitor's language from the message.
+- `npm run lint` works again (ESLint 9 flat config).
 
 - Reply buttons: AI replies can carry up to four buttons (`reply`, `link`, `app`, `handoff`)
   when the workspace turns them on. New `onAction` config callback and cancelable

@@ -32,6 +32,13 @@ export interface ErghiConfig {
    * or force 'ltr' / 'rtl'.
    */
   direction?: WidgetDirection;
+  /**
+   * The widget's language, e.g. "ar" or "en-US" (only the language part is used). Set it to your
+   * app's or site's chosen language. Without it the widget uses the page's `lang`, then the
+   * browser's language. It sets the widget's own text and direction, and the assistant replies in
+   * it when it can't tell the visitor's language from the message (a number, an emoji, "ok").
+   */
+  locale?: string;
   /** Arbitrary visitor / session context passed to the AI (customerId, claims, etc.).
    * Visible to the AI and settable by anyone, so never put tokens or secrets here; use
    * secureContextProvider / setSecureContext for those. */
@@ -95,9 +102,10 @@ interface Message {
 export default class ErghiWidget {
   private config: Required<Omit<ErghiConfig,
     'workspace' | 'visitorContext' | 'greeting' | 'identityToken' | 'secureContextProvider'
-    | 'speak' | 'stopSpeaking' | 'recordAudio' | 'onAction'>> & {
+    | 'speak' | 'stopSpeaking' | 'recordAudio' | 'locale' | 'onAction'>> & {
     workspace?: string;
     greeting?: string;
+    locale?: string;
     visitorContext: Record<string, unknown>;
   };
   // Which settings the embed (constructor/data-* attributes) fixed; those win over the
@@ -193,6 +201,7 @@ export default class ErghiWidget {
       autoOpen: config.autoOpen ?? false,
       theme: theme ?? 'light',
       direction: config.direction ?? 'auto',
+      locale: config.locale,
       visitorContext: { ...(config.visitorContext ?? {}) },
     };
     this.identityToken = config.identityToken || null;
@@ -226,6 +235,8 @@ export default class ErghiWidget {
   }
 
   private detectLocale(): string {
+    const configured = normalizeLocale(this.config.locale);
+    if (configured) return configured;
     try {
       const stored = localStorage.getItem('erghi:locale') || localStorage.getItem('ui-language');
       if (stored) return stored.slice(0, 2);
@@ -624,7 +635,8 @@ export default class ErghiWidget {
   }
 
   public toggle(): void {
-    this.isOpen ? this.close() : this.open();
+    if (this.isOpen) this.close();
+    else this.open();
   }
 
   /**
@@ -1815,6 +1827,12 @@ function parseJsonAttr(raw: string | null): Record<string, unknown> | undefined 
 }
 
 /** Auto-init from script tag attributes */
+/** The primary language subtag of a BCP 47 tag ("en-US" → "en"), or null for anything else. */
+export function normalizeLocale(value: string | null | undefined): string | null {
+  const match = /^([a-zA-Z]{2,3})(?:[-_][a-zA-Z0-9]{1,8})*$/.exec((value ?? '').trim());
+  return match ? match[1].toLowerCase().slice(0, 2) : null;
+}
+
 function autoInit(): void {
   const script =
     document.currentScript as HTMLScriptElement | null ??
@@ -1835,6 +1853,7 @@ function autoInit(): void {
     title: script.getAttribute('data-title') ?? undefined,
     greeting: script.getAttribute('data-greeting') ?? undefined,
     direction: (script.getAttribute('data-direction') as 'auto' | 'ltr' | 'rtl') ?? undefined,
+    locale: script.getAttribute('data-locale') ?? undefined,
     visitorContext,
   });
 
