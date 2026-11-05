@@ -1,4 +1,6 @@
-## Unreleased
+## 2.0.0 (2026-11-05)
+
+- Breaking: `Workspace` and `CreateWorkspaceRequest` changed shape, and `workspace.update`/`delete` now throw. The old shapes matched endpoints that never existed, so no working code depended on them, but TypeScript code using them will need updating.
 
 - Fix: `auth` now talks to the platform's real auth endpoints. `refresh`, `me`,
   `verifyEmail`, `forgotPassword` and `resetPassword` called paths that do not exist

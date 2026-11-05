@@ -1,4 +1,6 @@
-## Unreleased
+## 2.0.0 (2026-11-05)
+
+- Breaking: re-exports `Workspace` from `@erghi-ai/sdk` 2.0.0, whose shape changed. Requires `@erghi-ai/sdk` ^2.0.0.
 
 - `useChat` joins the visitor hub when the client holds the conversation's visitor token
   (end-user chat) and the agent hub otherwise; `isConnected` now follows the real connection

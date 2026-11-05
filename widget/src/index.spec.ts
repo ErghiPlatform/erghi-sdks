@@ -1059,6 +1059,26 @@ describe('ErghiWidget', () => {
       localStorage.clear();
     });
 
+    it('uses the configured locale over the stored and page language', async () => {
+      localStorage.setItem('erghi:locale', 'en');
+      const arWidget = new ErghiWidget({ ...mockConfig, locale: 'ar-EG' });
+      await flushPromises();
+
+      const root = (arWidget as any).shadow?.querySelector('.root');
+      expect(root?.getAttribute('lang')).toBe('ar');
+      expect(root?.getAttribute('dir')).toBe('rtl');
+      expect((arWidget as any).buildMetadata().locale).toBe('ar');
+      arWidget.destroy();
+      localStorage.clear();
+    });
+
+    it('ignores a configured locale that is not a language tag', async () => {
+      const w = new ErghiWidget({ ...mockConfig, locale: '<script>' });
+      await flushPromises();
+      expect((w as any).locale).toBe('en');
+      w.destroy();
+    });
+
     it('should honor an explicit direction override', async () => {
       const rtlWidget = new ErghiWidget({ ...mockConfig, direction: 'rtl' });
       await flushPromises();
