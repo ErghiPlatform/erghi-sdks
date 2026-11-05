@@ -1,3 +1,10 @@
+## 1.1.1 (2026-11-06)
+
+- Security: the SignalR client now logs at Warning instead of its default Information level.
+  At Information it printed the hub's WebSocket URL, including the visitor's conversation
+  token, into the browser console of every site embedding the widget. Failed connections and
+  reconnects are still logged.
+
 ## 1.1.0 (2026-11-05)
 
 - `locale` option (`data-locale` on the script tag): the widget's language, e.g. your app's

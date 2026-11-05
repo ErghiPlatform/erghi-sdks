@@ -1,3 +1,9 @@
+## 1.1.1 (2026-11-06)
+
+- Security: `SignalRService.connect` now logs at Warning instead of Information. At
+  Information SignalR printed the WebSocket URL, including `access_token`, to the browser
+  console. `connectVisitor` already used Warning.
+
 ## 1.1.0 (2026-11-05)
 
 

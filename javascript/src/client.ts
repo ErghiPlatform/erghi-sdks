@@ -247,6 +247,8 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
         { withCredentials: false }
       )
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+      // Information (the default) logs the WebSocket URL, visitorToken included, to the console.
+      .configureLogging(signalR.LogLevel.Warning)
       .build();
 
     hub.on('MessageReceived', (data) => this.emit('message.received', data));
@@ -340,6 +342,9 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
         // this) when no global `WebSocket` exists; browsers use the native global.
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+      // Browsers can't set headers on a WebSocket, so SignalR puts the access token in the URL
+      // as ?access_token=; Information (the default) would log that URL to the console.
+      .configureLogging(signalR.LogLevel.Warning)
       .build();
 
     this.hub.on('MessageReceived', (data) => this.emit('message.received', data));

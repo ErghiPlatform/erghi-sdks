@@ -5,11 +5,13 @@ type SignalRCallback = (payload: unknown) => void;
 const registeredHandlers = new Map<string, SignalRCallback>();
 
 const withUrlSpy = jest.fn().mockReturnThis();
+const configureLoggingSpy = jest.fn().mockReturnThis();
 
 jest.mock('@microsoft/signalr', () => ({
   HubConnectionBuilder: jest.fn().mockImplementation(() => ({
     withUrl: withUrlSpy,
     withAutomaticReconnect: jest.fn().mockReturnThis(),
+    configureLogging: configureLoggingSpy,
     build: jest.fn().mockReturnValue({
       start: jest.fn().mockResolvedValue(undefined),
       stop: jest.fn().mockResolvedValue(undefined),
@@ -25,6 +27,7 @@ jest.mock('@microsoft/signalr', () => ({
     }),
   })),
   HubConnectionState: { Connected: 'Connected' },
+  LogLevel: { Information: 2, Warning: 3 },
 }));
 
 describe('ConversationRealtimeClient', () => {
@@ -175,6 +178,14 @@ describe('ConversationRealtimeClient', () => {
       const url = withUrlSpy.mock.calls[0][0] as string;
       expect(url).toBe('https://api.test.com/hubs/visitor?conversationId=conv-3&visitorToken=a%2Bb%2Fc%3Dd');
       await specialClient.disconnect();
+    });
+  });
+
+  describe('client logging', () => {
+    // At Information (SignalR's default) the client logs the WebSocket URL, visitorToken
+    // included, into the console of every customer site embedding the widget.
+    it('caps SignalR logging at Warning so the token in the URL is never logged', () => {
+      expect(configureLoggingSpy).toHaveBeenCalledWith(3);
     });
   });
 

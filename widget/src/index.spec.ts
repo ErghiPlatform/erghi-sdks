@@ -8,6 +8,7 @@ jest.mock('@microsoft/signalr', () => ({
   HubConnectionBuilder: jest.fn().mockImplementation(() => ({
     withUrl: jest.fn().mockReturnThis(),
     withAutomaticReconnect: jest.fn().mockReturnThis(),
+    configureLogging: jest.fn().mockReturnThis(),
     build: jest.fn().mockReturnValue({
       start: jest.fn().mockResolvedValue(undefined),
       stop: jest.fn().mockResolvedValue(undefined),
@@ -36,6 +37,7 @@ jest.mock('@microsoft/signalr', () => ({
   },
   LogLevel: {
     Information: 1,
+    Warning: 3,
   },
 }));
 

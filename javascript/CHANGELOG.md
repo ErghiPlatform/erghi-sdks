@@ -1,3 +1,10 @@
+## 2.0.1 (2026-11-06)
+
+- Security: both hubs (`connect` and `connectVisitor`) now log at Warning instead of
+  SignalR's default Information level. At Information the client printed the WebSocket URL,
+  which carries the configured `accessToken` (as `access_token`) or the visitor token, to the
+  console. Failed connections and reconnects are still logged.
+
 ## 2.0.0 (2026-11-05)
 
 - Breaking: `Workspace` and `CreateWorkspaceRequest` changed shape, and `workspace.update`/`delete` now throw. The old shapes matched endpoints that never existed, so no working code depended on them, but TypeScript code using them will need updating.
