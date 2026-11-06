@@ -422,6 +422,9 @@ export function buildStyles(look: WidgetLook): string {
     }
     .footer a:hover { color: var(--cf-accent); text-decoration: underline; }
     .footer-sep { color: var(--cf-border); }
+    .footer a.powered-by strong { font-weight: 600; }
+    .root.no-attach .attach-btn { display: none; }
+    .root.no-rating .msg-feedback { display: none; }
     .bubble {
       position: relative;
       width: 56px; height: 56px;

@@ -157,7 +157,12 @@ export default class ErghiWidget {
     assignedAgentName: '',
     voiceInputEnabled: false,
     voiceOutputEnabled: false,
+    // Workspace "Chat features": both default on, so an old API or a failed fetch keeps them.
+    attachmentsEnabled: true,
+    messageRatingEnabled: true,
   };
+  // "Powered by Erghi" in the footer, on plans that don't remove branding (Free).
+  private showPoweredBy = false;
   private readonly voiceHooks: Pick<ErghiConfig, 'speak' | 'stopSpeaking' | 'recordAudio'>;
   private readonly onAction: ErghiConfig['onAction'] | null;
   private recorder: VoiceRecorder | null = null;
@@ -298,7 +303,10 @@ export default class ErghiWidget {
       assignedAgentName: this.displayConfig.assignedAgentName,
       voiceInputEnabled: boolOr(data.voiceInputEnabled ?? data.VoiceInputEnabled, false),
       voiceOutputEnabled: boolOr(data.voiceOutputEnabled ?? data.VoiceOutputEnabled, false),
+      attachmentsEnabled: boolOr(data.attachmentsEnabled ?? data.AttachmentsEnabled, true),
+      messageRatingEnabled: boolOr(data.messageRatingEnabled ?? data.MessageRatingEnabled, true),
     };
+    this.showPoweredBy = boolOr(data.showPoweredBy ?? data.ShowPoweredBy, false);
     this.footerLinks = {
       termsUrl: safeHttpsUrl(data.termsUrl ?? data.TermsUrl),
       privacyUrl: safeHttpsUrl(data.privacyUrl ?? data.PrivacyUrl),
@@ -313,7 +321,7 @@ export default class ErghiWidget {
   }
 
   private buildFooterHtml(): string {
-    if (!this.hasFooterLinks()) return '';
+    if (!this.hasFooterLinks() && !this.showPoweredBy) return '';
     const links: string[] = [];
     if (this.footerLinks.termsUrl)
       links.push(`<a href="${escapeHtml(this.footerLinks.termsUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(this.tr('widget.footer.terms', 'Terms'))}</a>`);
@@ -321,6 +329,8 @@ export default class ErghiWidget {
       links.push(`<a href="${escapeHtml(this.footerLinks.privacyUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(this.tr('widget.footer.privacy', 'Privacy'))}</a>`);
     if (this.footerLinks.supportUrl)
       links.push(`<a href="${escapeHtml(this.footerLinks.supportUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(this.tr('widget.footer.support', 'Support'))}</a>`);
+    if (this.showPoweredBy)
+      links.push(`<a class="powered-by" href="${POWERED_BY_URL}" target="_blank" rel="noopener">${escapeHtml(this.tr('widget.footer.poweredBy', 'Powered by'))} <strong>Erghi</strong></a>`);
     return `<div class="footer">${links.join('<span class="footer-sep">·</span>')}</div>`;
   }
 
@@ -832,6 +842,15 @@ export default class ErghiWidget {
     if (!this.voiceInputAvailable()) this.cancelRecording();
     this.shadow?.querySelector('.root')?.classList.toggle('voice-out', this.voiceOutputAvailable());
     if (!this.voiceOutputAvailable()) this.stopSpeaking();
+    this.applyChatFeatures();
+  }
+
+  /** Hides the attach button and the reply ratings when the workspace turned them off. Done with
+   * root classes so ratings already on screen follow too. The API refuses both as well. */
+  private applyChatFeatures(): void {
+    const root = this.shadow?.querySelector('.root');
+    root?.classList.toggle('no-attach', !this.displayConfig.attachmentsEnabled);
+    root?.classList.toggle('no-rating', !this.displayConfig.messageRatingEnabled);
   }
 
   private voiceInputAvailable(): boolean {
@@ -1168,6 +1187,8 @@ export default class ErghiWidget {
         assignedAgentName: this.displayConfig.assignedAgentName,
         voiceInputEnabled: boolOr(data.voiceInputEnabled ?? data.VoiceInputEnabled, this.displayConfig.voiceInputEnabled),
         voiceOutputEnabled: boolOr(data.voiceOutputEnabled ?? data.VoiceOutputEnabled, this.displayConfig.voiceOutputEnabled),
+        attachmentsEnabled: boolOr(data.attachmentsEnabled ?? data.AttachmentsEnabled, this.displayConfig.attachmentsEnabled),
+        messageRatingEnabled: boolOr(data.messageRatingEnabled ?? data.MessageRatingEnabled, this.displayConfig.messageRatingEnabled),
       };
       this.applyVoiceSettings();
     } catch {
@@ -1703,7 +1724,9 @@ type PublicWidgetConfig = Partial<Record<
   | 'welcomeMessage' | 'companyName' | 'logoUrl'
   | 'aiAssistantName' | 'AiAssistantName' | 'showAiLabel' | 'ShowAiLabel' | 'showAgentName' | 'ShowAgentName'
   | 'termsUrl' | 'TermsUrl' | 'privacyUrl' | 'PrivacyUrl' | 'supportUrl' | 'SupportUrl'
-  | 'voiceInputEnabled' | 'VoiceInputEnabled' | 'voiceOutputEnabled' | 'VoiceOutputEnabled',
+  | 'voiceInputEnabled' | 'VoiceInputEnabled' | 'voiceOutputEnabled' | 'VoiceOutputEnabled'
+  | 'attachmentsEnabled' | 'AttachmentsEnabled' | 'messageRatingEnabled' | 'MessageRatingEnabled'
+  | 'showPoweredBy' | 'ShowPoweredBy',
   unknown
 >>;
 
@@ -1730,6 +1753,9 @@ function stringOr(value: unknown, fallback: string): string {
 function boolOr(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
+
+// Free-plan badge target; the utm tells us which installs bring visitors over.
+const POWERED_BY_URL = 'https://erghi.ai/?utm_source=widget&amp;utm_medium=powered_by';
 
 const DEFAULT_CORNER_RADIUS = 12;
 // Generous enough for a slow mobile network, short enough that a stalled API still lets the
