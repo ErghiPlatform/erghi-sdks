@@ -1,3 +1,11 @@
+## 1.2.0 (2026-11-06)
+
+- Follows the workspace's new "Chat features" settings: the attach button is hidden when
+  visitor attachments are off, and the thumbs under AI replies are hidden when reply ratings
+  are off. Both default to on, so an older API changes nothing.
+- On plans that don't remove branding (Free), the footer shows a "Powered by Erghi" link,
+  localized in all six languages.
+
 ## 1.1.1 (2026-11-06)
 
 - Security: the SignalR client now logs at Warning instead of its default Information level.

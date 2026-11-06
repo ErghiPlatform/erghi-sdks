@@ -252,3 +252,41 @@ describe('start-up when the API is slow', () => {
     widget.destroy();
   });
 });
+
+describe('chat features and the Free-plan badge', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    localStorage.clear();
+  });
+
+  it('keeps attachments and ratings on, and shows no badge, when the API says nothing', async () => {
+    serve({});
+    const { widget, root, shadow } = await mount();
+    expect(root.classList.contains('no-attach')).toBe(false);
+    expect(root.classList.contains('no-rating')).toBe(false);
+    expect(shadow.querySelector('.powered-by')).toBeNull();
+    widget.destroy();
+  });
+
+  it('hides the attach button and reply ratings when the workspace turned them off', async () => {
+    serve({ attachmentsEnabled: false, messageRatingEnabled: false });
+    const { widget, root, css } = await mount();
+    expect(root.classList.contains('no-attach')).toBe(true);
+    expect(root.classList.contains('no-rating')).toBe(true);
+    expect(css).toContain('.root.no-attach .attach-btn { display: none; }');
+    expect(css).toContain('.root.no-rating .msg-feedback { display: none; }');
+    widget.destroy();
+  });
+
+  it('shows a localized "Powered by Erghi" link on the Free plan, even with no legal links', async () => {
+    serve({ showPoweredBy: true });
+    const { widget, shadow } = await mount({ locale: 'ar' });
+    const badge = shadow.querySelector('.footer a.powered-by') as HTMLAnchorElement;
+    expect(badge).not.toBeNull();
+    expect(badge.textContent).toContain('Erghi');
+    expect(badge.textContent).toContain('مدعوم من');
+    expect(badge.href).toContain('https://erghi.ai/');
+    expect(badge.target).toBe('_blank');
+    widget.destroy();
+  });
+});
