@@ -7,6 +7,7 @@ jest.mock('@microsoft/signalr', () => ({
   HubConnectionBuilder: jest.fn().mockImplementation(() => ({
     withUrl: jest.fn().mockReturnThis(),
     withAutomaticReconnect: jest.fn().mockReturnThis(),
+    configureLogging: jest.fn().mockReturnThis(),
     build: jest.fn().mockReturnValue({
       start: jest.fn().mockResolvedValue(undefined),
       stop: jest.fn().mockResolvedValue(undefined),
@@ -21,7 +22,7 @@ jest.mock('@microsoft/signalr', () => ({
   })),
   HubConnectionState: { Connected: 'Connected', Disconnected: 'Disconnected' },
   HttpTransportType: { WebSockets: 1, ServerSentEvents: 2, LongPolling: 4 },
-  LogLevel: { Information: 1 },
+  LogLevel: { Information: 1, Warning: 3 },
 }));
 
 const API = 'https://api.test.com';

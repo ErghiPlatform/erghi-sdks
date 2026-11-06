@@ -1,6 +1,6 @@
 {
   "name": "@erghi-ai/sdk",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Official JavaScript/TypeScript SDK for the Erghi customer-support platform",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

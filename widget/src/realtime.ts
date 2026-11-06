@@ -67,6 +67,10 @@ export class ConversationRealtimeClient {
         withCredentials: false,
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+      // At the default (Information) the client logs the full WebSocket URL, visitorToken
+      // included, to the console of every site that embeds the widget. Warning still reports
+      // failed connections and reconnects.
+      .configureLogging(signalR.LogLevel.Warning)
       .build();
 
     this.hub.on('MessageReceived', (raw: Record<string, unknown>) => {

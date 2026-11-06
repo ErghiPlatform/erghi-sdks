@@ -49,7 +49,10 @@ export class SignalRService implements OnDestroy {
         accessTokenFactory: () => token
       })
       .withAutomaticReconnect()
-      .configureLogging(LogLevel.Information)
+      // Browsers can't set headers on a WebSocket, so SignalR puts the token in the URL as
+      // ?access_token=; at Information it logs that URL to the console. Warning still reports
+      // failed connections and reconnects.
+      .configureLogging(LogLevel.Warning)
       .build();
 
     this.setupEventHandlers();

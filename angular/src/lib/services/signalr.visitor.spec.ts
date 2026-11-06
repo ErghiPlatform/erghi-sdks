@@ -15,12 +15,13 @@ const hub = {
   stop: jest.fn().mockResolvedValue(undefined),
 };
 const withUrl = jest.fn();
+const configureLogging = jest.fn();
 
 jest.mock('@microsoft/signalr', () => {
   const builder = {
     withUrl: (...args: unknown[]) => { withUrl(...args); return builder; },
     withAutomaticReconnect: () => builder,
-    configureLogging: () => builder,
+    configureLogging: (...args: unknown[]) => { configureLogging(...args); return builder; },
     build: () => hub,
   };
   return {
@@ -40,7 +41,7 @@ describe('SignalRService visitor hub', () => {
     TestBed.configureTestingModule({
       providers: [
         SignalRService,
-        { provide: AuthService, useValue: { getToken: jest.fn() } },
+        { provide: AuthService, useValue: { getToken: jest.fn().mockReturnValue('jwt-1') } },
         { provide: ChatService, useValue: { getVisitorToken } },
         { provide: ERGHI_CONFIG, useValue: { apiUrl: 'https://api.example.test/' } },
       ],
@@ -56,6 +57,19 @@ describe('SignalRService visitor hub', () => {
       { withCredentials: false }
     );
     expect(hub.start).toHaveBeenCalled();
+  });
+
+  // At Information (SignalR's default) the client logs the WebSocket URL, which carries the
+  // visitorToken or ?access_token=, to the browser console.
+  it('caps visitor hub logging at Warning', async () => {
+    getVisitorToken.mockReturnValue('vt-1');
+    await service.connectVisitor('conv-1');
+    expect(configureLogging).toHaveBeenCalledWith(3);
+  });
+
+  it('caps chat hub logging at Warning', async () => {
+    await service.connect();
+    expect(configureLogging).toHaveBeenCalledWith(3);
   });
 
   it('maps server events, including MessageReceived and ContextRequired', async () => {

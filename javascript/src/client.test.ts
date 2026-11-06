@@ -19,6 +19,7 @@ const mockHubConnection = {
 
 const withUrlMock = vi.fn().mockReturnThis();
 const withAutomaticReconnectMock = vi.fn().mockReturnThis();
+const configureLoggingMock = vi.fn().mockReturnThis();
 const buildMock = vi.fn(() => mockHubConnection);
 
 vi.mock('@microsoft/signalr', () => {
@@ -26,6 +27,7 @@ vi.mock('@microsoft/signalr', () => {
     HubConnectionBuilder: vi.fn().mockImplementation(() => ({
       withUrl: withUrlMock,
       withAutomaticReconnect: withAutomaticReconnectMock,
+      configureLogging: configureLoggingMock,
       build: buildMock,
     })),
     HubConnectionState: {
@@ -35,6 +37,7 @@ vi.mock('@microsoft/signalr', () => {
       Reconnecting: 'Reconnecting',
       Disconnecting: 'Disconnecting',
     },
+    LogLevel: { Information: 2, Warning: 3 },
   };
 });
 
@@ -55,6 +58,13 @@ describe('ErghiClient real-time transport', () => {
       expect.objectContaining({ accessTokenFactory: expect.any(Function) })
     );
     expect(mockHubConnection.start).toHaveBeenCalled();
+  });
+
+  it('caps chat hub logging at Warning so ?access_token= in the WebSocket URL is never logged', () => {
+    const client = new ErghiClient({ wsUrl: 'ws://localhost:5002', accessToken: 'test-token' });
+    client.connect();
+
+    expect(configureLoggingMock).toHaveBeenCalledWith(3);
   });
 
   it('subscribes to the real hub event names and re-emits them under the SDK\'s public dotted names', () => {
@@ -124,6 +134,14 @@ describe('ErghiClient real-time transport', () => {
     );
     const events = mockHubConnection.on.mock.calls.map((c) => c[0]);
     expect(events).toEqual(expect.arrayContaining(['MessageReceived', 'ContextRequired', 'ConversationClosed']));
+  });
+
+  it('caps visitor hub logging at Warning so the visitorToken in the URL is never logged', async () => {
+    const client = new ErghiClient({ apiUrl: 'https://api.example.test' });
+    client.setVisitorToken('conv-1', 'vt-1');
+    await client.connectVisitor('conv-1');
+
+    expect(configureLoggingMock).toHaveBeenCalledWith(3);
   });
 
   it('re-emits ContextRequired from the visitor hub as context.required', async () => {
