@@ -74,7 +74,7 @@
     <rect x="16" y="52" width="208" height="70" rx="6" fill="#0f172a"/>
     <text x="26" y="70" font-size="9" fill="#a5f3fc" font-family="monospace">&lt;script</text>
     <text x="26" y="84" font-size="9" fill="#fbbf24" font-family="monospace">  data-widget-id="..."</text>
-    <text x="26" y="98" font-size="9" fill="#fbbf24" font-family="monospace">  src="chat.staging.</text>
+    <text x="26" y="98" font-size="9" fill="#fbbf24" font-family="monospace">  src="chat.</text>
     <text x="26" y="110" font-size="9" fill="#fbbf24" font-family="monospace">  erghi.ai/widget.js"&gt;</text>
     <circle cx="216" cy="60" r="9" fill="#f59e0b"/>
     <text x="216" y="64" font-size="10" fill="#ffffff" text-anchor="middle" font-weight="700">D</text>
@@ -95,7 +95,7 @@
     <text x="20" y="30" font-size="14" font-weight="700" fill="#111827">Button callouts</text>
 
     <circle cx="35" cy="60" r="9" fill="#f59e0b"/><text x="35" y="64" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">A</text>
-    <text x="55" y="64" font-size="12" fill="#374151"><tspan font-weight="600">Create account</tspan> — on erghi.ai's "Start free" CTA, or directly at admin.staging.erghi.ai/register. No card required at this step.</text>
+    <text x="55" y="64" font-size="12" fill="#374151"><tspan font-weight="600">Create account</tspan> — on erghi.ai's "Start free" CTA, or directly at app.erghi.ai/register. No card required at this step.</text>
 
     <circle cx="35" cy="90" r="9" fill="#f59e0b"/><text x="35" y="94" font-size="10" fill="#fff" text-anchor="middle" font-weight="700">B</text>
     <text x="55" y="94" font-size="12" fill="#374151"><tspan font-weight="600">Sign In</tspan> — first login after registering sends you straight to Billing &amp; Plans, not the dashboard. This is deliberate: pick a plan before anything else.</text>

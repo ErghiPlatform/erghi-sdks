@@ -1,6 +1,6 @@
 # Erghi API Reference
 
-> **Gateway Base URL** (live today): `https://api.staging.erghi.ai` — `staging.` is currently the only live prefix platform-wide, not a separate sandbox; this is the real, production gateway. `api.erghi.ai` does not resolve yet.
+> **Gateway Base URL** (production): `https://api.erghi.ai`
 > **Gateway Base URL** (local dev): `http://localhost:5080`  
 > **Conversation API** (direct, dev only): `http://localhost:5002`  
 > **Content-Type**: `application/json`
@@ -260,7 +260,7 @@ Create a new chat widget for the workspace.
   "themeColor": "#6366f1",
   "autoAssign": true,
   "offlineMessage": "We're offline right now...",
-  "embedCode": "<script src='https://chat.staging.erghi.ai/widget.js' data-widget-id='widget-uuid' async></script>",
+  "embedCode": "<script src='https://chat.erghi.ai/widget.js' data-widget-id='widget-uuid' async></script>",
   "createdAt": "2025-01-15T09:00:00Z"
 }
 ```
@@ -424,7 +424,17 @@ Admin-level widget creation (same as `POST /api/widgets` with additional fields 
 
 Topic, sentiment and outcome of finished conversations. See [Conversation Insights](./guides/CONVERSATION_INSIGHTS.md) for what the fields mean and how they are produced.
 
-All three endpoints need the workspace permission `view_insights` (Owner and Admin roles) and are scoped to the workspace in the token. Workspace API keys and client-credentials tokens cannot hold that permission: use a signed-in user's access token, otherwise the response is `403`. Until Erghi enables the classifier for the deployment, they return empty results.
+All three endpoints need the workspace permission `view_insights` (Owner and Admin roles) and are scoped to the workspace in the token. Workspace API keys and client-credentials tokens cannot hold that permission today: use a signed-in user's access token, otherwise the response is `403`. Until Erghi enables the classifier for the deployment, they return empty results.
+
+**Plan gating.** The workspace's plan decides what is returned (see [Plans](./guides/CONVERSATION_INSIGHTS.md#plans)):
+
+| Plan | Access |
+|---|---|
+| Free | All three endpoints return `403` with `code: "plan_upgrade_required"` |
+| Starter | Outcomes, AI-resolved rate and sentiment over a 30-day window. `topics`, `categories` and `languages` are withheld, the per-conversation `topic`, `category`, `language`, `summary` and `confidence` are `null`, `category`/`topic`/`minConfidence` filters return `403`, and `export.csv` returns `403` |
+| Growth, Enterprise | All fields, filters and the CSV export, over the plan's history-retention window (Growth 90 days, Enterprise 365 days) |
+
+A plan error is `{ "error": "<text>", "code": "plan_upgrade_required", "plan": "<current plan>", "requiredPlan": "Starter" | "Growth" }`. `from` earlier than the window start is raised to it.
 
 **Filters** (query parameters, all optional, shared by the three endpoints)
 
@@ -454,11 +464,28 @@ An invalid value returns `400` with `{ "error": "<reason>", "code": "invalid_fil
   "sentiments": [{ "key": "Neutral", "count": 230 }, { "key": "Positive", "count": 120 }, { "key": "Negative", "count": 62 }],
   "categories": [{ "key": "billing", "count": 140 }],
   "topics": [{ "key": "refund status", "count": 48 }],
-  "languages": [{ "key": "ar-EG", "count": 300 }, { "key": "en", "count": 112 }]
+  "languages": [{ "key": "ar-EG", "count": 300 }, { "key": "en", "count": 112 }],
+  "plan": "Growth",
+  "locked": [],
+  "lockedCounts": {},
+  "windowDays": 90,
+  "from": "2026-08-11T09:00:00Z"
 }
 ```
 
-Each list is sorted by count, highest first. `topics` holds the 20 most frequent. `aiResolvedRate` is `ResolvedByAi` over all outcomes except `SpamOrEmpty`, rounded to four decimals, and `null` when there are none.
+Each list is sorted by count, highest first. `topics` holds the 20 most frequent. The example above is a Growth or Enterprise response. The response also carries the plan fields below; on Starter `categories`, `topics` and `languages` are `null` and named in `locked`:
+
+```json
+{
+  "plan": "Starter",
+  "locked": ["topics", "categories", "languages"],
+  "lockedCounts": { "topics": 14, "categories": 5 },
+  "windowDays": 30,
+  "from": "2026-10-10T09:00:00Z"
+}
+```
+
+On Growth and Enterprise `locked` is `[]` and `lockedCounts` is `{}`. `aiResolvedRate` is `ResolvedByAi` over all outcomes except `SpamOrEmpty`, rounded to four decimals, and `null` when there are none.
 
 ---
 
@@ -493,9 +520,15 @@ Classified conversations, newest `classifiedAt` first.
       "classifiedAt": "2026-11-09T10:14:03Z",
       "stale": false
     }
-  ]
+  ],
+  "plan": "Growth",
+  "locked": [],
+  "windowDays": 90,
+  "from": "2026-08-11T09:00:00Z"
 }
 ```
+
+On Starter, `topic`, `category`, `language`, `summary` and `confidence` are `null` and `locked` lists the withheld fields. `lockedCounts` is not part of this response.
 
 Use `conversationId` with `GET /api/conversations/{id}` to read the full conversation.
 
@@ -503,7 +536,7 @@ Use `conversationId` with `GET /api/conversations/{id}` to read the full convers
 
 ### GET `/api/v1/insights/export.csv` — Auth Required (`view_insights`)
 
-The same rows as a CSV download named `conversation-insights.csv` (`text/csv; charset=utf-8`, with a byte-order mark), newest first, at most **10,000** rows. Narrow `from`/`to` to export more. Text fields that start with `=`, `+`, `-`, `@`, a tab or a carriage return are prefixed with `'` so spreadsheets do not run them as formulas. Columns are listed in [Conversation Insights](./guides/CONVERSATION_INSIGHTS.md#csv-export).
+Growth and Enterprise only (Starter gets `403` `plan_upgrade_required`). The same rows as a CSV download named `conversation-insights.csv` (`text/csv; charset=utf-8`, with a byte-order mark), newest first, at most **10,000** rows. Narrow `from`/`to` to export more. Text fields that start with `=`, `+`, `-`, `@`, a tab or a carriage return are prefixed with `'` so spreadsheets do not run them as formulas. Columns are listed in [Conversation Insights](./guides/CONVERSATION_INSIGHTS.md#csv-export).
 
 ---
 
@@ -561,35 +594,14 @@ Get the current workspace plan and usage.
 
 ---
 
-### POST /api/v1/billing/checkout — Auth Required
-
-Create a Stripe checkout session.
-
-**Request body**
-```json
-{
-  "planId": "plan-growth",
-  "interval": "monthly"
-}
-```
-
-**Response `200 OK`**
-```json
-{
-  "checkoutUrl": "https://checkout.stripe.com/pay/cs_..."
-}
-```
-
----
-
 ### POST /api/v1/billing/portal — Auth Required
 
-Create a Stripe customer portal session.
+Open the payment provider's customer portal for the account (requires billing-management permission). Request body: `{ "returnUrl": "..." }`. Errors are returned as `400` with `{ "error": "..." }`.
 
 **Response `200 OK`**
 ```json
 {
-  "portalUrl": "https://billing.stripe.com/session/..."
+  "portalUrl": "<provider portal URL>"
 }
 ```
 
@@ -619,7 +631,7 @@ Get invoice history for the workspace.
 
 ### POST /api/v1/billing/checkout — Auth Required (Admin)
 
-Start a checkout for a paid plan, using the workspace's configured payment provider — currently always Stripe (see [Payment methods](./USER_GUIDE.md#payment-methods)).
+Start a checkout for a paid plan, using the platform's configured payment provider — Paddle in production (see [Payment methods](./USER_GUIDE.md#payment-methods)). Requires billing-management permission.
 
 **Request body**
 
@@ -632,9 +644,9 @@ Start a checkout for a paid plan, using the workspace's configured payment provi
 }
 ```
 
-**Response `200 OK`** — a checkout URL to redirect the user to (a real Stripe Checkout session).
+**Response `200 OK`** — `{ "checkoutUrl": "..." }`, the URL to send the user to. In production the Paddle checkout opens in the admin app at `app.erghi.ai/billing/paddle-checkout`.
 
-Paymob and Fawry are planned but not yet implemented — do not build against provider-specific checkout endpoints; there aren't any.
+Do not build against provider-specific checkout endpoints; there aren't any. (The Paymob and Fawry provider records exist but are hard-disabled.)
 
 ---
 
@@ -643,7 +655,7 @@ Paymob and Fawry are planned but not yet implemented — do not build against pr
 Erghi uses **SignalR** for real-time message delivery. Connect to the hub:
 
 ```
-wss://api.staging.erghi.ai/hubs/chat?conversationId=<conv-id>&token=<jwt>
+wss://api.erghi.ai/hubs/chat?conversationId=<conv-id>&token=<jwt>
 ```
 
 **Events received from server:**
