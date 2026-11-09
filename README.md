@@ -262,7 +262,6 @@ Client → WS   /hubs/chat      → ?access_token=<accessToken>
 | Environment | Gateway URL |
 |-------------|-------------|
 | Production  | `https://api.erghi.ai` |
-| Staging     | `https://staging-api.erghi.ai` |
 | Local dev   | `http://localhost:5000` |
 
 ## Running Locally

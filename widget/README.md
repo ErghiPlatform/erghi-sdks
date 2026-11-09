@@ -220,6 +220,13 @@ window.addEventListener('erghi:identity-expired', async () =>
   widget.setIdentityToken(await auth.getErghiIdentityToken()));
 ```
 
+Identity token rules (enforced by the server): sign with the workspace widget secret, include `sub`
+and `exp`, and set `exp` no more than 24 hours ahead (a longer-lived token is rejected). A stored
+verified identity lapses at the token's `exp`; after that, tools that need `identity.*` stop
+working until your app presents a fresh token.
+Call `setIdentityToken()` with a new token before the old one expires (listen for
+`erghi:identity-expired`).
+
 Secure values are kept in memory only (never localStorage) and stored server-side
 encrypted, with a TTL of 60 seconds to 24 hours.
 

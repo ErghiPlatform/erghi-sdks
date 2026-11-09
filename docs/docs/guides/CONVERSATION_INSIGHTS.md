@@ -11,8 +11,9 @@ short record, and the [Insights API](../API_REFERENCE.md#insights) lets you read
 totals and a CSV export.
 
 > **Status.** The API is live. The classifier that writes the records is **off by default** and is
-> switched on by Erghi for a deployment, not by you in the admin app. Until it is on, the API
-> answers normally but returns zero conversations.
+> switched on by Erghi for a deployment (the `CONVERSATION_INSIGHTS_ENABLED` deploy setting), not by
+> you in the admin app. Until it is on, the API answers normally but returns zero conversations. What
+> you can read depends on your plan: see [Plans](#plans).
 
 ## What is recorded
 
@@ -43,8 +44,10 @@ is nothing to rate.
 
 ## How it works
 
-1. A background sweep runs every couple of minutes, but only when the feature is enabled for the
-   deployment. It picks conversations that are resolved or closed, have been quiet for 5 minutes,
+1. A background sweep runs about every 2 minutes, but only when the feature is enabled for the
+   deployment, and only for workspaces on a **paid plan** (Starter, Growth or Enterprise, including a
+   trial of a paid plan) whose subscription is not suspended or cancelled. Free workspaces are never
+   classified, and a plan change takes effect on the next sweep. It picks conversations that are resolved or closed, have been quiet for 5 minutes,
    were last active in the past 14 days and have no record yet (or were reopened and closed again).
    Turning the feature on therefore never classifies older history.
 2. Erghi already knows some facts for certain: whether the conversation was handed off, whether a
@@ -54,12 +57,45 @@ is nothing to rate.
 3. The model sees the conversation summary and up to the 50 most recent messages and returns the
    fields above. A conversation with no visitor message needs no model call and is recorded as
    `SpamOrEmpty`.
-4. Each classification is a model call on a low-cost model. It counts toward the workspace's
+4. Each classification is a model call on the `classify` model tier, which is `gpt-oss-120b` on the
+   default providers (Groq `openai/gpt-oss-120b`, Bedrock `openai.gpt-oss-120b-1:0`). It counts toward the workspace's
    monthly AI spend cap like any other call. At the cap, classification pauses and resumes after
    the cap resets.
 
 A failed classification is retried after an hour. A reopened conversation keeps its old record,
 marked `stale`, until it closes again and is reclassified.
+
+## Plans
+
+What the API returns is decided server side from your workspace's plan; nothing in the request can
+widen it.
+
+| | Free | Starter | Growth | Enterprise |
+|---|---|---|---|---|
+| Read the API | No: `403` `plan_upgrade_required` | Yes | Yes | Yes |
+| Outcomes, AI-resolved rate, sentiment | | Yes | Yes | Yes |
+| Topics, categories, languages | | Withheld (`locked`) | Yes | Yes |
+| `topic`, `category`, `language`, `summary`, `confidence` on each conversation | | `null` | Yes | Yes |
+| Filtering by `category`, `topic` or `minConfidence` | | `403` | Yes | Yes |
+| CSV export | | `403` | Yes | Yes |
+| Window | | 30 days | 90 days (your plan's history retention) | 365 days (your plan's history retention) |
+
+A request that needs a higher plan returns `403` with
+`{ "error": "...", "code": "plan_upgrade_required", "plan": "Starter", "requiredPlan": "Growth" }`
+(`requiredPlan` is `Starter` when the workspace is on Free).
+
+The window is clamped on the server: a `from` earlier than the window start is raised to it, and
+every response reports the plan, what is locked and the effective window:
+
+| Field | Meaning |
+|---|---|
+| `plan` | The plan the response was computed for |
+| `locked` | Fields withheld on this plan: `["topics", "categories", "languages"]` on Starter, empty otherwise |
+| `lockedCounts` | Summary only. On Starter, the number of distinct `topics` and `categories` found in the plan window, so a UI can say "14 topics found" without revealing them. Always computed over the whole window, not your filters. Empty on Growth and Enterprise |
+| `windowDays` | Length of the plan's window in days |
+| `from` | The effective start of the window after clamping |
+
+On Starter the summary returns `topics`, `categories` and `languages` as `null`.
 
 ## Who can read it
 

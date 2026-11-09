@@ -130,6 +130,11 @@ this.chat.createConversation(widgetId, { locale: 'ar' }, identityToken).pipe(
 // Also: attachIdentityToken(id, jwt), clearSecureContext(id).
 ```
 
+Identity token rules (enforced by the server): sign with the workspace widget secret, include `sub`
+and `exp`, and set `exp` no more than 24 hours ahead (a longer-lived token is rejected). A stored
+verified identity lapses at the token's `exp`; after that, tools that need `identity.*` stop
+working until your app presents a fresh token.
+
 `createConversation` returns a per-conversation `visitorToken` and `ChatService` keeps it;
 every visitor call for that conversation (`getMessages`, `sendMessage` including file
 uploads, `getConversation`, identity, secure context) sends it as `X-Visitor-Token`. To

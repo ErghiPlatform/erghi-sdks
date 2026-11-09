@@ -10,7 +10,7 @@ import TabItem from '@theme/TabItem';
 
 > **Erghi** — Embed AI-powered live chat into your product and manage every conversation in real time.
 
-Everything in this guide reflects the current live product (verified 2026-08-31), not an aspirational roadmap. Where something isn't available yet, it's called out explicitly rather than glossed over.
+This guide describes the live product, not an aspirational roadmap. It was first verified 2026-08-31; the base URLs, sign-up path, checkout provider, plan limits, SDK publication status and identity-token rules were re-checked against the platform code on 2026-11-09. Where something isn't available yet, it's called out explicitly rather than glossed over.
 
 ## Table of Contents
 
@@ -59,7 +59,7 @@ This is the real, current flow — four steps, no step skipped or renamed from w
 
 ### 1. Create your workspace
 
-Click **Start free** on [erghi.ai](https://erghi.ai), or go directly to the registration page. You'll provide:
+Go to the registration page at [app.erghi.ai/register](https://app.erghi.ai/register) (the plan cards on [erghi.ai](https://erghi.ai) link there; the other buttons on the marketing site go to a contact form, so sign-up is by app URL). You'll provide:
 
 - Workspace name
 - Your work email
@@ -74,7 +74,7 @@ After registering, sign in. **Your first login lands you on Billing & Plans, not
 ### 3. Choose a plan
 
 - **Staying on Free** — do nothing; the Free plan is your default and you can use the workspace immediately.
-- **Upgrading** — clicking **Upgrade to Starter** or **Upgrade to Growth** opens a real Stripe Checkout page for that plan's price. Complete payment there; you're returned to the admin portal once it succeeds.
+- **Upgrading** — clicking **Upgrade to Starter** or **Upgrade to Growth** opens the Paddle checkout page inside the admin app (`app.erghi.ai/billing/paddle-checkout`) for that plan's price. Complete payment there.
 - **Enterprise** — has no self-serve checkout. Use the "Contact sales" form on the same page.
 
 See [Billing & Plans](#billing--plans) below for what each plan actually includes.
@@ -85,17 +85,13 @@ From the sidebar, go to **Widgets → your widget → Embed** to get your real, 
 
 ```html
 <script
-  src="https://chat.staging.erghi.ai/widget.js"
+  src="https://chat.erghi.ai/widget.js"
   data-widget-id="your-widget-id"
   async
 ></script>
 ```
 
 Paste it into your site's HTML just before `</body>`. The chat bubble appears immediately — no build step, no npm install required for a plain HTML site.
-
-:::note Why "staging" in the URL?
-The platform is mid soft-launch: `staging.` is currently the only live prefix for every Erghi subdomain, not a separate sandbox — this is the real, production widget host today. It moves to `chat.erghi.ai` once the prefix is dropped platform-wide; your embed snippet will be updated automatically from your widget settings when that happens, so nothing you do now needs to change later.
-:::
 
 ### 5. Invite your team
 
@@ -143,7 +139,7 @@ The widget reads its configuration **only** from `data-*` attributes on its own 
 
 ```html
 <script
-  src="https://chat.staging.erghi.ai/widget.js"
+  src="https://chat.erghi.ai/widget.js"
   data-widget-id="your-widget-id"
   data-primary-color="#6366f1"
   data-greeting="How can we help?"
@@ -165,6 +161,18 @@ You normally don't need any of the optional attributes: the widget uses what you
 radius, company name). An attribute on the script tag overrides the workspace setting for that
 one page, and an invalid value is ignored. Saved changes reach your site within about a minute.
 
+### Identity tokens for signed-in visitors
+
+To give a conversation a verified identity (used as `identity.*` in integration bindings and action policies), your backend signs a JWT and passes it to the widget (`identityToken` / `setIdentityToken`, or `authenticate`) or to an SDK (`createConversation(..., { identityToken })`, `attachIdentityToken`):
+
+- Sign it with the workspace's **widget secret** (HS256, HS384 or HS512).
+- It must contain `sub` (the user's id in your system) and `exp`. A token without `exp` is rejected.
+- `exp` must be **no more than 24 hours** in the future. A longer-lived token is rejected, not trimmed. There is no clock-skew allowance, so an expired token is rejected immediately.
+- The verified identity is stored with the conversation and **lapses at the token's `exp`** (never later than 24 hours after it was presented). After that, tools that need `identity.*` stop working until your app presents a fresh token.
+- The decoded claims (without `exp`, `iat`, `nbf`, `iss`, `aud`, `jti`) must stay under 4096 characters.
+
+Mint the token on your server, never in client code.
+
 ### Controlling the widget from your own JavaScript
 
 Once loaded, the widget exposes itself on `window.ErghiWidget`:
@@ -174,7 +182,7 @@ Once loaded, the widget exposes itself on `window.ErghiWidget`:
 | `open()` | Programmatically open the chat window |
 | `close()` | Programmatically close the chat window |
 | `toggle()` | Toggle open/closed |
-| `authenticate(jwtToken)` | Associate an authenticated (logged-in) visitor with the conversation |
+| `authenticate(jwtToken)` | Associate an authenticated (logged-in) visitor with the conversation. The JWT is also used as the conversation's identity token, so it must meet the [identity token rules](#identity-tokens-for-signed-in-visitors) |
 | `identify(attributes)` | Pass custom visitor attributes for routing and AI context |
 | `setContext(attributes, merge?)` | Update visitor context, optionally merging with what's already set |
 | `getContext()` | Read the current visitor context |
@@ -218,11 +226,11 @@ Annual billing is available on every paid plan at a discount, selectable on the 
 
 ### Adding extra agent seats
 
-Beyond a plan's included agent count, extra seats can be added from **Billing → Manage seats** ($15/mo on Starter, $12/mo on Growth) — billed on top of your plan through the same Stripe subscription.
+Beyond a plan's included agent count, extra seats can be added from **Billing → Manage seats** ($15/mo on Starter, $12/mo on Growth) — billed on top of your plan through the same subscription.
 
 ### Payment methods
 
-Erghi currently accepts **credit/debit card via Stripe**. Additional regional payment methods are planned but not yet available — if a payment method other than card is shown anywhere in the product, it is not yet live; use card for now.
+Checkout is handled by **Paddle**. Which payment methods are offered is decided by Paddle's checkout and is not documented here. Stripe is not an active checkout provider (its provider record is hard-disabled in the platform's seeder).
 
 ### Viewing invoices
 
@@ -238,7 +246,7 @@ All Erghi client SDKs share the same underlying resource-oriented API (`client.a
 |---|---|---|---|
 | JavaScript / TypeScript | `@erghi-ai/sdk` | [npm](https://www.npmjs.com/package/@erghi-ai/sdk) | ✅ Published |
 | React | `@erghi-ai/react` | [npm](https://www.npmjs.com/package/@erghi-ai/react) | ✅ Published |
-| Angular | `@erghi-ai/angular` | npm | 🚧 Not yet published — see the [Angular SDK source](https://github.com/ErghiPlatform/erghi-sdks/tree/main/angular) to build from source in the meantime |
+| Angular | `@erghi-ai/angular` | [npm](https://www.npmjs.com/package/@erghi-ai/angular) | ✅ Published |
 | Python | `erghi-sdk` | [PyPI](https://pypi.org/project/erghi-sdk/) | ✅ Published |
 | .NET | `Erghi.SDK` | [NuGet](https://www.nuget.org/packages/Erghi.SDK) | ✅ Published |
 | Flutter | `erghi_sdk` | [pub.dev](https://pub.dev/packages/erghi_sdk) | ✅ Published |
@@ -256,7 +264,7 @@ npm install @erghi-ai/sdk
 ```typescript
 import ErghiClient from '@erghi-ai/sdk';
 
-const client = new ErghiClient({ apiUrl: 'https://api.staging.erghi.ai', apiKey: 'your-api-key' });
+const client = new ErghiClient({ apiUrl: 'https://api.erghi.ai', apiKey: 'your-api-key' });
 await client.auth.login({ email: 'user@example.com', password: 'password' });
 ```
 
@@ -272,7 +280,7 @@ import { ErghiProvider, useChat } from '@erghi-ai/react';
 
 function App() {
   return (
-    <ErghiProvider config={{ apiUrl: 'https://api.staging.erghi.ai', apiKey: 'your-api-key' }}>
+    <ErghiProvider config={{ apiUrl: 'https://api.erghi.ai', apiKey: 'your-api-key' }}>
       <YourChatUI />
     </ErghiProvider>
   );
@@ -302,7 +310,7 @@ import { ERGHI_CONFIG, ErghiConfig } from '@erghi-ai/angular';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    { provide: ERGHI_CONFIG, useValue: <ErghiConfig>{ apiUrl: 'https://api.staging.erghi.ai', apiKey: 'your-api-key' } },
+    { provide: ERGHI_CONFIG, useValue: <ErghiConfig>{ apiUrl: 'https://api.erghi.ai', apiKey: 'your-api-key' } },
   ],
 };
 ```

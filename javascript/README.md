@@ -119,7 +119,7 @@ after a reload, persist `conv.id` and `conv.visitorToken` yourself and call
 `client.setVisitorToken(id, token)`.
 
 ```typescript
-const client = new ErghiClient({ apiUrl: 'https://api.staging.erghi.ai' }); // no API key
+const client = new ErghiClient({ apiUrl: 'https://api.erghi.ai' }); // no API key
 const conv = await client.chat.createConversation(widgetId, { locale: 'ar' }, { identityToken });
 
 client.on('message.received', (m) => render(m));      // agent and AI replies
@@ -145,6 +145,11 @@ await client.chat.setSecureContext(conv.id, { mf_access_token: token }, { ttlSec
 await client.chat.attachIdentityToken(conv.id, freshIdentityJwt);
 await client.chat.clearSecureContext(conv.id);
 ```
+
+Identity token rules (enforced by the server): sign with the workspace widget secret, include `sub`
+and `exp`, and set `exp` no more than 24 hours ahead (a longer-lived token is rejected). A stored
+verified identity lapses at the token's `exp`; after that, tools that need `identity.*` stop
+working until your app presents a fresh token.
 
 ### Send Message
 

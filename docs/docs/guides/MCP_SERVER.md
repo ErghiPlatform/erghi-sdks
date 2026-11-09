@@ -132,7 +132,7 @@ In clients that support MCP prompts, the `analyze_product` prompt does this step
 
 With `manage_integrations`, the assistant can connect an API from its OpenAPI document (the `connect_integration` prompt). It recommends which endpoints to expose and, for each one:
 
-- **binds** every parameter that identifies the user, such as `user_id`, to `{{identity.sub}}`, the signed-in user from your app's identity token, so the model can never choose whose data it reads;
+- **binds** every parameter that identifies the user, such as `user_id`, to `{{identity.sub}}`, the signed-in user from your app's identity token (signed with the workspace widget secret, with `sub` and an `exp` at most 24 hours ahead; the verified identity lapses at that `exp`), so the model can never choose whose data it reads;
 - passes the user's own access token as `{{secret.<key>}}` when your API is user-scoped (your app supplies it through the SDK, and the model never sees it);
 - writes **AI instructions**: when to call the endpoint, units and formats, what to tell the visitor;
 - adds **action policies**, such as a verified identity or a confirmation step before anything that changes data.
