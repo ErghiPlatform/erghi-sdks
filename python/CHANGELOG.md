@@ -1,3 +1,7 @@
+## Unreleased
+
+- New: `client.insights` for Conversation Insights: `summary()`, `list_conversations()` and `export_csv()` with typed `InsightSummary`/`InsightPage` models. Needs the `view_insights` workspace permission, so use a signed-in Owner or Admin access token; API keys and client-credentials tokens get 403.
+
 ## 2.0.0 (2026-11-05)
 
 - Breaking: `Workspace` fields and `workspace.create(name, company_website=None)` changed; `update`/`delete` raise. The old calls hit endpoints that never existed.

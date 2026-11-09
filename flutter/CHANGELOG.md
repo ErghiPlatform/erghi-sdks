@@ -1,3 +1,7 @@
+## Unreleased
+
+- New: `ErghiClient.insights` for Conversation Insights: `summary`, `listConversations` and `exportCsv`, with `InsightFilter`, `InsightSummary` and `InsightPage`. Needs the `view_insights` workspace permission, so use a signed-in Owner or Admin access token; API keys and client-credentials tokens get 403.
+
 ## 1.1.0 (2026-11-05)
 
 

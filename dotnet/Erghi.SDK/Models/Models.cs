@@ -146,6 +146,58 @@ public record PaginatedResponse<T>(
     int TotalPages
 );
 
+// ── Conversation insights ─────────────────────────────────────────────────────
+
+/// <summary>
+/// Filters shared by insights summary, list and export. All optional. <c>Sentiment</c>:
+/// positive, neutral or negative. <c>Outcome</c>: resolved_by_ai, resolved_by_agent,
+/// handed_off_unresolved, abandoned or spam_or_empty. <c>MinConfidence</c> is 0 to 1.
+/// </summary>
+public record InsightFilter(
+    DateTimeOffset? From = null,
+    DateTimeOffset? To = null,
+    string? Channel = null,
+    string? Category = null,
+    string? Topic = null,
+    string? Sentiment = null,
+    string? Outcome = null,
+    double? MinConfidence = null
+);
+
+public record InsightCount(string Key, int Count);
+
+/// <summary><c>AiResolvedRate</c> is AI-resolved over conversations that needed a reply (spam/empty excluded); null when none.</summary>
+public record InsightSummary(
+    int Total,
+    double? AiResolvedRate,
+    List<InsightCount> Outcomes,
+    List<InsightCount> Sentiments,
+    List<InsightCount> Categories,
+    List<InsightCount> Topics,
+    List<InsightCount> Languages
+);
+
+/// <summary>
+/// One classified conversation. Sentiment is Positive/Neutral/Negative; Outcome is ResolvedByAi,
+/// ResolvedByAgent, HandedOffUnresolved, Abandoned or SpamOrEmpty; Language is a BCP-47 tag;
+/// Stale means it was reopened and is reclassified on its next close.
+/// </summary>
+public record InsightConversation(
+    Guid ConversationId,
+    string Topic,
+    string Category,
+    string Sentiment,
+    string SentimentEnd,
+    string Outcome,
+    string Language,
+    string Summary,
+    double Confidence,
+    DateTimeOffset ClassifiedAt,
+    bool Stale
+);
+
+public record InsightPage(int Total, int Page, int PageSize, List<InsightConversation> Items);
+
 // ── WebSocket events ──────────────────────────────────────────────────────────
 
 public record TypingEvent(string UserId, bool IsTyping);

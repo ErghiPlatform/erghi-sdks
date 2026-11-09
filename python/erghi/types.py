@@ -177,6 +177,62 @@ class Workspace(BaseModel):
         )
 
 
+class InsightCount(BaseModel):
+    """One bucket of an insights summary"""
+
+    key: str
+    count: int
+
+
+class InsightSummary(BaseModel):
+    """``GET /api/v1/insights/summary``"""
+
+    total: int
+    # AI-resolved over conversations that needed a reply (spam/empty excluded); None when none.
+    ai_resolved_rate: Optional[float] = Field(None, alias="aiResolvedRate")
+    outcomes: List[InsightCount] = []
+    sentiments: List[InsightCount] = []
+    categories: List[InsightCount] = []
+    topics: List[InsightCount] = []
+    languages: List[InsightCount] = []
+
+    class Config:
+        populate_by_name = True
+
+
+class InsightConversation(BaseModel):
+    """One classified conversation"""
+
+    conversation_id: str = Field(alias="conversationId")
+    topic: str
+    category: str
+    sentiment: Literal["Positive", "Neutral", "Negative"]
+    sentiment_end: Literal["Positive", "Neutral", "Negative"] = Field(alias="sentimentEnd")
+    outcome: Literal[
+        "ResolvedByAi", "ResolvedByAgent", "HandedOffUnresolved", "Abandoned", "SpamOrEmpty"
+    ]
+    language: str  # BCP-47 tag
+    summary: str
+    confidence: float  # 0 to 1
+    classified_at: datetime = Field(alias="classifiedAt")
+    stale: bool  # reopened since; reclassified on its next close
+
+    class Config:
+        populate_by_name = True
+
+
+class InsightPage(BaseModel):
+    """``GET /api/v1/insights/conversations``"""
+
+    total: int
+    page: int
+    page_size: int = Field(alias="pageSize")
+    items: List[InsightConversation] = []
+
+    class Config:
+        populate_by_name = True
+
+
 class PaginationParams(BaseModel):
     """Pagination parameters"""
 

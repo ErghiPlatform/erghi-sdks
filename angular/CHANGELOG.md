@@ -1,3 +1,7 @@
+## Unreleased
+
+- New: `InsightsService` for Conversation Insights: `getSummary(filter)`, `getConversations(filter, { page, pageSize })` and `exportCsv(filter)`, with typed models. Needs the `view_insights` workspace permission, so use a signed-in Owner or Admin access token; API keys and client-credentials tokens get 403.
+
 ## 1.1.1 (2026-11-06)
 
 - Security: `SignalRService.connect` now logs at Warning instead of Information. At
