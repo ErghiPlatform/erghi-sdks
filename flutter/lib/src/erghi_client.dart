@@ -20,6 +20,7 @@ class ErghiClient {
   late final http.Client _httpClient;
   late final AuthResource auth;
   late final ChatResource chat;
+  late final InsightsResource insights;
 
   WebSocketChannel? _wsChannel;
   StreamSubscription? _wsSubscription;
@@ -41,6 +42,7 @@ class ErghiClient {
       auth: auth,
       getVisitorId: () => visitorId,
     );
+    insights = InsightsResource(config: config, client: _httpClient, auth: auth);
   }
 
   /// Check if the real-time hub is connected

@@ -1,3 +1,7 @@
+## Unreleased
+
+- No code change. Conversation Insights are available as `useErghi().client.insights` once `@erghi-ai/sdk` ships `insights` (see its changelog); this package has no hook for them.
+
 ## 2.0.0 (2026-11-05)
 
 - Breaking: re-exports `Workspace` from `@erghi-ai/sdk` 2.0.0, whose shape changed. Requires `@erghi-ai/sdk` ^2.0.0.

@@ -1,3 +1,7 @@
+## Unreleased
+
+- New: `client.insights` for Conversation Insights: `summary(filter)`, `listConversations(filter, { page, pageSize })` and `exportCsv(filter)`. Needs the `view_insights` workspace permission, so use a signed-in Owner or Admin access token; API keys and client-credentials tokens get 403.
+
 ## 2.0.1 (2026-11-06)
 
 - Security: both hubs (`connect` and `connectVisitor`) now log at Warning instead of

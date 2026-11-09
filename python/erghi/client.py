@@ -25,6 +25,7 @@ from .errors import (
 )
 from .resources.auth import AuthResource
 from .resources.chat import ChatResource
+from .resources.insights import InsightsResource
 from .resources.workspace import WorkspaceResource
 
 logger = logging.getLogger(__name__)
@@ -110,6 +111,7 @@ class ErghiClient:
         self.auth = AuthResource(self)
         self.chat = ChatResource(self)
         self.workspace = WorkspaceResource(self)
+        self.insights = InsightsResource(self)
 
     async def __aenter__(self) -> Self:
         """Async context manager entry"""

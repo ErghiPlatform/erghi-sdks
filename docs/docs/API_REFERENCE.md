@@ -420,6 +420,93 @@ Admin-level widget creation (same as `POST /api/widgets` with additional fields 
 
 ---
 
+## Insights
+
+Topic, sentiment and outcome of finished conversations. See [Conversation Insights](./guides/CONVERSATION_INSIGHTS.md) for what the fields mean and how they are produced.
+
+All three endpoints need the workspace permission `view_insights` (Owner and Admin roles) and are scoped to the workspace in the token. Workspace API keys and client-credentials tokens cannot hold that permission: use a signed-in user's access token, otherwise the response is `403`. Until Erghi enables the classifier for the deployment, they return empty results.
+
+**Filters** (query parameters, all optional, shared by the three endpoints)
+
+| Parameter | Type | Description |
+|---|---|---|
+| `from` | ISO 8601 date-time | Classified at or after this time |
+| `to` | ISO 8601 date-time | Classified before this time. Must not be earlier than `from` |
+| `channel` | string | Conversation channel, such as `widget` |
+| `category` | string | Exact category |
+| `topic` | string | Exact topic |
+| `sentiment` | string | `positive`, `neutral` or `negative` (any case) |
+| `outcome` | string | `resolved_by_ai`, `resolved_by_agent`, `handed_off_unresolved`, `abandoned` or `spam_or_empty` (`ResolvedByAi` style also works) |
+| `minConfidence` | number | 0 to 1 |
+
+An invalid value returns `400` with `{ "error": "<reason>", "code": "invalid_filter" }`. An unknown `category` or `topic` is not an error; it just matches nothing.
+
+---
+
+### GET `/api/v1/insights/summary` — Auth Required (`view_insights`)
+
+**Response `200 OK`**
+```json
+{
+  "total": 412,
+  "aiResolvedRate": 0.6375,
+  "outcomes": [{ "key": "ResolvedByAi", "count": 255 }, { "key": "ResolvedByAgent", "count": 110 }],
+  "sentiments": [{ "key": "Neutral", "count": 230 }, { "key": "Positive", "count": 120 }, { "key": "Negative", "count": 62 }],
+  "categories": [{ "key": "billing", "count": 140 }],
+  "topics": [{ "key": "refund status", "count": 48 }],
+  "languages": [{ "key": "ar-EG", "count": 300 }, { "key": "en", "count": 112 }]
+}
+```
+
+Each list is sorted by count, highest first. `topics` holds the 20 most frequent. `aiResolvedRate` is `ResolvedByAi` over all outcomes except `SpamOrEmpty`, rounded to four decimals, and `null` when there are none.
+
+---
+
+### GET `/api/v1/insights/conversations` — Auth Required (`view_insights`)
+
+Classified conversations, newest `classifiedAt` first.
+
+**Extra query parameters**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `page` | integer | 1 | Page number, from 1 |
+| `pageSize` | integer | 25 | 1 to 100; larger values are lowered to 100 |
+
+**Response `200 OK`**
+```json
+{
+  "total": 412,
+  "page": 1,
+  "pageSize": 25,
+  "items": [
+    {
+      "conversationId": "7b1c0d2e-3f4a-4b5c-8d9e-0a1b2c3d4e5f",
+      "topic": "refund status",
+      "category": "billing",
+      "sentiment": "Negative",
+      "sentimentEnd": "Neutral",
+      "outcome": "ResolvedByAgent",
+      "language": "ar-EG",
+      "summary": "The customer asked where their refund was; an agent confirmed it was sent.",
+      "confidence": 0.92,
+      "classifiedAt": "2026-11-09T10:14:03Z",
+      "stale": false
+    }
+  ]
+}
+```
+
+Use `conversationId` with `GET /api/conversations/{id}` to read the full conversation.
+
+---
+
+### GET `/api/v1/insights/export.csv` — Auth Required (`view_insights`)
+
+The same rows as a CSV download named `conversation-insights.csv` (`text/csv; charset=utf-8`, with a byte-order mark), newest first, at most **10,000** rows. Narrow `from`/`to` to export more. Text fields that start with `=`, `+`, `-`, `@`, a tab or a carriage return are prefixed with `'` so spreadsheets do not run them as formulas. Columns are listed in [Conversation Insights](./guides/CONVERSATION_INSIGHTS.md#csv-export).
+
+---
+
 ## Billing
 
 ### GET /api/v1/billing/plans — Public

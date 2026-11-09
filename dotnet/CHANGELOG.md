@@ -1,3 +1,7 @@
+## Unreleased
+
+- New: `client.Insights` for Conversation Insights: `SummaryAsync`, `ListConversationsAsync` and `ExportCsvAsync`, with `InsightFilter`, `InsightSummary` and `InsightPage` records. Needs the `view_insights` workspace permission, so use a signed-in Owner or Admin access token; API keys and client-credentials tokens get 403.
+
 ## 3.0.0 (2026-11-05)
 
 - Breaking: `Workspace` and `CreateWorkspaceRequest` records changed and `UpdateAsync`/`DeleteAsync` are obsolete and throw. The old calls hit endpoints that never existed.

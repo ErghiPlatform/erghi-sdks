@@ -188,6 +188,75 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
+export type InsightSentiment = 'Positive' | 'Neutral' | 'Negative';
+export type InsightOutcome =
+  | 'ResolvedByAi'
+  | 'ResolvedByAgent'
+  | 'HandedOffUnresolved'
+  | 'Abandoned'
+  | 'SpamOrEmpty';
+
+/** Filters shared by insights summary, list and export. Dates are ISO 8601 (or a Date). */
+export interface InsightFilter {
+  from?: string | Date;
+  to?: string | Date;
+  channel?: string;
+  category?: string;
+  topic?: string;
+  /** positive, neutral or negative (case-insensitive). */
+  sentiment?: string;
+  /** resolved_by_ai, resolved_by_agent, handed_off_unresolved, abandoned or spam_or_empty. */
+  outcome?: string;
+  /** 0 to 1. */
+  minConfidence?: number;
+}
+
+export interface InsightPageParams {
+  page?: number;
+  /** Server caps this at 100. Default 25. */
+  pageSize?: number;
+}
+
+export interface InsightCount {
+  key: string;
+  count: number;
+}
+
+export interface InsightSummary {
+  total: number;
+  /** AI-resolved over conversations that needed a reply (spam/empty excluded); null when none. */
+  aiResolvedRate: number | null;
+  outcomes: InsightCount[];
+  sentiments: InsightCount[];
+  categories: InsightCount[];
+  topics: InsightCount[];
+  languages: InsightCount[];
+}
+
+export interface InsightConversation {
+  conversationId: string;
+  topic: string;
+  category: string;
+  sentiment: InsightSentiment;
+  sentimentEnd: InsightSentiment;
+  outcome: InsightOutcome;
+  /** BCP-47 language tag the classifier detected. */
+  language: string;
+  summary: string;
+  /** 0 to 1. */
+  confidence: number;
+  classifiedAt: string;
+  /** The conversation was reopened after this was written; it is reclassified on its next close. */
+  stale: boolean;
+}
+
+export interface InsightPage {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: InsightConversation[];
+}
+
 export interface ErrorResponse {
   error: string;
   message?: string;

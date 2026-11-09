@@ -30,6 +30,7 @@ public sealed class ErghiClient : IAsyncDisposable
     public AuthResource Auth { get; }
     public ChatResource Chat { get; }
     public WorkspaceResource Workspace { get; }
+    public InsightsResource Insights { get; }
 
     public string? VisitorId => _config.VisitorId;
 
@@ -66,6 +67,7 @@ public sealed class ErghiClient : IAsyncDisposable
         Auth = new AuthResource(null!, this); // Dummy HTTP client for now, initialized properly below
         Chat = new ChatResource(null!, this);
         Workspace = new WorkspaceResource(null!);
+        Insights = new InsightsResource(null!);
 
         var handler = new M2MAuthHandler(config, token =>
         {
@@ -98,6 +100,7 @@ public sealed class ErghiClient : IAsyncDisposable
         Auth = new AuthResource(_http, this);
         Chat = new ChatResource(_http, this);
         Workspace = new WorkspaceResource(_http);
+        Insights = new InsightsResource(_http);
     }
 
     /// <summary>

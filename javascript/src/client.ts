@@ -16,6 +16,7 @@ import {
 import { AuthResource } from './resources/auth';
 import { ChatResource } from './resources/chat';
 import { WorkspaceResource } from './resources/workspace';
+import { InsightsResource } from './resources/insights';
 
 type WebSocketEvents = {
   [K in WebSocketEventType]: (data?: any) => void;
@@ -57,6 +58,7 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
   public readonly auth: AuthResource;
   public readonly chat: ChatResource;
   public readonly workspace: WorkspaceResource;
+  public readonly insights: InsightsResource;
 
   constructor(config: ErghiConfig = {}) {
     super();
@@ -121,6 +123,7 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
     this.auth = new AuthResource(this);
     this.chat = new ChatResource(this);
     this.workspace = new WorkspaceResource(this);
+    this.insights = new InsightsResource(this);
   }
 
   /**
