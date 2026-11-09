@@ -424,7 +424,7 @@ Admin-level widget creation (same as `POST /api/widgets` with additional fields 
 
 Topic, sentiment and outcome of finished conversations. See [Conversation Insights](./guides/CONVERSATION_INSIGHTS.md) for what the fields mean and how they are produced.
 
-All three endpoints need the workspace permission `view_insights` (Owner and Admin roles) and are scoped to the workspace in the token. Workspace API keys and client-credentials tokens cannot hold that permission today: use a signed-in user's access token, otherwise the response is `403`. Until Erghi enables the classifier for the deployment, they return empty results.
+All three endpoints need the workspace permission `view_insights` (Owner and Admin roles) and are scoped to the workspace in the token. A workspace API key can hold it by being created with the `view_insights` scope (the creator must hold it too); a key or token without it gets `403`. Until Erghi enables the classifier for the deployment, they return empty results.
 
 **Plan gating.** The workspace's plan decides what is returned (see [Plans](./guides/CONVERSATION_INSIGHTS.md#plans)):
 

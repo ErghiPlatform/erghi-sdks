@@ -51,6 +51,7 @@ Content-Type: application/json
 | `manage_workspace_identity` | Company name, colours, widget theme, legal and support links |
 | `manage_widgets` | Create, configure and deactivate widgets |
 | `view_audit_logs` | Read the audit log |
+| `view_insights` | Read conversation insights (plan-gated; the creator must hold it) |
 
 Billing, team members, integrations and account deletion are human-only and can't be granted to a key.
 
