@@ -27,7 +27,7 @@ In the admin app, open **Settings → Agent API keys** and choose **Create key**
 | `manage_widgets` | Create, configure and deactivate chat widgets, and get the embed code |
 | `manage_integrations` | Connect your product's APIs from OpenAPI documents, decide which values come from the signed-in user, write instructions for each endpoint, test and switch them on or off. Not their credentials. |
 | `view_audit_logs` | Read the security and configuration audit log |
-| `view_insights` | Read [conversation insights](./CONVERSATION_INSIGHTS.md) (topics, sentiment, outcomes). Erghi does not issue this scope to API keys yet, so the insight tools are not offered today |
+| `view_insights` | Read [conversation insights](./CONVERSATION_INSIGHTS.md) (topics, sentiment, outcomes). The creator must hold `view_insights` themselves (Owner and Admin do). Insights are plan-gated: Free workspaces get `403 plan_upgrade_required`. The scope also allows the CSV export on Growth and Enterprise, which includes conversation summaries, so treat the key as sensitive |
 
 You can only give a key permissions you have yourself. Billing, team members, API keys, integration credentials, the identity-verification secret and account deletion can never be given to a key.
 

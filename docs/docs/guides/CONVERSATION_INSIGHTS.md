@@ -102,10 +102,12 @@ On Starter the summary returns `topics`, `categories` and `languages` as `null`.
 Reading needs the workspace permission **`view_insights`**, which the Owner and Admin roles have.
 Other roles get `403`.
 
-Workspace API keys and client-credentials tokens **cannot** hold `view_insights`, so they get `403`
-too. Call the API with a signed-in Owner or Admin's access token. The same applies to the SDK
-`insights` methods and to the `get_insights_summary` and `list_insight_conversations` tools of the
-[MCP server](./MCP_SERVER.md), which only appear for a key that holds the scope.
+A workspace API key can hold `view_insights` too: tick **View insights** when you create the key
+in **Agent keys** (the creator must hold the permission themselves). A key without it gets `403`.
+The same applies to the SDK `insights` methods and to the `get_insights_summary` and
+`list_insight_conversations` tools of the [MCP server](./MCP_SERVER.md), which only appear for a
+key that holds the scope. On Growth and Enterprise the key can also export the CSV, which includes
+conversation summaries, so keep it secret.
 
 Every request is scoped to the workspace in the token. You cannot read another workspace's
 records.
