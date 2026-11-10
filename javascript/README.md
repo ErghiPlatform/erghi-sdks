@@ -365,22 +365,13 @@ const client = new ErghiClient({
 
 ## Browser Usage
 
-```html
-<script src="https://cdn.erghi.ai/sdk/latest/erghi.min.js"></script>
-<script>
-  const client = new ErghiSDK.default({
-    apiUrl: 'https://api.erghi.ai',
-    apiKey: 'your-api-key',
-  });
+There is no CDN bundle of this SDK. Install it from npm and use a bundler (Vite, webpack, esbuild):
 
-  client.auth.login({
-    email: 'user@example.com',
-    password: 'password',
-  }).then((response) => {
-    console.log('Logged in:', response.user);
-  });
-</script>
+```bash
+npm install @erghi-ai/sdk
 ```
+
+(For the chat widget on a web page you do not need the SDK: use the script tag from the widget README, `https://chat.erghi.ai/widget.js`.)
 
 ## Node.js Usage
 
