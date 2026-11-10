@@ -67,7 +67,30 @@ void main() {
     });
     expect(result.total, 4);
     expect(result.aiResolvedRate, 0.5);
-    expect(result.topics.single.key, 'refund');
+    expect(result.topics!.single.key, 'refund');
+  });
+
+  test('summary parses the Starter shape: locked fields are null, plan metadata is present', () async {
+    final insights = make(jsonEncode({
+      'total': 3,
+      'aiResolvedRate': null,
+      'outcomes': [],
+      'sentiments': [],
+      'categories': null,
+      'topics': null,
+      'languages': null,
+      'plan': 'Starter',
+      'locked': ['topics', 'categories', 'languages'],
+      'lockedCounts': {'topics': 14},
+      'windowDays': 30,
+      'from': '2026-10-11T00:00:00Z',
+    }));
+    final result = await insights.summary();
+    expect(result.topics, isNull);
+    expect(result.plan, 'Starter');
+    expect(result.locked, ['topics', 'categories', 'languages']);
+    expect(result.lockedCounts['topics'], 14);
+    expect(result.windowDays, 30);
   });
 
   test('listConversations pages and parses rows', () async {
