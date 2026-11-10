@@ -68,6 +68,7 @@ target-version = "py39"
 # Pydantic evaluates these annotations at runtime, and `X | None` / `list[X]` there
 # fail on Python 3.9, which the package still supports.
 "erghi/types.py" = ["FA100", "UP006", "UP007", "UP035", "UP045"]
+"erghi/resources/insights.py" = ["FA100", "UP006", "UP007", "UP035", "UP045"]
 
 [tool.mypy]
 python_version = "3.10"

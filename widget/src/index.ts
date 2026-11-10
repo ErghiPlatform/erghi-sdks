@@ -44,8 +44,9 @@ export interface ErghiConfig {
    * secureContextProvider / setSecureContext for those. */
   visitorContext?: Record<string, unknown>;
   /** Identity JWT signed by your backend with the workspace's widget secret (HS256, `sub`
-   * and `exp` required). Makes `identity.*` available to integration bindings and action
-   * policies. Same as calling setIdentityToken(). */
+   * and `exp` required; `exp` may be at most 24 hours ahead, and the verified identity lapses
+   * at `exp`, so mint a fresh token per session). Makes `identity.*` available to integration
+   * bindings and action policies. Same as calling setIdentityToken(). */
   identityToken?: string;
   /** Returns values only your integrations should see (e.g. the signed-in user's access
    * token). Called before a message is sent when the stored values are missing or about

@@ -7,7 +7,7 @@ Official embeddable chat widget for the [Erghi Platform](https://erghi.ai) — v
 ### Option 1: CDN (Easiest)
 
 ```html
-<script src="https://cdn.erghi.ai/widget.min.js" data-erghi="YOUR_WORKSPACE_ID"></script>
+<script src="https://chat.erghi.ai/widget.js" data-widget-id="YOUR_WIDGET_ID" async></script>
 ```
 
 ### Option 2: npm
@@ -244,7 +244,7 @@ encrypted, with a TTL of 60 seconds to 24 hours.
   <h1>Welcome!</h1>
   
   <!-- Erghi Widget -->
-  <script src="https://cdn.erghi.ai/widget.min.js"></script>
+  <script src="https://chat.erghi.ai/widget.js"></script>
   <script>
     new ErghiWidget({
       workspace: 'ws_abc123',

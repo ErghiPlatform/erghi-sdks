@@ -172,9 +172,14 @@ public record InsightSummary(
     double? AiResolvedRate,
     List<InsightCount> Outcomes,
     List<InsightCount> Sentiments,
-    List<InsightCount> Categories,
-    List<InsightCount> Topics,
-    List<InsightCount> Languages
+    List<InsightCount>? Categories,
+    List<InsightCount>? Topics,
+    List<InsightCount>? Languages,
+    string? Plan = null,
+    List<string>? Locked = null,
+    Dictionary<string, int>? LockedCounts = null,
+    int? WindowDays = null,
+    DateTimeOffset? From = null
 );
 
 /// <summary>
@@ -184,19 +189,28 @@ public record InsightSummary(
 /// </summary>
 public record InsightConversation(
     Guid ConversationId,
-    string Topic,
-    string Category,
+    string? Topic,
+    string? Category,
     string Sentiment,
     string SentimentEnd,
     string Outcome,
-    string Language,
-    string Summary,
-    double Confidence,
+    string? Language,
+    string? Summary,
+    double? Confidence,
     DateTimeOffset ClassifiedAt,
     bool Stale
 );
 
-public record InsightPage(int Total, int Page, int PageSize, List<InsightConversation> Items);
+public record InsightPage(
+    int Total,
+    int Page,
+    int PageSize,
+    List<InsightConversation> Items,
+    string? Plan = null,
+    List<string>? Locked = null,
+    int? WindowDays = null,
+    DateTimeOffset? From = null
+);
 
 // ── WebSocket events ──────────────────────────────────────────────────────────
 

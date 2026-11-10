@@ -112,7 +112,7 @@ npm install @erghi-ai/widget
 ```
 
 ```html
-<script src="https://cdn.erghi.ai/widget/latest/widget.min.js"></script>
+<script src="https://chat.erghi.ai/widget.js"></script>
 <script>
   ErghiWidget.init({
     widgetId: 'your-widget-id',

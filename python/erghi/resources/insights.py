@@ -101,9 +101,7 @@ class InsightsResource:
             params["page"] = page
         if page_size is not None:
             params["pageSize"] = page_size
-        response = await self.client.request(
-            "GET", "/api/v1/insights/conversations", params=params
-        )
+        response = await self.client.request("GET", "/api/v1/insights/conversations", params=params)
         return InsightPage.model_validate(response.json())
 
     async def export_csv(

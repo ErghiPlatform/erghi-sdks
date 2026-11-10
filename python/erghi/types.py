@@ -192,9 +192,16 @@ class InsightSummary(BaseModel):
     ai_resolved_rate: Optional[float] = Field(None, alias="aiResolvedRate")
     outcomes: List[InsightCount] = []
     sentiments: List[InsightCount] = []
-    categories: List[InsightCount] = []
-    topics: List[InsightCount] = []
-    languages: List[InsightCount] = []
+    # None when the workspace's plan locks the field (named in ``locked``).
+    categories: Optional[List[InsightCount]] = None
+    topics: Optional[List[InsightCount]] = None
+    languages: Optional[List[InsightCount]] = None
+    # Effective plan, locked field names, counts of locked topics/categories, and the readable window.
+    plan: Optional[str] = None
+    locked: List[str] = []
+    locked_counts: Dict[str, int] = Field(default_factory=dict, alias="lockedCounts")
+    window_days: Optional[int] = Field(None, alias="windowDays")
+    from_: Optional[datetime] = Field(None, alias="from")
 
     class Config:
         populate_by_name = True
@@ -204,16 +211,16 @@ class InsightConversation(BaseModel):
     """One classified conversation"""
 
     conversation_id: str = Field(alias="conversationId")
-    topic: str
-    category: str
+    topic: Optional[str] = None  # None when the plan locks it (Starter)
+    category: Optional[str] = None
     sentiment: Literal["Positive", "Neutral", "Negative"]
     sentiment_end: Literal["Positive", "Neutral", "Negative"] = Field(alias="sentimentEnd")
     outcome: Literal[
         "ResolvedByAi", "ResolvedByAgent", "HandedOffUnresolved", "Abandoned", "SpamOrEmpty"
     ]
-    language: str  # BCP-47 tag
-    summary: str
-    confidence: float  # 0 to 1
+    language: Optional[str] = None  # BCP-47 tag; None when locked
+    summary: Optional[str] = None
+    confidence: Optional[float] = None  # 0 to 1; None when locked
     classified_at: datetime = Field(alias="classifiedAt")
     stale: bool  # reopened since; reclassified on its next close
 
@@ -228,6 +235,10 @@ class InsightPage(BaseModel):
     page: int
     page_size: int = Field(alias="pageSize")
     items: List[InsightConversation] = []
+    plan: Optional[str] = None
+    locked: List[str] = []
+    window_days: Optional[int] = Field(None, alias="windowDays")
+    from_: Optional[datetime] = Field(None, alias="from")
 
     class Config:
         populate_by_name = True
