@@ -1,6 +1,7 @@
 import { buildStyles, ICON_CHAT, ICON_MIC, ICON_SEND, ICON_SPEAKER, WidgetPosition, WidgetTheme } from './styles';
 import { DARK_SURFACE, LIGHT_SURFACE, normalizeHex, readableAccent } from './color';
 import { ConversationRealtimeClient } from './realtime';
+import { renderMarkdown } from './markdown';
 import { ChatAction, isOpenableUrl, normalizeActions } from './actions';
 
 export type { ChatAction, ChatActionKind } from './actions';
@@ -1035,13 +1036,18 @@ export default class ErghiWidget {
     }
   }
 
+  private fillMessageText(target: HTMLElement, content: string, markdown: boolean): void {
+    if (markdown) renderMarkdown(document, target, content);
+    else target.textContent = content;
+  }
+
   private setMessageText(id: string, content: string): void {
     const msg = this.messages.find(m => m.id === id);
     if (msg) msg.content = content;
     const el = this.shadow?.querySelector(`[data-id="${id}"]`);
     el?.classList.remove('pending');
     const text = el?.querySelector('.msg-text');
-    if (text) text.textContent = content;
+    if (text) this.fillMessageText(text as HTMLElement, content, el?.classList.contains('bot') || el?.classList.contains('agent') || false);
   }
 
   private removeMessage(id: string): void {
@@ -1403,7 +1409,7 @@ export default class ErghiWidget {
     textEl.className = 'msg-text';
     // Per-message direction so mixed Arabic/English threads each render correctly.
     textEl.setAttribute('dir', 'auto');
-    textEl.textContent = msg.content;
+    this.fillMessageText(textEl, msg.content, role === 'bot' || role === 'agent');
     el.appendChild(textEl);
 
     if (role === 'visitor' && msg.source === 'voice') {
