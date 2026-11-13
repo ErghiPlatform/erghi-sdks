@@ -1,3 +1,9 @@
+## 1.2.1 (2026-11-13)
+
+- AI and agent replies now render bold, italic, inline code, line breaks and simple lists
+  instead of showing literal `**` and `*` markers. Built with DOM nodes only, so HTML in a
+  reply stays plain text; works for right-to-left and mixed Arabic/English text.
+
 ## 1.2.0 (2026-11-06)
 
 - Follows the workspace's new "Chat features" settings: the attach button is hidden when
