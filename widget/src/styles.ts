@@ -206,6 +206,10 @@ export function buildStyles(look: WidgetLook): string {
       margin-bottom: 4px;
     }
     .msg-text { white-space: pre-wrap; }
+    .msg-text ul, .msg-text ol { margin: 4px 0; padding-inline-start: 22px; white-space: normal; }
+    .msg-text li { margin: 2px 0; }
+    .msg-text .md-gap { height: .5em; }
+    .msg-text code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; background: rgba(127,127,127,.18); padding: 1px 4px; border-radius: 4px; }
     .msg-sources {
       display: flex;
       flex-wrap: wrap;
