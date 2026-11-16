@@ -300,6 +300,20 @@ var workspace = await client.Workspace.CreateAsync(
 Console.WriteLine($"Workspace ID: {workspace.Id}");
 ```
 
+## Inbox and Contacts
+
+Workspace operations: use a signed-in teammate's access token on your server (workspace API keys cannot hold these permissions), never in a visitor's browser. The workspace comes from the credential. Contacts, notifications and `unassign` need platform PR #256; see the Inbox and contacts guide (`docs/docs/guides/INBOX_AND_CONTACTS.md` in erghi-sdks).
+
+```csharp
+var labels = await client.Inbox.ListLabelsAsync();
+var vip = await client.Inbox.CreateLabelAsync("VIP", "#d97706");
+await client.Inbox.AddConversationLabelAsync(conversationId, vip.Id);
+await client.Inbox.CreateCannedResponseAsync("hi", "Hello! How can I help?");
+
+var page = await client.Contacts.ListAsync(search: "ann", pageSize: 20); // requires #256
+await client.Contacts.BlockAsync(page.Items[0].Id);
+```
+
 ## Error Handling
 
 ```csharp

@@ -264,3 +264,182 @@ class PaginatedResponse(BaseModel):
 
     class Config:
         populate_by_name = True
+
+
+# ---------------------------------------------------------------------------
+# Inbox: labels, notes, saved replies, contacts, notifications
+# ---------------------------------------------------------------------------
+
+
+class ConversationLabel(BaseModel):
+    """A workspace conversation label"""
+
+    id: str
+    name: str
+    color: str
+    description: Optional[str] = None
+
+
+class ConversationLabelList(BaseModel):
+    """``GET /api/v1/conversation-labels``"""
+
+    max_labels: int = Field(alias="maxLabels")
+    labels: List[ConversationLabel] = []
+
+    class Config:
+        populate_by_name = True
+
+
+class ConversationNote(BaseModel):
+    """A private (internal-only) note on a conversation; visitors never see it"""
+
+    id: str
+    conversation_id: str = Field(alias="conversationId")
+    author_id: str = Field(alias="authorId")
+    author_name: Optional[str] = Field(None, alias="authorName")
+    content: str
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+    can_edit: bool = Field(alias="canEdit")
+    can_delete: bool = Field(alias="canDelete")
+
+    class Config:
+        populate_by_name = True
+
+
+class CannedResponse(BaseModel):
+    """A saved reply, inserted by typing its short code"""
+
+    id: str
+    short_code: str = Field(alias="shortCode")
+    content: str
+    updated_at: datetime = Field(alias="updatedAt")
+
+    class Config:
+        populate_by_name = True
+
+
+class CannedResponseList(BaseModel):
+    """``GET /api/v1/canned-responses``"""
+
+    max_responses: int = Field(alias="maxResponses")
+    responses: List[CannedResponse] = []
+
+    class Config:
+        populate_by_name = True
+
+
+class ContactSummary(BaseModel):
+    """A row of ``GET /api/v1/contacts`` (requires platform PR #256)"""
+
+    id: str
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    external_id: Optional[str] = Field(None, alias="externalId")
+    first_seen_at: datetime = Field(alias="firstSeenAt")
+    last_seen_at: datetime = Field(alias="lastSeenAt")
+    blocked: bool
+    conversation_count: int = Field(alias="conversationCount")
+
+    class Config:
+        populate_by_name = True
+
+
+class ContactPage(BaseModel):
+    """``GET /api/v1/contacts`` (requires platform PR #256)"""
+
+    items: List[ContactSummary] = []
+    total: int
+    page: int
+    page_size: int = Field(alias="pageSize")
+
+    class Config:
+        populate_by_name = True
+
+
+class ContactConversation(BaseModel):
+    """A conversation in a contact's history"""
+
+    id: str
+    channel: str
+    status: str
+    started_at: datetime = Field(alias="startedAt")
+    closed_at: Optional[datetime] = Field(None, alias="closedAt")
+    assigned_agent_id: Optional[str] = Field(None, alias="assignedAgentId")
+
+    class Config:
+        populate_by_name = True
+
+
+class ContactDetail(BaseModel):
+    """``GET /api/v1/contacts/{id}`` (requires platform PR #256)"""
+
+    id: str
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    external_id: Optional[str] = Field(None, alias="externalId")
+    locale: Optional[str] = None
+    first_seen_at: datetime = Field(alias="firstSeenAt")
+    last_seen_at: datetime = Field(alias="lastSeenAt")
+    blocked: bool
+    blocked_at: Optional[datetime] = Field(None, alias="blockedAt")
+    conversations: List[ContactConversation] = []
+
+    class Config:
+        populate_by_name = True
+
+
+class ContactNote(BaseModel):
+    """A private note on a contact (requires platform PR #256)"""
+
+    id: str
+    contact_id: str = Field(alias="contactId")
+    author_id: str = Field(alias="authorId")
+    author_name: Optional[str] = Field(None, alias="authorName")
+    content: str
+    created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime = Field(alias="updatedAt")
+    can_edit: bool = Field(alias="canEdit")
+    can_delete: bool = Field(alias="canDelete")
+
+    class Config:
+        populate_by_name = True
+
+
+class ContactEraseResult(BaseModel):
+    """What an erasure deleted (requires platform PR #256)"""
+
+    conversations_deleted: int = Field(alias="conversationsDeleted")
+    messages_deleted: int = Field(alias="messagesDeleted")
+
+    class Config:
+        populate_by_name = True
+
+
+class UserNotification(BaseModel):
+    """An in-app notification for the signed-in teammate (requires platform PR #256)"""
+
+    id: str
+    type: str
+    conversation_id: Optional[str] = Field(None, alias="conversationId")
+    note_id: Optional[str] = Field(None, alias="noteId")
+    actor_id: Optional[str] = Field(None, alias="actorId")
+    actor_name: Optional[str] = Field(None, alias="actorName")
+    preview: Optional[str] = None
+    created_at: datetime = Field(alias="createdAt")
+    read_at: Optional[datetime] = Field(None, alias="readAt")
+
+    class Config:
+        populate_by_name = True
+
+
+class MentionableMember(BaseModel):
+    """A teammate who can be @mentioned in a note (requires platform PR #256)"""
+
+    user_id: str = Field(alias="userId")
+    display_name: Optional[str] = Field(None, alias="displayName")
+
+    class Config:
+        populate_by_name = True

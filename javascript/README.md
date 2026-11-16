@@ -291,6 +291,20 @@ const workspace = await client.workspace.create({
 client.workspace.switchWorkspace('workspace-id');
 ```
 
+## Inbox and Contacts
+
+Workspace operations: use a signed-in teammate's access token on your server (workspace API keys cannot hold these permissions), never in a visitor's browser. The workspace comes from the credential. Contacts, notifications and `unassign` need platform PR #256; see the Inbox and contacts guide (`docs/docs/guides/INBOX_AND_CONTACTS.md` in erghi-sdks).
+
+```typescript
+const { labels } = await client.inbox.listLabels();
+const vip = await client.inbox.createLabel({ name: 'VIP', color: '#d97706' });
+await client.inbox.addConversationLabel(conversationId, vip.id);
+await client.inbox.createCannedResponse({ shortCode: 'hi', content: 'Hello! How can I help?' });
+
+const page = await client.contacts.list({ search: 'ann', pageSize: 20 }); // requires #256
+await client.contacts.block(page.items[0].id);
+```
+
 ## Error Handling
 
 ```typescript

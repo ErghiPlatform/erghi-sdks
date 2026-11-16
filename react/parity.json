@@ -37,6 +37,15 @@
       "protocol": "signalr-hub-over-websocket (delegates to @erghi-ai/sdk's client.connect())",
       "evidence": "react/src/useChat.ts:36-51, react/src/useWebSocket.ts"
     },
+    "inbox": {
+      "labels": false,
+      "conversation_notes": false,
+      "canned_responses": false,
+      "contacts": false,
+      "notifications": false,
+      "verified": "2026-11-16",
+      "note": "Maintenance tier: gap recorded deliberately, not built. react depends on @erghi-ai/sdk, so a team that needs this can use the javascript client directly. Revisit if the founder re-tiers react."
+    },
     "rag": { "supported": false, "note": "Same platform-wide gap as javascript." },
     "webhooks": { "supported": false, "note": "Same platform-wide gap as javascript." }
   },

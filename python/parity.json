@@ -37,6 +37,16 @@
       "protocol": "signalr-hub-over-websocket",
       "evidence": "python/erghi/client.py (signalr wiring), python/erghi/errors.py"
     },
+    "inbox": {
+      "labels": true,
+      "conversation_notes": true,
+      "canned_responses": true,
+      "contacts": true,
+      "notifications": true,
+      "verified": "2026-11-16",
+      "evidence": "python/erghi/resources/inbox.py + contacts.py; python/tests/test_inbox.py",
+      "note": "Workspace surface (member access token), never the visitor surface. Workspace API keys cannot hold view_conversations/manage_inbox_settings/manage_contacts (not grantable), so they get 403. Contacts, notifications, @mentions and unassign require platform PR #256 (not merged when this was written)."
+    },
     "rag": { "supported": false, "note": "Same platform-wide gap as javascript." },
     "webhooks": { "supported": false, "note": "Same platform-wide gap as javascript." }
   },

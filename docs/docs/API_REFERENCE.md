@@ -538,6 +538,29 @@ Use `conversationId` with `GET /api/conversations/{id}` to read the full convers
 
 Growth and Enterprise only (Starter gets `403` `plan_upgrade_required`). The same rows as a CSV download named `conversation-insights.csv` (`text/csv; charset=utf-8`, with a byte-order mark), newest first, at most **10,000** rows. Narrow `from`/`to` to export more. Text fields that start with `=`, `+`, `-`, `@`, a tab or a carriage return are prefixed with `'` so spreadsheets do not run them as formulas. Columns are listed in [Conversation Insights](./guides/CONVERSATION_INSIGHTS.md#csv-export).
 
+## Inbox and contacts
+
+Labels, private notes, saved replies, contacts and notifications. Full guide, permissions and per-SDK examples: [Inbox and contacts API](./guides/INBOX_AND_CONTACTS.md). The workspace comes from the credential; none of these routes takes a workspace id. Workspace API keys cannot hold these permissions (not grantable), so use a teammate's access token. Items marked **(#256)** need platform PR #256 and answer `404` until it ships.
+
+| Method and path | Permission | Notes |
+|---|---|---|
+| `GET` `/api/v1/conversation-labels` | `view_conversations` | `{ maxLabels, labels[] }` |
+| `POST` `/api/v1/conversation-labels` | `manage_inbox_settings` | `{ name, color?, description? }`; 409 `label_name_taken`, `label_limit_reached` |
+| `PUT` `DELETE` `/api/v1/conversation-labels/{id}` | `manage_inbox_settings` | |
+| `GET` `PUT` `/api/v1/conversations/{id}/labels` | `view_conversations` | `PUT` body `{ labelIds[] }` replaces the set |
+| `POST` `DELETE` `/api/v1/conversations/{id}/labels/{labelId}` | `view_conversations` | Returns the set |
+| `GET` `POST` `/api/v1/conversations/{id}/notes` | `view_conversations` | `mentionedUserIds` **(#256)** |
+| `PUT` `DELETE` `/api/v1/conversations/{id}/notes/{noteId}` | author (delete: or `manage_inbox_settings`) | 403 `note_not_author` |
+| `GET` `/api/v1/canned-responses?search=` | `view_conversations` | `{ maxResponses, responses[] }` |
+| `POST` `PUT` `DELETE` `/api/v1/canned-responses[/{id}]` | `manage_inbox_settings` | `{ shortCode, content }`; 409 `canned_response_short_code_taken` |
+| `POST` `/api/conversations/{id}/unassign` | `view_conversations` | **(#256)** 409 if resolved or closed |
+| `GET` `/api/v1/contacts` | `view_conversations` | **(#256)** `search`, `blocked`, `page`, `pageSize` (max 100) |
+| `GET` `PATCH` `DELETE` `/api/v1/contacts/{id}` | read / `manage_contacts` | **(#256)** `DELETE` erases the contact and their conversations permanently |
+| `POST` `/api/v1/contacts/{id}/block` `/unblock` | `manage_contacts` | **(#256)** |
+| `GET` `POST` `PUT` `DELETE` `/api/v1/contacts/{id}/notes[/{noteId}]` | `view_conversations` | **(#256)** same author rules as conversation notes |
+| `GET` `/api/v1/notifications`, `/unread-count`; `POST` `/{id}/read`, `/read-all` | signed-in member | **(#256)** per member |
+| `GET` `/api/v1/team/mentionable` | `view_conversations` | **(#256)** |
+
 ---
 
 ## Billing

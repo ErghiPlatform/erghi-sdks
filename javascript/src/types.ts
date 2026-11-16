@@ -285,3 +285,159 @@ export interface ErrorResponse {
   statusCode: number;
   traceId?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Inbox: labels, notes, saved replies, contacts, notifications
+// ---------------------------------------------------------------------------
+
+/** A workspace conversation label. `color` is a server-assigned or chosen hex colour. */
+export interface ConversationLabel {
+  id: string;
+  name: string;
+  color: string;
+  description: string | null;
+}
+
+export interface ConversationLabelList {
+  maxLabels: number;
+  labels: ConversationLabel[];
+}
+
+export interface SaveConversationLabelRequest {
+  name: string;
+  color?: string | null;
+  description?: string | null;
+}
+
+/** A private (internal-only) note on a conversation. Visitors never see notes. */
+export interface ConversationNote {
+  id: string;
+  conversationId: string;
+  authorId: string;
+  authorName: string | null;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  canEdit: boolean;
+  canDelete: boolean;
+}
+
+export interface SaveConversationNoteRequest {
+  content: string;
+  /**
+   * Teammates @mentioned in the note; each active member gets an in-app notification.
+   * Requires platform PR #256.
+   */
+  mentionedUserIds?: string[];
+}
+
+export interface CannedResponse {
+  id: string;
+  shortCode: string;
+  content: string;
+  updatedAt: string;
+}
+
+export interface CannedResponseList {
+  maxResponses: number;
+  responses: CannedResponse[];
+}
+
+export interface SaveCannedResponseRequest {
+  shortCode: string;
+  content: string;
+}
+
+/** Requires platform PR #256. */
+export interface ContactSummary {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  externalId: string | null;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  blocked: boolean;
+  conversationCount: number;
+}
+
+export interface ContactConversation {
+  id: string;
+  channel: string;
+  status: string;
+  startedAt: string;
+  closedAt: string | null;
+  assignedAgentId: string | null;
+}
+
+export interface ContactDetail {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  externalId: string | null;
+  locale: string | null;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  blocked: boolean;
+  blockedAt: string | null;
+  conversations: ContactConversation[];
+}
+
+export interface ContactPage {
+  items: ContactSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface ContactListParams {
+  /** Matches name, email, phone or external id (max 100 characters). */
+  search?: string;
+  blocked?: boolean;
+  page?: number;
+  /** Capped at 100 by the server. */
+  pageSize?: number;
+}
+
+/** `undefined`/omitted leaves a field unchanged; an empty string clears it. */
+export interface UpdateContactRequest {
+  name?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface ContactNote {
+  id: string;
+  contactId: string;
+  authorId: string;
+  authorName: string | null;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  canEdit: boolean;
+  canDelete: boolean;
+}
+
+export interface ContactEraseResult {
+  conversationsDeleted: number;
+  messagesDeleted: number;
+}
+
+/** Requires platform PR #256. */
+export interface UserNotification {
+  id: string;
+  type: string;
+  conversationId: string | null;
+  noteId: string | null;
+  actorId: string | null;
+  actorName: string | null;
+  preview: string | null;
+  createdAt: string;
+  readAt: string | null;
+}
+
+export interface MentionableMember {
+  userId: string;
+  displayName: string | null;
+}

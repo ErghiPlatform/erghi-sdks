@@ -215,3 +215,100 @@ public record InsightPage(
 // ── WebSocket events ──────────────────────────────────────────────────────────
 
 public record TypingEvent(string UserId, bool IsTyping);
+
+// ── Inbox: labels, notes, saved replies, contacts, notifications ─────────────
+
+public record ConversationLabel(string Id, string Name, string Color, string? Description);
+
+public record ConversationLabelList(int MaxLabels, List<ConversationLabel> Labels);
+
+/// <summary>A private (internal-only) note on a conversation. Visitors never see notes.</summary>
+public record ConversationNote(
+    string Id,
+    string ConversationId,
+    string AuthorId,
+    string? AuthorName,
+    string Content,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    bool CanEdit,
+    bool CanDelete
+);
+
+public record CannedResponse(string Id, string ShortCode, string Content, DateTimeOffset UpdatedAt);
+
+public record CannedResponseList(int MaxResponses, List<CannedResponse> Responses);
+
+/// <summary>Requires platform PR #256.</summary>
+public record ContactSummary(
+    string Id,
+    string? Name,
+    string? Email,
+    string? Phone,
+    string? ExternalId,
+    DateTimeOffset FirstSeenAt,
+    DateTimeOffset LastSeenAt,
+    bool Blocked,
+    int ConversationCount
+);
+
+/// <summary>Requires platform PR #256.</summary>
+public record ContactPage(List<ContactSummary> Items, int Total, int Page, int PageSize);
+
+public record ContactConversation(
+    string Id,
+    string Channel,
+    string Status,
+    DateTimeOffset StartedAt,
+    DateTimeOffset? ClosedAt,
+    string? AssignedAgentId
+);
+
+/// <summary>Requires platform PR #256.</summary>
+public record ContactDetail(
+    string Id,
+    string? Name,
+    string? Email,
+    string? Phone,
+    string? ExternalId,
+    string? Locale,
+    DateTimeOffset FirstSeenAt,
+    DateTimeOffset LastSeenAt,
+    bool Blocked,
+    DateTimeOffset? BlockedAt,
+    List<ContactConversation> Conversations
+);
+
+/// <summary>Null leaves a field unchanged; an empty string clears it.</summary>
+public record UpdateContactRequest(string? Name = null, string? Email = null, string? Phone = null);
+
+/// <summary>Requires platform PR #256.</summary>
+public record ContactNote(
+    string Id,
+    string ContactId,
+    string AuthorId,
+    string? AuthorName,
+    string Content,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    bool CanEdit,
+    bool CanDelete
+);
+
+public record ContactEraseResult(int ConversationsDeleted, int MessagesDeleted);
+
+/// <summary>Requires platform PR #256.</summary>
+public record UserNotification(
+    string Id,
+    string Type,
+    string? ConversationId,
+    string? NoteId,
+    string? ActorId,
+    string? ActorName,
+    string? Preview,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? ReadAt
+);
+
+/// <summary>Requires platform PR #256.</summary>
+public record MentionableMember(string UserId, string? DisplayName);

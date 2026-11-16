@@ -21,6 +21,8 @@ class ErghiClient {
   late final AuthResource auth;
   late final ChatResource chat;
   late final InsightsResource insights;
+  late final InboxResource inbox;
+  late final ContactsResource contacts;
 
   WebSocketChannel? _wsChannel;
   StreamSubscription? _wsSubscription;
@@ -43,6 +45,9 @@ class ErghiClient {
       getVisitorId: () => visitorId,
     );
     insights = InsightsResource(config: config, client: _httpClient, auth: auth);
+    final workspaceHttp = WorkspaceHttp(config: config, client: _httpClient, auth: auth);
+    inbox = InboxResource(workspaceHttp);
+    contacts = ContactsResource(workspaceHttp);
   }
 
   /// Check if the real-time hub is connected

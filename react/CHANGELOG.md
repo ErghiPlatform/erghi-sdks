@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Gap, not implemented (maintenance tier): the inbox and contacts API (labels, notes, saved replies, contacts, notifications). Use the JavaScript SDK from your server. Recorded in `parity.json`.
+
 - No code change. Conversation Insights are available as `useErghi().client.insights` once `@erghi-ai/sdk` ships `insights` (see its changelog); this package has no hook for them.
 
 ## 2.0.0 (2026-11-05)
