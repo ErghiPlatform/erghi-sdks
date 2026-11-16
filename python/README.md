@@ -229,6 +229,20 @@ def handle_webhook(request):
     # ... handle event
 ```
 
+## Inbox and Contacts
+
+Workspace operations: use a signed-in teammate's access token on your server (workspace API keys cannot hold these permissions), never in a visitor's browser. The workspace comes from the credential. Contacts, notifications and `unassign` need platform PR #256; see the Inbox and contacts guide (`docs/docs/guides/INBOX_AND_CONTACTS.md` in erghi-sdks).
+
+```python
+labels = await client.inbox.list_labels()
+vip = await client.inbox.create_label("VIP", color="#d97706")
+await client.inbox.add_conversation_label(conversation_id, vip.id)
+await client.inbox.create_canned_response("hi", "Hello! How can I help?")
+
+page = await client.contacts.list(search="ann", page_size=20)  # requires #256
+await client.contacts.block(page.items[0].id)
+```
+
 ## Error Handling
 
 ```python

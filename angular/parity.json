@@ -43,6 +43,15 @@
       "protocol": "signalr-hub-over-websocket (own implementation, angular/src/lib/services/signalr.service.ts, not shared with javascript)",
       "evidence": "angular/src/lib/services/signalr.service.ts"
     },
+    "inbox": {
+      "labels": false,
+      "conversation_notes": false,
+      "canned_responses": false,
+      "contacts": false,
+      "notifications": false,
+      "verified": "2026-11-16",
+      "note": "Maintenance tier: gap recorded deliberately, not built. angular has its own independent HttpClient services, so this does NOT arrive via an @erghi-ai/sdk bump. Revisit if the founder re-tiers angular."
+    },
     "rag": { "supported": false, "note": "Same platform-wide gap as javascript." },
     "webhooks": { "supported": false, "note": "Same platform-wide gap as javascript." }
   },

@@ -242,6 +242,20 @@ class _ChatScreenState extends State<ChatScreen> {
 }
 ```
 
+## Inbox and Contacts
+
+Workspace operations: use a signed-in teammate's access token on your server (workspace API keys cannot hold these permissions), never in a visitor's browser. The workspace comes from the credential. Contacts, notifications and `unassign` need platform PR #256; see the Inbox and contacts guide (`docs/docs/guides/INBOX_AND_CONTACTS.md` in erghi-sdks).
+
+```dart
+final labels = await client.inbox.listLabels();
+final vip = await client.inbox.createLabel('VIP', color: '#d97706');
+await client.inbox.addConversationLabel(conversationId, vip.id);
+await client.inbox.createCannedResponse('hi', 'Hello! How can I help?');
+
+final page = await client.contacts.list(search: 'ann', pageSize: 20); // requires #256
+await client.contacts.block(page.items.first.id);
+```
+
 ## Error Handling
 
 ```dart

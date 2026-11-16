@@ -22,6 +22,7 @@ const sidebars: SidebarsConfig = {
         'guides/MCP_SERVER',
         'guides/CLIENT_CREDENTIALS_INTEGRATION',
         'guides/CONVERSATION_INSIGHTS',
+        'guides/INBOX_AND_CONTACTS',
       ],
     },
     {

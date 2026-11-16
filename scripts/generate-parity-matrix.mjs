@@ -88,6 +88,14 @@ function section(title, cols, manifests, group) {
   return [`### ${title}`, '', header, sep, ...rows, ''].join('\n');
 }
 
+const INBOX_COLS = [
+  ['labels', 'Labels'],
+  ['conversation_notes', 'Conversation notes'],
+  ['canned_responses', 'Saved replies'],
+  ['contacts', 'Contacts (PR #256)'],
+  ['notifications', 'Notifications + mentions (PR #256)'],
+];
+
 function realtimeSection(manifests) {
   const header = '| SDK | Realtime | Protocol |';
   const sep = '|---|---|---|';
@@ -148,6 +156,7 @@ ${tierTable(manifests)}
 ${section('Auth', AUTH_COLS, manifests, 'auth')}
 ${section('Chat / conversations', CHAT_COLS, manifests, 'chat')}
 ${section('Widget management', WIDGET_COLS, manifests, 'widgets')}
+${section('Inbox: labels, notes, saved replies, contacts (workspace/admin API; visitor-side SDKs: —)', INBOX_COLS, manifests.filter(({ data }) => data.capabilities?.inbox), 'inbox')}
 ${realtimeSection(manifests)}
 ${platformGapsSection(manifests)}
 ## How to keep this honest
