@@ -785,6 +785,20 @@ describe('ErghiWidget', () => {
     });
   });
 
+  describe('Links in messages', () => {
+    it('makes the survey link in a system message clickable, but never a link in an agent reply', () => {
+      widget.open();
+      (widget as any).handleInboundMessage({
+        id: 'csat-1', content: 'Rate your conversation here: https://app.erghi.ai/csat/q-1-abc', sender: 'system',
+      });
+      (widget as any).handleInboundMessage({ id: 'agent-1', content: 'See https://evil.test/login', sender: 'agent' });
+
+      const root = getShadowRoot();
+      expect(root?.querySelector('.msg.system .msg-text a')?.getAttribute('href')).toBe('https://app.erghi.ai/csat/q-1-abc');
+      expect(root?.querySelector('[data-id="agent-1"] a')).toBeNull();
+    });
+  });
+
   describe('Handoff notices (one per event)', () => {
     const systemTexts = () =>
       Array.from(getShadowRoot()?.querySelectorAll('.msg.system .msg-text') ?? []).map((el) => el.textContent);

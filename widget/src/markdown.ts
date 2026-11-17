@@ -101,3 +101,37 @@ export function renderMarkdown(doc: Document, target: HTMLElement, text: string)
     else renderInline(doc, line, row);
   }
 }
+
+const HTTPS_URL = /https:\/\/[^\s<>"'`]+/g;
+const TRAILING_PUNCT = /[.,;:!?)\]}»”’،؛؟]+$/u;
+
+/**
+ * Plain text with https links made clickable, for server-authored system messages only (the
+ * satisfaction-survey link, a welcome message). Bot and agent text stays link-free on purpose.
+ * Builds DOM nodes only; anything that does not parse as an https URL stays text.
+ */
+export function renderLinkedText(doc: Document, target: HTMLElement, text: string): void {
+  target.textContent = '';
+  let last = 0;
+  for (const match of text.matchAll(HTTPS_URL)) {
+    const start = match.index ?? 0;
+    const url = match[0].replace(TRAILING_PUNCT, '');
+    let href: string | null = null;
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === 'https:') href = parsed.href;
+    } catch {
+      href = null;
+    }
+    if (!href) continue;
+    if (start > last) target.appendChild(doc.createTextNode(text.slice(last, start)));
+    const a = doc.createElement('a');
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.textContent = url;
+    target.appendChild(a);
+    last = start + url.length;
+  }
+  if (last < text.length) target.appendChild(doc.createTextNode(text.slice(last)));
+}

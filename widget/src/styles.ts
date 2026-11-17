@@ -199,6 +199,11 @@ export function buildStyles(look: WidgetLook): string {
       max-width: 100%;
       text-align: center;
     }
+    .msg.system a {
+      color: inherit;
+      text-decoration: underline;
+      overflow-wrap: anywhere;
+    }
     .msg-label {
       font-size: 11px;
       font-weight: 600;

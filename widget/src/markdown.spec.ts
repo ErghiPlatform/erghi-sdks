@@ -1,4 +1,4 @@
-import { renderMarkdown } from './markdown';
+import { renderLinkedText, renderMarkdown } from './markdown';
 
 function render(text: string): HTMLElement {
   const t = document.createElement('div');
@@ -57,5 +57,35 @@ describe('renderMarkdown', () => {
   it('leaves plain text unchanged', () => {
     expect(render('Hello, how can I help?').textContent).toBe('Hello, how can I help?');
     expect(render('مرحباً بك').textContent).toBe('مرحباً بك');
+  });
+});
+
+describe('renderLinkedText', () => {
+  function linked(text: string): HTMLElement {
+    const t = document.createElement('div');
+    renderLinkedText(document, t, text);
+    return t;
+  }
+
+  it('makes an https survey link clickable and keeps the surrounding text', () => {
+    const t = linked('Rate your conversation here: https://app.erghi.ai/csat/q-1-abc.');
+    const a = t.querySelector('a');
+    expect(a?.getAttribute('href')).toBe('https://app.erghi.ai/csat/q-1-abc');
+    expect(a?.target).toBe('_blank');
+    expect(a?.rel).toBe('noopener noreferrer');
+    expect(t.textContent).toBe('Rate your conversation here: https://app.erghi.ai/csat/q-1-abc.');
+  });
+
+  it('leaves http, javascript and markup as text', () => {
+    const t = linked('http://x.test javascript:alert(1) <img src=x onerror=alert(1)>');
+    expect(t.querySelector('a')).toBeNull();
+    expect(t.querySelector('img')).toBeNull();
+    expect(t.textContent).toBe('http://x.test javascript:alert(1) <img src=x onerror=alert(1)>');
+  });
+
+  it('handles Arabic text and punctuation around a link', () => {
+    const t = linked('قيّم المحادثة: https://app.erghi.ai/csat/t1؟ شكراً');
+    expect(t.querySelector('a')?.textContent).toBe('https://app.erghi.ai/csat/t1');
+    expect(t.textContent).toBe('قيّم المحادثة: https://app.erghi.ai/csat/t1؟ شكراً');
   });
 });

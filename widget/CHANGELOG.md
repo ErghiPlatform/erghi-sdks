@@ -1,3 +1,9 @@
+## Unreleased
+
+- Links in system messages (the satisfaction-survey link sent when a conversation closes, the
+  welcome message) are now clickable and open in a new tab. Only `https://` URLs become links;
+  AI and agent replies still never contain links.
+
 ## 1.2.1 (2026-11-13)
 
 - AI and agent replies now render bold, italic, inline code, line breaks and simple lists
