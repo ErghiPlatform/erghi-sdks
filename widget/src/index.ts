@@ -1,7 +1,7 @@
 import { buildStyles, ICON_CHAT, ICON_MIC, ICON_SEND, ICON_SPEAKER, WidgetPosition, WidgetTheme } from './styles';
 import { DARK_SURFACE, LIGHT_SURFACE, normalizeHex, readableAccent } from './color';
 import { ConversationRealtimeClient } from './realtime';
-import { renderMarkdown } from './markdown';
+import { renderLinkedText, renderMarkdown } from './markdown';
 import { ChatAction, isOpenableUrl, normalizeActions } from './actions';
 
 export type { ChatAction, ChatActionKind } from './actions';
@@ -1036,8 +1036,9 @@ export default class ErghiWidget {
     }
   }
 
-  private fillMessageText(target: HTMLElement, content: string, markdown: boolean): void {
-    if (markdown) renderMarkdown(document, target, content);
+  private fillMessageText(target: HTMLElement, content: string, kind: 'markdown' | 'linked' | 'plain'): void {
+    if (kind === 'markdown') renderMarkdown(document, target, content);
+    else if (kind === 'linked') renderLinkedText(document, target, content);
     else target.textContent = content;
   }
 
@@ -1047,7 +1048,10 @@ export default class ErghiWidget {
     const el = this.shadow?.querySelector(`[data-id="${id}"]`);
     el?.classList.remove('pending');
     const text = el?.querySelector('.msg-text');
-    if (text) this.fillMessageText(text as HTMLElement, content, el?.classList.contains('bot') || el?.classList.contains('agent') || false);
+    if (!text) return;
+    const kind = el?.classList.contains('bot') || el?.classList.contains('agent') ? 'markdown'
+      : el?.classList.contains('system') ? 'linked' : 'plain';
+    this.fillMessageText(text as HTMLElement, content, kind);
   }
 
   private removeMessage(id: string): void {
@@ -1409,7 +1413,8 @@ export default class ErghiWidget {
     textEl.className = 'msg-text';
     // Per-message direction so mixed Arabic/English threads each render correctly.
     textEl.setAttribute('dir', 'auto');
-    this.fillMessageText(textEl, msg.content, role === 'bot' || role === 'agent');
+    this.fillMessageText(textEl, msg.content,
+      role === 'bot' || role === 'agent' ? 'markdown' : role === 'system' ? 'linked' : 'plain');
     el.appendChild(textEl);
 
     if (role === 'visitor' && msg.source === 'voice') {
