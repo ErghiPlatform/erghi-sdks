@@ -154,6 +154,19 @@ window.addEventListener('erghi:action', (e) => {
 
 After a tap the row is disabled (links stay tappable), and a newer message disables older rows.
 
+### Proactive messages (campaigns)
+
+Campaigns are set up in the Erghi dashboard (Campaigns, Starter plan and up); the widget needs
+no configuration. It reads the live ones from the widget's public settings and, for a visitor
+with no open conversation, shows the first one that matches the page after its delay: in the
+chat, and in a note beside the closed launcher. Each campaign shows once per browser
+(`localStorage` key `erghi:campaigns-seen:<widgetId>`).
+
+Page matching ignores case and compares plain text: a value starting with `/` is compared with
+the path, query and fragment (`/pricing` works on every domain the widget is embedded on),
+anything else with the full address. Reading a campaign starts no conversation; the visitor's
+first reply does, and links it to the campaign.
+
 ### Localization & RTL
 
 The widget ships with built-in English, Arabic, and Spanish UI strings and full

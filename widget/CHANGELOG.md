@@ -1,5 +1,13 @@
-## Unreleased
+## 1.3.0 (2026-11-17)
 
+- Shows the workspace's campaigns (proactive messages set up under Campaigns in the Erghi
+  dashboard). After the campaign's delay, on a page whose address matches, the message appears
+  in the chat and in a small note beside the closed launcher, which the visitor can dismiss.
+  Each campaign shows once per browser, only to visitors without an open conversation.
+- Reading a campaign creates nothing. The visitor's first reply starts the conversation and
+  links it to the campaign, so the dashboard can count the conversations each one started.
+- Campaign messages carry no AI label and no rating buttons. Text only, never markup; page
+  addresses are compared as plain text (a value starting with `/` against the path).
 - Links in system messages (the satisfaction-survey link sent when a conversation closes, the
   welcome message) are now clickable and open in a new tab. Only `https://` URLs become links;
   AI and agent replies still never contain links.

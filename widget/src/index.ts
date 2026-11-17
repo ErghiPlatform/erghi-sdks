@@ -6,6 +6,7 @@ import { ChatAction, isOpenableUrl, normalizeActions } from './actions';
 
 export type { ChatAction, ChatActionKind } from './actions';
 import { playMessageNotification } from './notification';
+import { markCampaignSeen, parseCampaigns, pickCampaign, PublicCampaign, readSeenCampaigns } from './campaigns';
 import { bundledTranslations, interpolate, isRtlLocale, WidgetDirection } from './locale';
 import {
   BrowserSpeaker, canRecordInBrowser, canSpeakInBrowser, detectLanguage, fileExtension,
@@ -96,7 +97,7 @@ interface Message {
   sender: string;
   createdAt?: string;
   sources?: MessageSource[];
-  /** "voice" when the visitor sent it as a voice note. */
+  /** "voice" when the visitor sent it as a voice note; "campaign" for a proactive message. */
   source?: string | null;
   actions?: ChatAction[];
 }
@@ -133,6 +134,12 @@ export default class ErghiWidget {
   private secureContextExpiresAt = 0;
   private secureContextRefresh: Promise<void> | null = null;
   private messages: Message[] = [];
+  // Proactive messages live for this widget (from /public), the timer for the next one, and the
+  // one on screen. A shown campaign creates no conversation: the visitor's first message does,
+  // sending its id, and the server then stores the campaign message itself.
+  private campaigns: PublicCampaign[] = [];
+  private campaignTimer: ReturnType<typeof setTimeout> | null = null;
+  private activeCampaign: { id: string; tempId: string; content: string } | null = null;
   private isTyping = false;
   private knownMessageIds = new Set<string>();
   private ratedMessageIds = new Set<string>();
@@ -309,6 +316,7 @@ export default class ErghiWidget {
       messageRatingEnabled: boolOr(data.messageRatingEnabled ?? data.MessageRatingEnabled, true),
     };
     this.showPoweredBy = boolOr(data.showPoweredBy ?? data.ShowPoweredBy, false);
+    this.campaigns = parseCampaigns(data.campaigns ?? data.Campaigns);
     this.footerLinks = {
       termsUrl: safeHttpsUrl(data.termsUrl ?? data.TermsUrl),
       privacyUrl: safeHttpsUrl(data.privacyUrl ?? data.PrivacyUrl),
@@ -562,6 +570,10 @@ export default class ErghiWidget {
         </div>
         ${this.buildFooterHtml()}
       </div>
+      <div class="teaser" id="cf-teaser" hidden>
+        <button type="button" class="teaser-text" id="cf-teaser-open" dir="auto"></button>
+        <button type="button" class="teaser-close" id="cf-teaser-close" aria-label="${escapeHtml(this.tr('widget.aria.dismiss', 'Dismiss'))}">&times;</button>
+      </div>
       <button type="button" class="bubble" id="cf-bubble" aria-label="${escapeHtml(this.tr('widget.aria.open', 'Open chat'))}">${ICON_CHAT}</button>
     `;
     this.shadow.appendChild(root);
@@ -571,7 +583,9 @@ export default class ErghiWidget {
     this.bindEvents();
     this.applyVoiceSettings();
     this.addSystemMessage(this.greetingText());
-    void this.tryRestoreSession();
+    void this.tryRestoreSession().then(restored => {
+      if (!restored) this.scheduleCampaign();
+    });
 
     if (this.config.autoOpen) this.open();
   }
@@ -595,6 +609,8 @@ export default class ErghiWidget {
     const s = this.shadow!;
     s.getElementById('cf-bubble')?.addEventListener('click', () => this.toggle());
     s.getElementById('cf-close')?.addEventListener('click', () => this.close());
+    s.getElementById('cf-teaser-open')?.addEventListener('click', () => this.open());
+    s.getElementById('cf-teaser-close')?.addEventListener('click', () => this.hideTeaser());
     s.getElementById('cf-send')?.addEventListener('click', () => void this.sendMessage());
     s.getElementById('cf-attach')?.addEventListener('click', () => {
       (s.getElementById('cf-file') as HTMLInputElement)?.click();
@@ -622,6 +638,7 @@ export default class ErghiWidget {
     this.$('cf-panel')?.classList.add('open');
     this.$('cf-bubble')?.classList.add('hidden');
     this.$('cf-bubble')?.classList.remove('has-unread');
+    this.hideTeaser();
     void this.ensureConversation();
     (this.$('cf-input') as HTMLInputElement | null)?.focus();
     this.scrollMessages(true);
@@ -634,7 +651,54 @@ export default class ErghiWidget {
       return;
     }
     const restored = await this.tryRestoreSession();
-    if (!restored) await this.startConversation();
+    // A visitor who opens the chat to read a campaign hasn't said anything yet: their first
+    // message starts the conversation (sendMessage), so reading one leaves nothing in the inbox.
+    if (!restored && !this.activeCampaign) await this.startConversation();
+  }
+
+  /** Arms the next campaign for this page: only for a visitor with no conversation, once per
+   * campaign per browser. */
+  private scheduleCampaign(): void {
+    if (this.conversationId || this.campaignTimer || this.activeCampaign || !this.host) return;
+    let next: PublicCampaign | null = null;
+    try {
+      next = pickCampaign(this.campaigns, readSeenCampaigns(this.config.widgetId), window.location);
+    } catch {
+      return;
+    }
+    if (!next) return;
+    const campaign = next;
+    this.campaignTimer = setTimeout(() => {
+      this.campaignTimer = null;
+      this.showCampaign(campaign);
+    }, campaign.delaySeconds * 1000);
+  }
+
+  private showCampaign(campaign: PublicCampaign): void {
+    // The visitor started chatting in the meantime, or the widget was removed.
+    if (this.conversationId || !this.host) return;
+    markCampaignSeen(this.config.widgetId, campaign.id);
+    const tempId = `campaign-${campaign.id}`;
+    this.activeCampaign = { id: campaign.id, tempId, content: campaign.message };
+    this.appendMessageEl({ id: tempId, content: campaign.message, sender: 'bot', source: 'campaign' });
+    if (this.isOpen) return;
+    const teaser = this.$('cf-teaser');
+    const text = this.$('cf-teaser-open');
+    if (teaser && text) {
+      text.textContent = campaign.message;
+      teaser.hidden = false;
+    }
+    this.$('cf-bubble')?.classList.add('has-unread');
+  }
+
+  private hideTeaser(): void {
+    const teaser = this.$('cf-teaser');
+    if (teaser) teaser.hidden = true;
+  }
+
+  private clearCampaignTimer(): void {
+    if (this.campaignTimer) clearTimeout(this.campaignTimer);
+    this.campaignTimer = null;
   }
 
   public close(): void {
@@ -685,6 +749,7 @@ export default class ErghiWidget {
     this.stopHeartbeat();
     this.stopFallbackPoll();
     this.clearReplyTimeout();
+    this.clearCampaignTimer();
     this.cancelRecording();
     this.stopSpeaking();
     void this.realtime.disconnect();
@@ -734,6 +799,8 @@ export default class ErghiWidget {
         visitorId: this.visitorId,
         identityToken: identityToken ?? undefined,
         metadata: this.buildMetadata(),
+        // Only an id the widget received from /public; the server re-checks it is live.
+        campaignId: this.activeCampaign?.id ?? undefined,
       }),
     });
   }
@@ -754,6 +821,8 @@ export default class ErghiWidget {
       const data = await res.json();
       this.conversationId = data.id ?? data.Id;
       this.visitorToken = data.visitorToken ?? data.VisitorToken ?? null;
+      this.clearCampaignTimer();
+      this.hideTeaser();
       this.saveSession();
       if (this.pendingSecureContext) {
         const pending = this.pendingSecureContext;
@@ -1249,8 +1318,17 @@ export default class ErghiWidget {
 
   private handleInboundMessage(msg: {
     id: string; content: string; sender: string; sources?: MessageSource[]; actions?: ChatAction[];
+    source?: string | null;
   }): void {
     const sender = msg.sender.toLowerCase();
+    // The server's copy of the campaign message already on screen: adopt its id, don't repeat it.
+    const campaign = this.activeCampaign;
+    if (campaign && sender === 'bot' && !this.knownMessageIds.has(msg.id)
+        && (msg.source === 'campaign' || msg.content.trim() === campaign.content)) {
+      this.activeCampaign = null;
+      this.replaceTempId(campaign.tempId, msg.id);
+      return;
+    }
     if (sender === 'system') {
       if (this.knownMessageIds.has(msg.id)) return;
       this.knownMessageIds.add(msg.id);
@@ -1294,7 +1372,8 @@ export default class ErghiWidget {
         const content = m.content ?? (m as Message & { Content?: string }).Content ?? '';
         if (id && !this.knownMessageIds.has(id) && sender !== 'visitor' && sender !== 'user') {
           const actions = normalizeActions(m.actions ?? (m as Message & { Actions?: unknown }).Actions);
-          this.handleInboundMessage({ id, content, sender, actions });
+          const source = m.source ?? (m as Message & { Source?: string | null }).Source ?? null;
+          this.handleInboundMessage({ id, content, sender, actions, source });
         }
       });
     } catch {
@@ -1399,7 +1478,9 @@ export default class ErghiWidget {
     el.className = `msg ${role}`;
     el.setAttribute('data-id', msg.id);
 
-    if (msg.sender !== 'system' && msg.sender !== 'visitor' && msg.sender !== 'user') {
+    // A campaign is the business's own words, not an AI reply: no AI label, no rating.
+    const isCampaign = msg.source === 'campaign';
+    if (msg.sender !== 'system' && msg.sender !== 'visitor' && msg.sender !== 'user' && !isCampaign) {
       const label = this.senderLabel(msg.sender);
       if (label) {
         const labelEl = document.createElement('div');
@@ -1439,7 +1520,7 @@ export default class ErghiWidget {
       el.appendChild(this.buildActionsEl(msg.actions));
     }
 
-    if (role === 'bot') {
+    if (role === 'bot' && !isCampaign) {
       el.appendChild(this.buildFeedbackEl(msg.id));
     }
 
@@ -1738,7 +1819,7 @@ type PublicWidgetConfig = Partial<Record<
   | 'termsUrl' | 'TermsUrl' | 'privacyUrl' | 'PrivacyUrl' | 'supportUrl' | 'SupportUrl'
   | 'voiceInputEnabled' | 'VoiceInputEnabled' | 'voiceOutputEnabled' | 'VoiceOutputEnabled'
   | 'attachmentsEnabled' | 'AttachmentsEnabled' | 'messageRatingEnabled' | 'MessageRatingEnabled'
-  | 'showPoweredBy' | 'ShowPoweredBy',
+  | 'showPoweredBy' | 'ShowPoweredBy' | 'campaigns' | 'Campaigns',
   unknown
 >>;
 

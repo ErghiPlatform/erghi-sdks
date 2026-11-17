@@ -15,6 +15,8 @@ export type RealtimeMessage = {
   sources?: RealtimeMessageSource[];
   /** Buttons under an AI reply, already checked by the server. */
   actions?: ChatAction[];
+  /** "campaign" for a proactive widget message the server stored. */
+  source?: string | null;
 };
 
 export type RealtimeHandlers = {
@@ -163,5 +165,6 @@ function normalizeMessage(raw: Record<string, unknown>): RealtimeMessage | null 
     isAI: Boolean(raw['isAI'] ?? raw['IsAI'] ?? false),
     sources: normalizeSources(raw['sources'] ?? raw['Sources']),
     actions: normalizeActions(raw['actions'] ?? raw['Actions']),
+    source: typeof (raw['source'] ?? raw['Source']) === 'string' ? String(raw['source'] ?? raw['Source']) : null,
   };
 }
