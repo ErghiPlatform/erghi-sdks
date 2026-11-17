@@ -449,6 +449,50 @@ export function buildStyles(look: WidgetLook): string {
       transition: transform .2s, box-shadow .2s;
     }
     .bubble:hover { transform: scale(1.06); box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+    /* A campaign's message beside the closed launcher. Out of the flow so the launcher keeps its place. */
+    .teaser {
+      position: absolute;
+      bottom: 68px;
+      ${position === 'bottom-right' ? 'right: 0;' : 'left: 0;'}
+      display: flex;
+      align-items: flex-start;
+      gap: 4px;
+      width: max-content;
+      max-width: min(280px, calc(100vw - 40px));
+      padding: 10px 6px 10px 14px;
+      background: var(--cf-surface);
+      color: var(--cf-text);
+      border-radius: var(--cf-r-msg);
+      box-shadow: 0 6px 24px rgba(0,0,0,.16), 0 0 0 1px rgba(0,0,0,.06);
+    }
+    .teaser[hidden] { display: none; }
+    .root[dir="rtl"] .teaser { padding: 10px 14px 10px 6px; }
+    .teaser-text {
+      border: none;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      text-align: start;
+      cursor: pointer;
+      padding: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+    }
+    .teaser-close {
+      border: none;
+      background: transparent;
+      color: var(--cf-text-muted);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 4px;
+      border-radius: 6px;
+    }
+    .teaser-close:hover { background: var(--cf-raised); color: var(--cf-text); }
+    .panel.open ~ .teaser { display: none; }
     .bubble svg { width: 26px; height: 26px; fill: currentColor; }
     .bubble.hidden { display: none; }
     .bubble.has-unread { animation: cf-pulse 1.5s ease-in-out infinite; }
@@ -497,6 +541,7 @@ export function buildStyles(look: WidgetLook): string {
           env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
       }
       .bubble { margin: 16px; margin-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); ${position === 'bottom-right' ? 'margin-left: auto;' : 'margin-right: auto;'} }
+      .teaser { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); ${position === 'bottom-right' ? 'right: 16px;' : 'left: 16px;'} max-width: calc(100vw - 32px); }
       .bubble.hidden { display: none; }
     }
   `;
