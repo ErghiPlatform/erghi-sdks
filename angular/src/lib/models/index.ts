@@ -40,10 +40,14 @@ export interface Message {
   id: string;
   conversationId: string;
   content: string;
-  sender: 'visitor' | 'agent' | 'system' | 'ai';
+  /** As the API sends it: 'visitor', 'agent', 'bot' (the AI assistant), 'system', 'user'. */
+  sender: 'visitor' | 'agent' | 'bot' | 'user' | 'system' | 'ai';
   senderId?: string;
-  type: 'text' | 'image' | 'file';
+  /** The API sends PascalCase ('Text'); lowercase is kept so existing comparisons still compile. */
+  type: 'Text' | 'Image' | 'File' | 'System' | 'text' | 'image' | 'file' | 'system';
   createdAt: string;
+  /** Set when the message has been read; the API has no boolean `isRead` on a message. */
+  readAt?: string;
   isRead: boolean;
   isAI?: boolean;
   attachments?: Attachment[];
@@ -55,8 +59,14 @@ export interface Conversation {
   widgetId: string;
   visitorId?: string;
   assignedAgentId?: string;
-  status: 'open' | 'assigned' | 'closed';
+  /** The API sends PascalCase ('Open'); lowercase is kept so existing comparisons still compile. */
+  status:
+    | 'Open' | 'Assigned' | 'Queued' | 'Snoozed' | 'Resolved' | 'Closed'
+    | 'open' | 'assigned' | 'queued' | 'snoozed' | 'resolved' | 'closed';
+  channel?: string;
   metadata?: Record<string, any>;
+  /** When the conversation started, as the API names it. */
+  startedAt?: string;
   createdAt: string;
   closedAt?: string;
   /** Returned by conversation create only; required as X-Visitor-Token on later visitor calls. */

@@ -14,6 +14,9 @@ import {
   SecureContextResult,
 } from '../types';
 
+/** The conversation endpoints open to workspace API keys (`chat:read` / `chat:write`). */
+const AGENT_CONVERSATIONS = '/api/v1/agent/conversations';
+
 /**
  * Chat resource
  */
@@ -25,18 +28,19 @@ export class ChatResource {
    */
   async getConversation(conversationId: string): Promise<Conversation> {
     const response = await this.client.getHttpClient().get<Conversation>(
-      `/api/conversations/${conversationId}`,
+      `${this.conversationsBase(conversationId)}/${conversationId}`,
       { headers: this.visitorHeaders(conversationId) }
     );
     return response.data;
   }
 
   /**
-   * List conversations
+   * List conversations. With an API key (`clientId` + `clientSecret`) this needs the `chat:read`
+   * scope; with a teammate's access token it lists what that teammate may see.
    */
   async listConversations(params?: PaginationParams): Promise<PaginatedResponse<Conversation>> {
     const response = await this.client.getHttpClient().get<PaginatedResponse<Conversation>>(
-      '/api/conversations',
+      this.client.usesClientCredentials() ? AGENT_CONVERSATIONS : '/api/conversations',
       { params }
     );
     return response.data;
@@ -116,22 +120,30 @@ export class ChatResource {
    * Close conversation. Operator-only: needs an access token or API key, not a visitor token.
    */
   async closeConversation(conversationId: string): Promise<void> {
-    await this.client.getHttpClient().post(`/api/conversations/${conversationId}/close`);
+    await this.client.getHttpClient().post(`${this.conversationsBase(conversationId)}/${conversationId}/close`);
   }
 
   /**
-   * Send a message. Files in `attachments` are uploaded first (images, PDF or plain text,
+   * Send a message. With an API key (`clientId` + `clientSecret`, scope `chat:write`) it is sent
+   * as an agent reply and attachments are not supported. Files in `attachments` are uploaded first (images, PDF or plain text,
    * up to the workspace's size limit), then the message is posted with references to them.
    * As a visitor, the conversation's visitor token is sent automatically.
    */
   async sendMessage(data: SendMessageRequest): Promise<Message> {
+    const asKey = this.usesKeyEndpoints(data.conversationId);
+    if (asKey && data.attachments?.length) {
+      throw new ErghiError(
+        'Attachments cannot be sent with an API key; use a signed-in teammate token',
+        'ATTACHMENTS_NOT_SUPPORTED_FOR_API_KEYS'
+      );
+    }
     const attachments: Attachment[] = [];
     for (const file of data.attachments ?? []) {
       attachments.push(await this.uploadAttachment(data.conversationId, file));
     }
 
     const response = await this.client.getHttpClient().post<Message>(
-      `/api/conversations/${data.conversationId}/messages`,
+      `${this.conversationsBase(data.conversationId)}/${data.conversationId}/messages`,
       {
         content: data.content,
         type: data.type ?? 'text',
@@ -181,7 +193,7 @@ export class ChatResource {
     params?: PaginationParams
   ): Promise<PaginatedResponse<Message>> {
     const response = await this.client.getHttpClient().get<PaginatedResponse<Message>>(
-      `/api/conversations/${conversationId}/messages`,
+      `${this.conversationsBase(conversationId)}/${conversationId}/messages`,
       { params, headers: this.visitorHeaders(conversationId) }
     );
     return response.data;
@@ -205,6 +217,15 @@ export class ChatResource {
 
   /** X-Visitor-Token for this conversation when the client holds one; operators send none and
    * authenticate with their access token or API key instead. */
+  /** An API-key client (and not a visitor of this conversation) uses the key-scoped endpoints. */
+  private usesKeyEndpoints(conversationId: string): boolean {
+    return this.client.usesClientCredentials() && !this.client.getVisitorToken(conversationId);
+  }
+
+  private conversationsBase(conversationId: string): string {
+    return this.usesKeyEndpoints(conversationId) ? AGENT_CONVERSATIONS : '/api/conversations';
+  }
+
   private visitorHeaders(conversationId: string): Record<string, string> {
     const token = this.client.getVisitorToken(conversationId);
     return token ? { 'X-Visitor-Token': token } : {};

@@ -133,6 +133,15 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
   }
 
   /**
+   * True when this client was configured with an API key's client id and secret (workspace API
+   * key), as opposed to a signed-in user's token or a visitor. Conversation calls use the
+   * key-scoped `/api/v1/agent/conversations` endpoints in that case.
+   */
+  public usesClientCredentials(): boolean {
+    return Boolean(this.config.clientId && this.config.clientSecret);
+  }
+
+  /**
    * Authenticate using Client Credentials to obtain a JWT token
    */
   public async authenticate(): Promise<string> {

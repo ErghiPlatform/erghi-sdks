@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from ..errors import ErghiError
 from ..types import Conversation, Message, PaginatedResponse, PaginationParams
 
 if TYPE_CHECKING:
@@ -16,11 +17,23 @@ class ChatResource:
     def __init__(self, client: ErghiClient) -> None:
         self.client = client
 
+    @property
+    def _base(self) -> str:
+        """Conversation endpoints for this credential.
+
+        A workspace API key (``client_id`` + ``client_secret``) uses the key-scoped endpoints, which
+        need the ``chat:read`` / ``chat:write`` scopes. A signed-in teammate's token uses the
+        member endpoints.
+        """
+        if self.client.client_id and self.client.client_secret:
+            return "/api/v1/agent/conversations"
+        return "/api/conversations"
+
     async def get_conversation(self, conversation_id: str) -> Conversation:
         """Get conversation by ID"""
         response = await self.client.request(
             "GET",
-            f"/api/conversations/{conversation_id}",
+            f"{self._base}/{conversation_id}",
         )
         return Conversation.model_validate(response.json())
 
@@ -33,7 +46,7 @@ class ChatResource:
 
         response = await self.client.request(
             "GET",
-            "/api/conversations",
+            self._base,
             params=query_params,
         )
         return PaginatedResponse.model_validate(response.json())
@@ -59,7 +72,7 @@ class ChatResource:
         """Close conversation"""
         await self.client.request(
             "POST",
-            f"/api/conversations/{conversation_id}/close",
+            f"{self._base}/{conversation_id}/close",
         )
 
     async def send_message(
@@ -70,6 +83,11 @@ class ChatResource:
         attachments: list[Any] | None = None,
     ) -> Message:
         """Send a message"""
+        if attachments and self._base != "/api/conversations":
+            raise ErghiError(
+                "Attachments cannot be sent with an API key; use a signed-in teammate's token",
+                "ATTACHMENTS_NOT_SUPPORTED_FOR_API_KEYS",
+            )
         if attachments:
             # Multipart form data
             files = []
@@ -83,7 +101,7 @@ class ChatResource:
 
             response = await self.client.request(
                 "POST",
-                f"/api/conversations/{conversation_id}/messages",
+                f"{self._base}/{conversation_id}/messages",
                 data=data,
                 files=files,
             )
@@ -91,7 +109,7 @@ class ChatResource:
             # JSON request
             response = await self.client.request(
                 "POST",
-                f"/api/conversations/{conversation_id}/messages",
+                f"{self._base}/{conversation_id}/messages",
                 json={"content": content, "type": message_type},
             )
 
@@ -107,7 +125,7 @@ class ChatResource:
 
         response = await self.client.request(
             "GET",
-            f"/api/conversations/{conversation_id}/messages",
+            f"{self._base}/{conversation_id}/messages",
             params=query_params,
         )
         return PaginatedResponse.model_validate(response.json())

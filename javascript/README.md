@@ -131,7 +131,7 @@ await client.chat.sendMessage({ conversationId: conv.id, content: 'Receipt', att
 const history = await client.chat.getMessages(conv.id);
 ```
 
-`closeConversation` and `markAsRead` are operator calls (access token or API key).
+`closeConversation` and `markAsRead` are operator calls: use a teammate's access token, or an API key's `clientId` and `clientSecret` for everything except `markAsRead`.
 
 ### Signed-in users and integration calls
 

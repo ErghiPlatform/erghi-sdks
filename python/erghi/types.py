@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class User(BaseModel):
@@ -119,9 +119,11 @@ class Message(BaseModel):
 
     id: str
     conversation_id: str = Field(alias="conversationId")
-    sender: Literal["visitor", "agent", "system", "ai"]
+    # As the API sends it: "visitor", "agent", "bot" (the AI assistant), "system", "user".
+    sender: str
     sender_id: Optional[str] = Field(None, alias="senderId")
-    type: Literal["text", "image", "file", "system"]
+    # The API sends PascalCase ("Text", "Image", "File", "System"); normalised to lowercase.
+    type: str
     content: str
     attachments: Optional[List[Attachment]] = None
     created_at: datetime = Field(alias="createdAt")
@@ -134,6 +136,11 @@ class Message(BaseModel):
     class Config:
         populate_by_name = True
 
+    @field_validator("type", mode="before")
+    @classmethod
+    def _lower_type(cls, value: Any) -> Any:
+        return value.lower() if isinstance(value, str) else value
+
 
 class Conversation(BaseModel):
     """Chat conversation"""
@@ -143,14 +150,23 @@ class Conversation(BaseModel):
     widget_id: str = Field(alias="widgetId")
     visitor_id: Optional[str] = Field(None, alias="visitorId")
     assigned_agent_id: Optional[str] = Field(None, alias="assignedAgentId")
-    status: Literal["open", "assigned", "resolved", "closed"]
-    channel: Literal["web_widget", "email", "sms", "whatsapp"]
+    # The API sends PascalCase ("Open", "Assigned", "Queued", "Snoozed", "Resolved", "Closed");
+    # normalised to lowercase so ``conversation.status == "open"`` holds. Unknown future values pass
+    # through (lowercased) instead of failing validation.
+    status: str
+    # "web_widget", "whatsapp", "telegram", "email", "slack"... new channels can appear.
+    channel: str
     started_at: datetime = Field(alias="startedAt")
     closed_at: Optional[datetime] = Field(None, alias="closedAt")
     metadata: Optional[Dict[str, Any]] = None
 
     class Config:
         populate_by_name = True
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def _lower_status(cls, value: Any) -> Any:
+        return value.lower() if isinstance(value, str) else value
 
 
 class Workspace(BaseModel):

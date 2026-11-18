@@ -74,7 +74,9 @@ public record Conversation(
     string WidgetId,
     string? VisitorId,
     string? AssignedAgentId,
+    // As the API sends it: "Open", "Assigned", "Queued", "Snoozed", "Resolved" or "Closed".
     string Status,
+    // "web_widget", "whatsapp", "telegram", "email", "slack"... new channels can appear.
     string Channel,
     DateTime StartedAt,
     DateTime? ClosedAt,
@@ -94,6 +96,7 @@ public record Message(
     string ConversationId,
     string Sender,
     string? SenderId,
+    // Sender: "visitor", "agent", "bot" (the AI assistant), "system" or "user". Type: "Text", "Image", "File", "System".
     string Type,
     string Content,
     DateTime CreatedAt,

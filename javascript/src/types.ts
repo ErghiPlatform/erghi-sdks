@@ -59,12 +59,21 @@ export interface AuthResponse {
   user: User;
 }
 
+/** Conversation statuses as the API returns them (PascalCase), plus the lowercase spellings older typings used. */
+export type ConversationStatus =
+  | 'Open' | 'Assigned' | 'Queued' | 'Snoozed' | 'Resolved' | 'Closed'
+  | 'open' | 'assigned' | 'queued' | 'snoozed' | 'resolved' | 'closed';
+
+export type MessageKind = 'Text' | 'Image' | 'File' | 'System' | 'text' | 'image' | 'file' | 'system';
+
 export interface Message {
   id: string;
   conversationId: string;
-  sender: 'visitor' | 'agent' | 'system' | 'ai';
+  /** As the API sends it: 'visitor', 'agent', 'bot' (the AI assistant), 'system', 'user'. */
+  sender: 'visitor' | 'agent' | 'bot' | 'user' | 'system' | 'ai';
   senderId?: string;
-  type: 'text' | 'image' | 'file' | 'system';
+  /** The API sends PascalCase ('Text'); lowercase is kept so existing comparisons still compile. */
+  type: MessageKind;
   content: string;
   attachments?: Attachment[];
   createdAt: string;
@@ -89,8 +98,10 @@ export interface Conversation {
   widgetId: string;
   visitorId?: string;
   assignedAgentId?: string;
-  status: 'open' | 'assigned' | 'resolved' | 'closed';
-  channel: 'web_widget' | 'email' | 'sms' | 'whatsapp';
+  /** The API sends PascalCase ('Open'); lowercase is kept so existing comparisons still compile. */
+  status: ConversationStatus;
+  /** 'web_widget', 'whatsapp', 'telegram', 'email', 'slack'... new channels can appear. */
+  channel: string;
   startedAt: string;
   closedAt?: string;
   metadata?: Record<string, any>;
