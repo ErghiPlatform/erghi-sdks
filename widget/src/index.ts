@@ -156,6 +156,11 @@ export default class ErghiWidget {
   private static readonly GENERATION_TIMEOUT_MS = 90_000;
   private lastInactivityWarningAt = 0;
   private pendingFile: File | null = null;
+  /** Sends that failed, by the id of their (still visible) bubble, so Retry can send them again. */
+  private readonly failedSends = new Map<string, { content: string; file: File | null }>();
+  /** System notices the server posted (queue position, connecting, connected) and when they came. */
+  private serverNotices: Array<{ el: Element; at: number }> = [];
+  private assignedAt = 0;
   private translations: Record<string, string> = {};
   private locale = 'en';
   // Empty names fall back to localized defaults in senderLabel() at render time.
@@ -560,9 +565,16 @@ export default class ErghiWidget {
         </div>
         <div class="messages" id="cf-messages"></div>
         <div class="typing" id="cf-typing"><span></span><span></span><span></span></div>
+        <div class="file-chip-row" id="cf-chip-row" hidden>
+          <span class="file-chip">
+            <span class="file-chip-icon" aria-hidden="true">📎</span>
+            <span class="file-chip-name" id="cf-chip-name" dir="auto"></span>
+            <button type="button" class="file-chip-remove" id="cf-chip-remove" aria-label="${escapeHtml(this.tr('widget.aria.removeFile', 'Remove attached file'))}">&times;</button>
+          </span>
+        </div>
         <div class="composer">
           <input type="file" id="cf-file" accept="image/*,.pdf,.txt" hidden />
-          <button type="button" class="attach-btn" id="cf-attach" aria-label="${escapeHtml(this.tr('widget.aria.attach', 'Attach file'))}">📎</button>
+          <button type="button" class="attach-btn" id="cf-attach" title="${escapeHtml(this.tr('widget.attach.hint', 'One file per message'))}" aria-label="${escapeHtml(this.tr('widget.aria.attach', 'Attach file'))}">📎</button>
           <input type="text" id="cf-input" placeholder="${escapeHtml(this.tr('widget.input.placeholder', 'Type a message…'))}" autocomplete="off" maxlength="4000" />
           <button type="button" class="voice-cancel-btn" id="cf-mic-cancel" hidden aria-label="${escapeHtml(this.tr('widget.aria.micCancel', 'Cancel recording'))}">&times;</button>
           <button type="button" class="mic-btn" id="cf-mic" hidden aria-label="${escapeHtml(this.tr('widget.aria.mic', 'Record a voice message'))}">${ICON_MIC}</button>
@@ -617,7 +629,11 @@ export default class ErghiWidget {
     });
     s.getElementById('cf-file')?.addEventListener('change', (e) => {
       const input = e.target as HTMLInputElement;
-      this.pendingFile = input.files?.[0] ?? null;
+      this.setPendingFile(input.files?.[0] ?? null);
+    });
+    s.getElementById('cf-chip-remove')?.addEventListener('click', () => {
+      this.setPendingFile(null);
+      (this.$('cf-input') as HTMLInputElement | null)?.focus();
     });
     s.getElementById('cf-mic')?.addEventListener('click', () => void this.onMicClick());
     s.getElementById('cf-mic-cancel')?.addEventListener('click', () => this.cancelRecording());
@@ -627,6 +643,17 @@ export default class ErghiWidget {
         void this.sendMessage();
       }
     });
+  }
+
+  /** Holds the one file that goes with the next message and shows it as a removable chip. */
+  private setPendingFile(file: File | null): void {
+    this.pendingFile = file;
+    const fileInput = this.$('cf-file') as HTMLInputElement | null;
+    if (fileInput && !file) fileInput.value = '';
+    const name = this.$('cf-chip-name');
+    if (name) name.textContent = file?.name ?? '';
+    const row = this.$('cf-chip-row');
+    if (row) row.hidden = !file;
   }
 
   private $(id: string): HTMLElement | null {
@@ -840,13 +867,12 @@ export default class ErghiWidget {
 
   /** Sends what is in the input (and any picked file), or `text` alone when given (a tapped
    * reply button), leaving the input and the picked file untouched. */
-  private async sendMessage(text?: string): Promise<void> {
+  private async sendMessage(text?: string, retryFile: File | null = null): Promise<void> {
     const input = this.$('cf-input') as HTMLInputElement | null;
     const fromInput = text === undefined;
-    const file = fromInput ? this.pendingFile : null;
-    const content = fromInput
-      ? input?.value.trim() || (file ? `[${file.name}]` : '')
-      : text.trim();
+    const file = fromInput ? this.pendingFile : retryFile;
+    const typed = fromInput ? input?.value.trim() ?? '' : text.trim();
+    const content = typed || (file ? `[${file.name}]` : '');
     if (!content && !file) return;
 
     if (!this.conversationId) {
@@ -859,6 +885,8 @@ export default class ErghiWidget {
     const tempId = `temp-${Date.now()}`;
     this.appendMessageEl({ id: tempId, content: content || `📎 ${file!.name}`, sender: 'visitor' });
     if (input && fromInput) input.value = '';
+    // The file is on its way (or will be reported failed); either way the chip's job is done.
+    if (fromInput && file) this.setPendingFile(null);
     this.setTyping(true);
 
     try {
@@ -870,7 +898,7 @@ export default class ErghiWidget {
           `${this.config.apiUrl}/api/conversations/${this.conversationId}/attachments`,
           { method: 'POST', headers: this.visitorHeaders(), body: fd }
         );
-        if (!up.ok) throw new Error(`Upload HTTP ${up.status}`);
+        if (!up.ok) throw new UploadError(up.status, await readErrorReason(up));
         const uploaded = await up.json();
         attachments = [{
           id: uploaded.id ?? uploaded.Id,
@@ -879,9 +907,6 @@ export default class ErghiWidget {
           size: uploaded.size ?? uploaded.Size,
           url: uploaded.url ?? uploaded.Url,
         }];
-        this.pendingFile = null;
-        const fileInput = this.$('cf-file') as HTMLInputElement | null;
-        if (fileInput) fileInput.value = '';
       }
 
       const res = await fetch(
@@ -901,7 +926,17 @@ export default class ErghiWidget {
     } catch (err) {
       console.error('[Erghi] Send failed:', err);
       this.setTyping(false);
-      this.addSystemMessage(this.tr('widget.error.send', 'Message failed to send.'));
+      // The server refusing the file itself (bad request, too large, wrong type) will not change on
+      // a second try, so the file is dropped and Retry sends just the typed text. Anything else
+      // (a dropped connection, 5xx, 408/429, an expired visitor token) keeps it for Retry.
+      const rejected = err instanceof UploadError && FILE_REJECTED_STATUSES.has(err.status);
+      const keepFile = rejected ? null : file;
+      // The server's reason is English; isolate it so it does not scramble a right-to-left sentence.
+      const message = rejected
+        ? [this.tr('widget.error.attachment', "The file couldn't be attached."), err.reason ? `\u2068${err.reason}\u2069` : '']
+            .filter(Boolean).join(' ')
+        : this.tr('widget.error.send', 'Message failed to send.');
+      this.markSendFailed(tempId, typed, keepFile, message);
     }
   }
 
@@ -1289,6 +1324,8 @@ export default class ErghiWidget {
         // visitor's language (handled by onMessage); assignment only updates widget state.
         onAssigned: (payload) => {
           this.displayConfig.assignedAgentName = payload.agentName;
+          this.assignedAt = Date.now();
+          this.pruneWaitingNotices();
           this.awaitingReply = false;
           this.clearReplyTimeout();
           this.setTyping(false);
@@ -1333,6 +1370,10 @@ export default class ErghiWidget {
       if (this.knownMessageIds.has(msg.id)) return;
       this.knownMessageIds.add(msg.id);
       this.appendMessageEl({ id: msg.id, content: msg.content, sender: 'system' });
+      const noticeEl = this.$('cf-messages')?.lastElementChild;
+      if (noticeEl) this.serverNotices.push({ el: noticeEl, at: Date.now() });
+      // A notice right after an assignment is the "connected" one: the waiting ones go.
+      if (Date.now() - this.assignedAt < 5000) this.pruneWaitingNotices();
       this.awaitingReply = false;
       this.clearReplyTimeout();
       this.setTyping(false);
@@ -1452,6 +1493,44 @@ export default class ErghiWidget {
     this.isTyping = on;
     this.$('cf-typing')?.classList.toggle('visible', on);
     this.scrollMessages(true);
+  }
+
+  /** Flags the visitor's bubble as unsent with a Retry button, instead of leaving it looking
+   * delivered. Retry removes the bubble and sends the same content again. */
+  private markSendFailed(tempId: string, typed: string, file: File | null, message: string): void {
+    const el = this.shadow?.querySelector(`[data-id="${tempId}"]`);
+    this.addSystemMessage(message);
+    if (!el) return;
+    el.classList.add('failed');
+    if (!typed && !file) return; // nothing left worth sending again
+    this.failedSends.set(tempId, { content: typed, file });
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'msg-retry-btn';
+    btn.textContent = this.tr('widget.retry', 'Retry');
+    btn.addEventListener('click', () => {
+      const pending = this.failedSends.get(tempId);
+      if (!pending) return;
+      this.failedSends.delete(tempId);
+      el.remove();
+      this.messages = this.messages.filter(m => m.id !== tempId);
+      this.knownMessageIds.delete(tempId);
+      void this.sendMessage(pending.content, pending.file);
+    });
+    el.appendChild(btn);
+  }
+
+  /** Drops the queue/connecting notices once an agent has joined; keeps the "connected" one,
+   * which is whatever notice arrived within a few seconds of the assignment. */
+  private pruneWaitingNotices(): void {
+    const now = Date.now();
+    this.serverNotices = this.serverNotices.filter(n => n.el.isConnected);
+    const keep = this.serverNotices[this.serverNotices.length - 1];
+    for (const n of this.serverNotices) {
+      if (n === keep && now - n.at < 5000) continue;
+      n.el.remove();
+    }
+    this.serverNotices = this.serverNotices.filter(n => n.el.isConnected);
   }
 
   private addSystemMessage(text: string): void {
@@ -1824,6 +1903,26 @@ type PublicWidgetConfig = Partial<Record<
 >>;
 
 /** m:ss for the recording timer. */
+/** Upload statuses that mean "this file will never be accepted", as opposed to "try again". */
+const FILE_REJECTED_STATUSES = new Set([400, 413, 415, 422]);
+
+/** The attachment upload was refused or failed; `reason` is the server's own words, when it sent any. */
+class UploadError extends Error {
+  constructor(readonly status: number, readonly reason: string) {
+    super(`Upload HTTP ${status}`);
+  }
+}
+
+async function readErrorReason(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { error?: unknown; message?: unknown };
+    const reason = body.error ?? body.message;
+    return typeof reason === 'string' ? reason.slice(0, 200) : '';
+  } catch {
+    return '';
+  }
+}
+
 function formatClock(seconds: number): string {
   const whole = Math.max(0, Math.floor(seconds));
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
