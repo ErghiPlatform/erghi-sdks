@@ -164,6 +164,7 @@ describe('ErghiWidget', () => {
   describe('Conversation Handling', () => {
     it('should create conversation on first open', async () => {
       await widget.open();
+      await (widget as any).startConversation(); // the first message does this
       await flushPromises();
 
       expect(global.fetch).toHaveBeenCalledWith(
@@ -176,6 +177,7 @@ describe('ErghiWidget', () => {
 
     it('should not create duplicate conversations', async () => {
       await widget.open();
+      await (widget as any).startConversation(); // the first message does this
       await flushPromises();
       (global.fetch as jest.Mock).mockClear();
       
@@ -194,6 +196,7 @@ describe('ErghiWidget', () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
       await widget.open();
+      await (widget as any).startConversation(); // the first message does this
       await flushPromises();
 
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -216,6 +219,7 @@ describe('ErghiWidget', () => {
 
     it('captures visitorToken from the conversation-create response', async () => {
       await widget.open();
+      await (widget as any).startConversation(); // the first message does this
       await flushPromises();
 
       expect((widget as any).visitorToken).toBe('tok-abc123');
@@ -223,6 +227,7 @@ describe('ErghiWidget', () => {
 
     it('persists visitorToken to localStorage alongside the conversation id', async () => {
       await widget.open();
+      await (widget as any).startConversation(); // the first message does this
       await flushPromises();
 
       const saved = JSON.parse(localStorage.getItem('erghi:session:test-widget-uuid') || '{}');
@@ -232,6 +237,7 @@ describe('ErghiWidget', () => {
 
     it('sends the token as X-Visitor-Token on sendMessage', async () => {
       await widget.open();
+      await (widget as any).startConversation(); // the first message does this
       await flushPromises();
       (global.fetch as jest.Mock).mockClear();
       (global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ id: 'm1' }) });
@@ -252,6 +258,7 @@ describe('ErghiWidget', () => {
 
     it('sends the token as X-Visitor-Token on the heartbeat call', async () => {
       await widget.open();
+      await (widget as any).startConversation(); // the first message does this
       await flushPromises();
       (global.fetch as jest.Mock).mockClear();
       (global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ active: true }) });
@@ -293,6 +300,7 @@ describe('ErghiWidget', () => {
       const connectSpy = jest.spyOn(ConversationRealtimeClient.prototype, 'connect');
 
       await widget.open();
+      await (widget as any).startConversation(); // the first message does this
       await flushPromises();
 
       expect(connectSpy).toHaveBeenCalledWith(
@@ -419,6 +427,7 @@ describe('ErghiWidget', () => {
       const w = new ErghiWidget({ ...mockConfig, identityToken: 'jwt-1' });
       await flushPromises();
       await w.open();
+      await (w as any).startConversation(); // the first message does this
       await flushPromises();
 
       const create = findCall('/api/conversations', 'POST');
@@ -442,6 +451,7 @@ describe('ErghiWidget', () => {
       const w = new ErghiWidget({ ...mockConfig, identityToken: 'expired-jwt' });
       await flushPromises();
       await w.open();
+      await (w as any).startConversation(); // the first message does this
       await flushPromises();
 
       const creates = (global.fetch as jest.Mock).mock.calls.filter(
@@ -457,6 +467,7 @@ describe('ErghiWidget', () => {
 
     it('posts setIdentityToken to the current conversation with the visitor token', async () => {
       await widget.open();
+      await (widget as any).startConversation(); // the first message does this
       await flushPromises();
       (global.fetch as jest.Mock).mockClear();
       (global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({}) });
@@ -473,6 +484,7 @@ describe('ErghiWidget', () => {
       expect(findCall('/secure-context')).toBeUndefined();
 
       await widget.open();
+      await (widget as any).startConversation(); // the first message does this
       await flushPromises();
 
       const put = findCall('/conv-sc-1/secure-context', 'PUT');
@@ -483,6 +495,7 @@ describe('ErghiWidget', () => {
 
     it('never writes secure values to localStorage', async () => {
       await widget.open();
+      await (widget as any).startConversation(); // the first message does this
       await flushPromises();
       await widget.setSecureContext({ mf_access_token: 'secret-ls' });
 
@@ -497,6 +510,7 @@ describe('ErghiWidget', () => {
       const w = new ErghiWidget({ ...mockConfig, secureContextProvider: provider });
       await flushPromises();
       await w.open();
+      await (w as any).startConversation(); // the first message does this
       await flushPromises();
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
@@ -523,6 +537,7 @@ describe('ErghiWidget', () => {
       const w = new ErghiWidget({ ...mockConfig, secureContextProvider: provider });
       await flushPromises();
       await w.open();
+      await (w as any).startConversation(); // the first message does this
       await flushPromises();
       const listener = jest.fn();
       window.addEventListener('erghi:context-required', listener);
@@ -538,6 +553,7 @@ describe('ErghiWidget', () => {
 
     it('clearSecureContext sends DELETE', async () => {
       await widget.open();
+      await (widget as any).startConversation(); // the first message does this
       await flushPromises();
       await widget.clearSecureContext();
 
@@ -546,6 +562,7 @@ describe('ErghiWidget', () => {
 
     it('destroy({ clearSession: true }) forgets the session and clears the secure context', async () => {
       await widget.open();
+      await (widget as any).startConversation(); // the first message does this
       await flushPromises();
       expect(localStorage.getItem('erghi:session:test-widget-uuid')).not.toBeNull();
 
@@ -558,6 +575,7 @@ describe('ErghiWidget', () => {
 
     it('plain destroy() keeps the session on the device', async () => {
       await widget.open();
+      await (widget as any).startConversation(); // the first message does this
       await flushPromises();
 
       await widget.destroy();
@@ -1459,6 +1477,61 @@ describe('ErghiWidget', () => {
       // should exist on the parsed element.
       expect(anchor.getAttribute('onmouseover')).toBeNull();
       expect(anchor.getAttribute('aria-label')).toContain('onmouseover=');
+    });
+  });
+
+  describe('lazy conversation, page context and refusals (QA2 S5)', () => {
+    const post = () => (global.fetch as jest.Mock).mock.calls.filter(
+      c => String(c[0]).endsWith('/api/conversations') && c[1]?.method === 'POST');
+    const say = async (text: string) => {
+      const root = getShadowRoot();
+      (root?.getElementById('cf-input') as HTMLInputElement).value = text;
+      (root?.getElementById('cf-send') as HTMLButtonElement).click();
+      await flushPromises();
+    };
+    const sysText = () => getShadowRoot()?.textContent ?? '';
+
+    it('opening the launcher creates no conversation; the first message creates exactly one', async () => {
+      await widget.open();
+      await flushPromises();
+      expect(post()).toHaveLength(0);
+      await say('hi');
+      expect(post()).toHaveLength(1);
+      await say('again');
+      expect(post()).toHaveLength(1);
+    });
+
+    it('sends pageUrl and referrer without query strings or fragments', async () => {
+      Object.defineProperty(document, 'referrer', { value: 'https://ref.example/path?token=secret#frag', configurable: true });
+      await widget.open();
+      await say('hi');
+      const meta = JSON.parse(String(post()[0][1].body)).metadata;
+      expect(meta.referrer).toBe('https://ref.example/path');
+      expect(meta.pageUrl).not.toContain('?');
+      expect(meta.pageUrl.length).toBeLessThanOrEqual(500);
+    });
+
+    it('a refused origin shows the unavailable notice and disables the composer', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 403, json: async () => ({ code: 'origin_not_allowed' }) });
+      await widget.open();
+      await say('hi');
+      expect(sysText()).toContain("Chat isn't available on this website.");
+      expect((getShadowRoot()?.getElementById('cf-input') as HTMLInputElement).disabled).toBe(true);
+    });
+
+    it('a 429 on send shows the rate-limit text', async () => {
+      await widget.open();
+      await say('hi');
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 429, json: async () => ({}) });
+      await say('again');
+      expect(sysText()).toContain('too fast');
+    });
+
+    it('a message over 4000 characters is refused locally', async () => {
+      await widget.open();
+      await (widget as any).sendMessage('x'.repeat(4001));
+      expect(post()).toHaveLength(0);
+      expect(sysText()).toContain('too long');
     });
   });
 });

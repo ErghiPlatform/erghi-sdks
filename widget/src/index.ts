@@ -677,10 +677,10 @@ export default class ErghiWidget {
       this.startHeartbeat();
       return;
     }
-    const restored = await this.tryRestoreSession();
-    // A visitor who opens the chat to read a campaign hasn't said anything yet: their first
-    // message starts the conversation (sendMessage), so reading one leaves nothing in the inbox.
-    if (!restored && !this.activeCampaign) await this.startConversation();
+    // Opening the launcher only restores a saved session. A visitor who has said nothing creates
+    // nothing: their first message starts the conversation (sendMessage), so browsing leaves no
+    // empty conversation in the inbox.
+    await this.tryRestoreSession();
   }
 
   /** Arms the next campaign for this page: only for a visitor with no conversation, once per
@@ -791,7 +791,31 @@ export default class ErghiWidget {
   }
 
   private buildMetadata(): Record<string, unknown> {
-    return { ...this.config.visitorContext, locale: this.locale };
+    return { ...this.pageContext(), ...this.config.visitorContext, locale: this.locale };
+  }
+
+  /** pageUrl and referrer as origin + path only: query strings and fragments can carry tokens,
+   * so they are never sent. Capped in length; explicit visitorContext values win. */
+  private pageContext(): Record<string, string> {
+    const out: Record<string, string> = {};
+    const strip = (raw: string): string => {
+      try {
+        const u = new URL(raw);
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') return '';
+        return (u.origin + u.pathname).slice(0, 500);
+      } catch {
+        return '';
+      }
+    };
+    try {
+      const page = strip(window.location.href);
+      if (page) out.pageUrl = page;
+      const ref = strip(document.referrer);
+      if (ref) out.referrer = ref;
+    } catch {
+      /* no DOM access */
+    }
+    return out;
   }
 
   /** Merges the current visitor token (if any) into a headers object as X-Visitor-Token.
@@ -844,7 +868,24 @@ export default class ErghiWidget {
         window.dispatchEvent(new CustomEvent('erghi:identity-expired'));
         res = await this.postConversation(null);
       }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const code = res.status === 403 ? await readErrorCode(res) : null;
+        if (res.status === 403) {
+          this.blockChat(code === 'widget_inactive'
+            ? this.tr('widget.error.unavailable', 'Chat is unavailable right now. Please try again later.')
+            : this.tr('widget.error.originNotAllowed', "Chat isn't available on this website."));
+          return;
+        }
+        if (res.status === 404) {
+          this.blockChat(this.tr('widget.error.unavailable', 'Chat is unavailable right now. Please try again later.'));
+          return;
+        }
+        if (res.status === 429) {
+          this.addSystemMessage(this.tr('widget.error.rateLimited', "You're sending messages too fast. Please wait a moment and try again."));
+          return;
+        }
+        throw new Error(`HTTP ${res.status}`);
+      }
       const data = await res.json();
       this.conversationId = data.id ?? data.Id;
       this.visitorToken = data.visitorToken ?? data.VisitorToken ?? null;
@@ -865,6 +906,15 @@ export default class ErghiWidget {
     }
   }
 
+  /** The chat cannot work here (deactivated widget, refused origin): say so and stop accepting input. */
+  private blockChat(message: string): void {
+    this.addSystemMessage(message);
+    const input = this.$('cf-input') as HTMLInputElement | null;
+    if (input) input.disabled = true;
+    const send = this.$('cf-send') as HTMLButtonElement | null;
+    if (send) send.disabled = true;
+  }
+
   /** Sends what is in the input (and any picked file), or `text` alone when given (a tapped
    * reply button), leaving the input and the picked file untouched. */
   private async sendMessage(text?: string, retryFile: File | null = null): Promise<void> {
@@ -874,6 +924,10 @@ export default class ErghiWidget {
     const typed = fromInput ? input?.value.trim() ?? '' : text.trim();
     const content = typed || (file ? `[${file.name}]` : '');
     if (!content && !file) return;
+    if (content.length > MAX_MESSAGE_LENGTH) {
+      this.addSystemMessage(this.tr('widget.error.tooLong', 'That message is too long. Please shorten it and try again.'));
+      return;
+    }
 
     if (!this.conversationId) {
       await this.startConversation();
@@ -917,7 +971,7 @@ export default class ErghiWidget {
           body: JSON.stringify({ content, type: 'text', attachments }),
         }
       );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new SendError(res.status, res.status === 400 || res.status === 403 ? await readErrorCode(res) : null);
       const saved = await res.json();
       const serverId = saved.id ?? saved.Id;
       this.replaceTempId(tempId, serverId);
@@ -932,7 +986,20 @@ export default class ErghiWidget {
       const rejected = err instanceof UploadError && FILE_REJECTED_STATUSES.has(err.status);
       const keepFile = rejected ? null : file;
       // The server's reason is English; isolate it so it does not scramble a right-to-left sentence.
-      const message = rejected
+      const sendErr = err instanceof SendError ? err : null;
+      const rateLimited = (err instanceof UploadError || sendErr) && (err as UploadError | SendError).status === 429;
+      const tooLong = sendErr?.status === 400 && sendErr.code === 'message_too_long';
+      const inactive = sendErr?.status === 403 && sendErr.code === 'widget_inactive';
+      if (inactive) {
+        this.markSendFailed(tempId, typed, null, '');
+        this.blockChat(this.tr('widget.error.unavailable', 'Chat is unavailable right now. Please try again later.'));
+        return;
+      }
+      const message = rateLimited
+        ? this.tr('widget.error.rateLimited', "You're sending messages too fast. Please wait a moment and try again.")
+        : tooLong
+        ? this.tr('widget.error.tooLong', 'That message is too long. Please shorten it and try again.')
+        : rejected
         ? [this.tr('widget.error.attachment', "The file couldn't be attached."), err.reason ? `\u2068${err.reason}\u2069` : '']
             .filter(Boolean).join(' ')
         : this.tr('widget.error.send', 'Message failed to send.');
@@ -1499,7 +1566,7 @@ export default class ErghiWidget {
    * delivered. Retry removes the bubble and sends the same content again. */
   private markSendFailed(tempId: string, typed: string, file: File | null, message: string): void {
     const el = this.shadow?.querySelector(`[data-id="${tempId}"]`);
-    this.addSystemMessage(message);
+    if (message) this.failureNotices.set(tempId, this.addSystemMessage(message));
     if (!el) return;
     el.classList.add('failed');
     if (!typed && !file) return; // nothing left worth sending again
@@ -1513,6 +1580,9 @@ export default class ErghiWidget {
       if (!pending) return;
       this.failedSends.delete(tempId);
       el.remove();
+      const noticeId = this.failureNotices.get(tempId);
+      if (noticeId) this.shadow?.querySelector(`[data-id="${noticeId}"]`)?.remove();
+      this.failureNotices.delete(tempId);
       this.messages = this.messages.filter(m => m.id !== tempId);
       this.knownMessageIds.delete(tempId);
       void this.sendMessage(pending.content, pending.file);
@@ -1533,9 +1603,15 @@ export default class ErghiWidget {
     this.serverNotices = this.serverNotices.filter(n => n.el.isConnected);
   }
 
-  private addSystemMessage(text: string): void {
-    this.appendMessageEl({ id: `sys-${Date.now()}`, content: text, sender: 'system' });
+  private addSystemMessage(text: string): string {
+    const id = `sys-${Date.now()}-${++this.noticeSeq}`;
+    this.appendMessageEl({ id, content: text, sender: 'system' });
+    return id;
   }
+
+  private noticeSeq = 0;
+  /** The "failed to send" notice shown for each unsent bubble, so a successful Retry can remove it. */
+  private failureNotices = new Map<string, string>();
 
   private appendMessageEl(msg: Message): void {
     if (msg.sender !== 'system' && this.messages.some(m => m.id === msg.id)) return;
@@ -1782,7 +1858,7 @@ export default class ErghiWidget {
   }
 
   private handleSessionEnded(): void {
-    this.addSystemMessage(this.tr('widget.session.ended', 'This conversation has ended. Start a new chat if you need more help.'));
+    this.addSystemMessage(this.tr('widget.session.endedNewChat', 'This conversation has ended. Send a message to start a new chat.'));
     this.conversationId = null;
     this.visitorToken = null;
     this.secureContextExpiresAt = 0;
@@ -1907,6 +1983,15 @@ type PublicWidgetConfig = Partial<Record<
 const FILE_REJECTED_STATUSES = new Set([400, 413, 415, 422]);
 
 /** The attachment upload was refused or failed; `reason` is the server's own words, when it sent any. */
+const MAX_MESSAGE_LENGTH = 4000;
+
+/** The message POST was refused; `code` is the server's stable error code, when it sent one. */
+class SendError extends Error {
+  constructor(readonly status: number, readonly code: string | null) {
+    super(`Send HTTP ${status}`);
+  }
+}
+
 class UploadError extends Error {
   constructor(readonly status: number, readonly reason: string) {
     super(`Upload HTTP ${status}`);
