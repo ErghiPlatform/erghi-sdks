@@ -1,3 +1,15 @@
+## 1.4.0 (2026-11-18)
+
+- Changed: opening the chat no longer creates a conversation. The first message does, so visitors
+  who only look leave nothing in the inbox. A saved conversation still resumes on open.
+- The conversation now carries pageUrl and referrer (origin and path only, no query string or
+  fragment, capped at 500 characters).
+- A deactivated widget or a refused origin shows a clear notice and disables the composer instead of
+  a generic connection error. A rate limit (429) on send or upload and a message over 4000
+  characters now get their own text (all six languages).
+- Retrying a failed message removes its "failed to send" notice.
+- The ended-conversation notice now says that sending a message starts a new chat.
+
 ## 1.3.1 (2026-11-18)
 
 - Fixed: a rejected attachment (for example an unsupported file type) no longer breaks the chat.

@@ -209,6 +209,9 @@ describe('widget campaigns', () => {
     await mount();
     widget!.open();
     await flush();
+    expect(conversationPosts()).toHaveLength(0); // opening alone creates nothing
+    await (widget as any).startConversation();
+    await flush();
     expect(conversationPosts()).toHaveLength(1);
     expect(conversationPosts()[0].body?.['campaignId']).toBeUndefined();
   });
