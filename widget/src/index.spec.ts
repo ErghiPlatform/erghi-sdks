@@ -834,6 +834,123 @@ describe('ErghiWidget', () => {
     });
   });
 
+  describe('Handoff notices after an agent joins', () => {
+    const systemTexts = () =>
+      Array.from(getShadowRoot()?.querySelectorAll('.msg.system .msg-text') ?? []).map((el) => el.textContent);
+    const capture = async (): Promise<RealtimeHandlers> => {
+      let captured: RealtimeHandlers | undefined;
+      jest.spyOn(ConversationRealtimeClient.prototype, 'connect')
+        .mockImplementation(async (_url, _id, _token, handlers) => { captured = handlers; });
+      widget.open();
+      (widget as any).conversationId = 'conv-queue';
+      await (widget as any).connectRealtime();
+      return captured as RealtimeHandlers;
+    };
+    type Inbound = Parameters<RealtimeHandlers['onMessage']>[0];
+
+    it('removes the queue line once the agent has joined, keeping the connected notice', async () => {
+      const h = await capture();
+      h.onMessage({ id: 'q1', content: "You're #7 in the queue.", sender: 'system' } as Inbound);
+      expect(systemTexts()).toContain("You're #7 in the queue.");
+      (widget as any).serverNotices.forEach((n: { at: number }) => { n.at -= 60_000; });
+      h.onMessage({ id: 'c1', content: "You're now connected with Sara.", sender: 'system' } as Inbound);
+      h.onAssigned?.({ agentName: 'Sara' });
+      expect(systemTexts()).not.toContain("You're #7 in the queue.");
+      expect(systemTexts()).toContain("You're now connected with Sara.");
+    });
+
+    it('drops the queue line when the assignment arrives before the connected notice', async () => {
+      const h = await capture();
+      h.onMessage({ id: 'q1', content: 'Please hold.', sender: 'system' } as Inbound);
+      (widget as any).serverNotices.forEach((n: { at: number }) => { n.at -= 60_000; });
+      h.onAssigned?.({ agentName: 'Sara' });
+      h.onMessage({ id: 'c1', content: "You're now connected with Sara.", sender: 'system' } as Inbound);
+      expect(systemTexts()).not.toContain('Please hold.');
+      expect(systemTexts()).toContain("You're now connected with Sara.");
+    });
+  });
+
+  describe('Attachments', () => {
+    const root = () => getShadowRoot()!;
+    const pick = (file: File): void => {
+      const fileInput = root().getElementById('cf-file') as HTMLInputElement;
+      Object.defineProperty(fileInput, 'files', { value: [file], configurable: true });
+      fileInput.dispatchEvent(new Event('change'));
+    };
+    const send = async (text: string): Promise<void> => {
+      (root().getElementById('cf-input') as HTMLInputElement).value = text;
+      (root().getElementById('cf-send') as HTMLButtonElement).click();
+      await flushPromises();
+    };
+    const posts = (needle: string) => (global.fetch as jest.Mock).mock.calls.filter(
+      (c: unknown[]) => String(c[0]).includes(needle) && (c[1] as RequestInit | undefined)?.method === 'POST');
+
+    beforeEach(async () => {
+      widget.open();
+      await flushPromises();
+    });
+
+    it('shows the picked file as a chip and removes it from the chip button', () => {
+      const chipRow = root().getElementById('cf-chip-row') as HTMLElement;
+      expect(chipRow.hidden).toBe(true);
+      pick(new File(['x'], 'invoice.pdf', { type: 'application/pdf' }));
+      expect(chipRow.hidden).toBe(false);
+      expect(root().getElementById('cf-chip-name')?.textContent).toBe('invoice.pdf');
+      (root().getElementById('cf-chip-remove') as HTMLButtonElement).click();
+      expect(chipRow.hidden).toBe(true);
+      expect((widget as any).pendingFile).toBeNull();
+    });
+
+    it('a second pick replaces the first: only one file is attached', () => {
+      pick(new File(['x'], 'a.txt', { type: 'text/plain' }));
+      pick(new File(['y'], 'b.txt', { type: 'text/plain' }));
+      expect(root().getElementById('cf-chip-name')?.textContent).toBe('b.txt');
+      expect(root().querySelectorAll('.file-chip')).toHaveLength(1);
+    });
+
+    it('a rejected upload clears the file, shows the server reason, and later text still sends', async () => {
+      (global.fetch as jest.Mock).mockImplementation(async (url: string) => {
+        if (String(url).includes('/attachments')) {
+          return { ok: false, status: 400, json: async () => ({ error: 'Unsupported file type. Use images, PDF, or plain text.' }) };
+        }
+        return { ok: true, json: async () => ({ id: 'srv-1', messages: [], active: true }) };
+      });
+      pick(new File(['MZ'], 'bad.exe', { type: 'application/x-msdownload' }));
+      await send('with exe');
+
+      expect((widget as any).pendingFile).toBeNull();
+      expect((root().getElementById('cf-chip-row') as HTMLElement).hidden).toBe(true);
+      expect(root().querySelector('.msg.system:last-child')?.textContent)
+        .toContain('Unsupported file type. Use images, PDF, or plain text.');
+      expect(posts('/attachments')).toHaveLength(1);
+
+      await send('plain text after failure');
+      expect(posts('/attachments')).toHaveLength(1); // not re-uploaded
+      expect(posts('/messages').some((c: unknown[]) => String((c[1] as RequestInit).body).includes('plain text after failure'))).toBe(true);
+    });
+
+    it('Retry on a failed text send sends it again and removes the failed bubble', async () => {
+      (global.fetch as jest.Mock).mockImplementation(async (url: string, init?: RequestInit) => {
+        if (String(url).includes('/messages') && init?.method === 'POST') throw new TypeError('offline');
+        return { ok: true, json: async () => ({ id: 'conv-123', messages: [], active: true }) };
+      });
+      await send('hello offline');
+      const failed = root().querySelector('.msg.visitor.failed') as HTMLElement;
+      expect(failed).toBeTruthy();
+      const retry = failed.querySelector('.msg-retry-btn') as HTMLButtonElement;
+      expect(retry.textContent).toBe('Retry');
+
+      (global.fetch as jest.Mock).mockImplementation(async () => ({
+        ok: true, json: async () => ({ id: 'srv-9', messages: [], active: true }),
+      }));
+      retry.click();
+      await flushPromises();
+      expect(root().querySelector('.msg.visitor.failed')).toBeNull();
+      expect(root().querySelectorAll('.msg.visitor')).toHaveLength(1);
+      expect(posts('/messages').some((c: unknown[]) => String((c[1] as RequestInit).body).includes('hello offline'))).toBe(true);
+    });
+  });
+
   describe('Message Display', () => {
     it('should display greeting message', async () => {
       const customWidget = new ErghiWidget({

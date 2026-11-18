@@ -1,3 +1,20 @@
+## 1.3.1 (2026-11-18)
+
+- Fixed: a rejected attachment (for example an unsupported file type) no longer breaks the chat.
+  The file is dropped, the visitor sees the server's reason, and the next message sends normally.
+  Before, the same file was uploaded again with every later message and every send failed until
+  the page was reloaded.
+- A picked file now shows as a chip above the input with its name and a remove button. One file
+  goes with each message; picking another replaces it.
+- A message that fails to send is marked as unsent and has a Retry button.
+- The chat no longer picks up the host page's inherited text styles (text-transform, letter-spacing,
+  line-height, font settings), which could uppercase or space out all widget text and break
+  connected Arabic script. Font, direction and size are still set by the widget.
+- The "You're #N in the queue" line (and the "connecting" line) disappear once an agent joins.
+- Arabic default greeting is now Modern Standard Arabic instead of Egyptian dialect.
+- New strings (Retry, remove file, one file per message, attachment error) are translated in
+  every bundled language. No API or configuration change.
+
 ## 1.3.0 (2026-11-17)
 
 - Shows the workspace's campaigns (proactive messages set up under Campaigns in the Erghi

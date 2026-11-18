@@ -28,3 +28,16 @@ describe('mobile styles', () => {
     expect(rule).not.toContain('right: 0;');
   });
 });
+
+describe('host page isolation', () => {
+  const css = buildStyles({ primaryColor: '#123456', accentLight: '#123456', accentDark: '#abcdef', position: 'bottom-right', cornerRadius: 12 });
+
+  it('resets inherited properties on the host so page CSS cannot restyle the widget', () => {
+    expect(css).toContain(':host { all: initial; }');
+  });
+
+  it('sets font, direction and text properties explicitly on the root afterwards', () => {
+    expect(css).toMatch(/\.root \{[^}]*font-family: Inter[^}]*letter-spacing: normal[^}]*text-transform: none/s);
+    expect(css).toContain('.root[dir="rtl"] {\n      direction: rtl;');
+  });
+});

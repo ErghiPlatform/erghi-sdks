@@ -52,6 +52,10 @@ export function buildStyles(look: WidgetLook): string {
     ? 'right: calc(20px + env(safe-area-inset-right, 0px));'
     : 'left: calc(20px + env(safe-area-inset-left, 0px));';
   return `
+    /* The host element sits in the customer's page: reset every inherited property (text-transform,
+       letter-spacing, line-height, font...) so their body CSS cannot restyle the widget. The font,
+       size, colour and direction are then set explicitly on .root below. */
+    :host { all: initial; }
     :host, * { box-sizing: border-box; }
     .root {
       --cf-primary: ${primaryColor};
@@ -77,7 +81,12 @@ export function buildStyles(look: WidgetLook): string {
       z-index: 2147483646;
       font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 14px;
+      font-weight: 400;
       line-height: 1.5;
+      letter-spacing: normal;
+      text-transform: none;
+      text-align: start;
+      white-space: normal;
       color: var(--cf-text);
       -webkit-font-smoothing: antialiased;
     }
@@ -87,7 +96,9 @@ export function buildStyles(look: WidgetLook): string {
       .root[data-theme="auto"] {${DARK_PALETTE}
       }
     }
+    .root[dir="ltr"] { direction: ltr; }
     .root[dir="rtl"] {
+      direction: rtl;
       font-family: Inter, -apple-system, 'Segoe UI', Tahoma, Roboto, sans-serif;
     }
     .root :focus-visible {
@@ -323,6 +334,38 @@ export function buildStyles(look: WidgetLook): string {
       flex-shrink: 0;
       align-items: center;
     }
+    .file-chip-row {
+      padding: 8px 14px 0;
+      background: var(--cf-surface);
+      flex-shrink: 0;
+    }
+    .file-chip-row[hidden] { display: none; }
+    .file-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      max-width: 100%;
+      padding: 4px;
+      padding-inline-start: 10px;
+      background: var(--cf-raised);
+      border: 1px solid var(--cf-border);
+      border-radius: var(--cf-r-control);
+      font-size: 13px;
+    }
+    .file-chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-chip-remove {
+      background: none; border: none; cursor: pointer; color: var(--cf-text-muted);
+      font-size: 18px; line-height: 1; width: 22px; height: 22px; border-radius: 50%;
+      flex-shrink: 0; padding: 0;
+    }
+    .file-chip-remove:hover { background: var(--cf-hover); color: var(--cf-text); }
+    .msg.failed { opacity: .75; }
+    .msg-retry-btn {
+      display: block; margin-block-start: 6px; padding: 3px 10px; cursor: pointer;
+      background: transparent; color: inherit; font: inherit; font-size: 12px; font-weight: 600;
+      border: 1px solid currentColor; border-radius: var(--cf-r-control);
+    }
+    .msg-retry-btn:hover { background: rgba(255,255,255,.18); }
     .attach-btn {
       background: none; border: none; cursor: pointer; font-size: 1.1rem;
       padding: 4px 6px; border-radius: 6px; opacity: 0.75; flex-shrink: 0;
