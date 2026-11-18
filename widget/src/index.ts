@@ -926,12 +926,15 @@ export default class ErghiWidget {
     } catch (err) {
       console.error('[Erghi] Send failed:', err);
       this.setTyping(false);
-      // The server refusing the file (4xx) will not change on a second try, so the file is
-      // dropped and Retry sends just the typed text. A dropped connection or a 5xx keeps it.
-      const rejected = err instanceof UploadError && err.status >= 400 && err.status < 500;
+      // The server refusing the file itself (bad request, too large, wrong type) will not change on
+      // a second try, so the file is dropped and Retry sends just the typed text. Anything else
+      // (a dropped connection, 5xx, 408/429, an expired visitor token) keeps it for Retry.
+      const rejected = err instanceof UploadError && FILE_REJECTED_STATUSES.has(err.status);
       const keepFile = rejected ? null : file;
+      // The server's reason is English; isolate it so it does not scramble a right-to-left sentence.
       const message = rejected
-        ? [this.tr('widget.error.attachment', "The file couldn't be attached."), err.reason].filter(Boolean).join(' ')
+        ? [this.tr('widget.error.attachment', "The file couldn't be attached."), err.reason ? `\u2068${err.reason}\u2069` : '']
+            .filter(Boolean).join(' ')
         : this.tr('widget.error.send', 'Message failed to send.');
       this.markSendFailed(tempId, typed, keepFile, message);
     }
@@ -1900,6 +1903,9 @@ type PublicWidgetConfig = Partial<Record<
 >>;
 
 /** m:ss for the recording timer. */
+/** Upload statuses that mean "this file will never be accepted", as opposed to "try again". */
+const FILE_REJECTED_STATUSES = new Set([400, 413, 415, 422]);
+
 /** The attachment upload was refused or failed; `reason` is the server's own words, when it sent any. */
 class UploadError extends Error {
   constructor(readonly status: number, readonly reason: string) {

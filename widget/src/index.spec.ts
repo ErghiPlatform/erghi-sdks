@@ -929,6 +929,28 @@ describe('ErghiWidget', () => {
       expect(posts('/messages').some((c: unknown[]) => String((c[1] as RequestInit).body).includes('plain text after failure'))).toBe(true);
     });
 
+    it('a rate-limited upload (429) keeps the file so Retry uploads it again', async () => {
+      let uploads = 0;
+      (global.fetch as jest.Mock).mockImplementation(async (url: string) => {
+        if (String(url).includes('/attachments')) {
+          uploads++;
+          return uploads === 1
+            ? { ok: false, status: 429, json: async () => ({ error: 'Too many requests.' }) }
+            : { ok: true, json: async () => ({ id: 'att-1', url: 'https://files.example/att-1', fileName: 'a.pdf' }) };
+        }
+        return { ok: true, json: async () => ({ id: 'srv-1', messages: [], active: true }) };
+      });
+      pick(new File(['x'], 'a.pdf', { type: 'application/pdf' }));
+      await send('with pdf');
+      const failed = root().querySelector('.msg.visitor.failed') as HTMLElement;
+      expect(failed).toBeTruthy();
+      expect(root().querySelector('.msg.system:last-child')?.textContent).not.toContain("couldn't be attached");
+
+      (failed.querySelector('.msg-retry-btn') as HTMLButtonElement).click();
+      await flushPromises();
+      expect(posts('/attachments')).toHaveLength(2);
+    });
+
     it('Retry on a failed text send sends it again and removes the failed bubble', async () => {
       (global.fetch as jest.Mock).mockImplementation(async (url: string, init?: RequestInit) => {
         if (String(url).includes('/messages') && init?.method === 'POST') throw new TypeError('offline');

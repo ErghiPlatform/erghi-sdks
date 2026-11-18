@@ -3,7 +3,8 @@
 - Fixed: a rejected attachment (for example an unsupported file type) no longer breaks the chat.
   The file is dropped, the visitor sees the server's reason, and the next message sends normally.
   Before, the same file was uploaded again with every later message and every send failed until
-  the page was reloaded.
+  the page was reloaded. Only a permanent refusal (bad request, too large, wrong type) drops the
+  file; a rate limit, timeout or server error keeps it for Retry.
 - A picked file now shows as a chip above the input with its name and a remove button. One file
   goes with each message; picking another replaces it.
 - A message that fails to send is marked as unsent and has a Retry button.
