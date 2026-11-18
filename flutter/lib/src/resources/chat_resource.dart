@@ -32,12 +32,18 @@ class ChatResource {
     return headers;
   }
 
+  /// A workspace API key (`clientId` + `clientSecret`) uses the key-scoped conversation endpoints,
+  /// which need the `chat:read` / `chat:write` scopes. Anything else uses the member endpoints.
+  String get _base => (config.clientId != null && config.clientSecret != null)
+      ? '/api/v1/agent/conversations'
+      : '/api/conversations';
+
   /// Get conversation by ID
   Future<Conversation> getConversation(String conversationId) async {
     try {
       final response = await client
           .get(
-            Uri.parse('${config.apiUrl}/api/conversations/$conversationId'),
+            Uri.parse('${config.apiUrl}$_base/$conversationId'),
             headers: _headers,
           )
           .timeout(config.timeout);
@@ -68,7 +74,7 @@ class ChatResource {
     String? status,
   }) async {
     try {
-      final uri = Uri.parse('${config.apiUrl}/api/conversations').replace(
+      final uri = Uri.parse('${config.apiUrl}$_base').replace(
         queryParameters: {
           'page': '$page',
           'limit': '$limit',
@@ -100,7 +106,7 @@ class ChatResource {
     try {
       final response = await client
           .post(
-            Uri.parse('${config.apiUrl}/api/conversations/$conversationId/close'),
+            Uri.parse('${config.apiUrl}$_base/$conversationId/close'),
             headers: _headers,
           )
           .timeout(config.timeout);
@@ -171,7 +177,7 @@ class ChatResource {
   }) async {
     try {
       final uri = Uri.parse(
-        '${config.apiUrl}/api/conversations/$conversationId/messages',
+        '${config.apiUrl}$_base/$conversationId/messages',
       ).replace(queryParameters: {
         'page': page.toString(),
         'limit': limit.toString(),
@@ -210,7 +216,7 @@ class ChatResource {
       final response = await client
           .post(
             Uri.parse(
-              '${config.apiUrl}/api/conversations/$conversationId/messages',
+              '${config.apiUrl}$_base/$conversationId/messages',
             ),
             headers: _headers,
             body: jsonEncode(request.toJson()),

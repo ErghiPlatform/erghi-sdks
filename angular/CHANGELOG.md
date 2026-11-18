@@ -1,3 +1,7 @@
+## 1.2.1 (2026-11-18)
+
+- Fix (types): `Conversation.status` and `Message.type` list the PascalCase values the API sends (`'Open'`, `'Queued'`, `'Text'`...) alongside the old lowercase spellings; `Message.sender` adds `'bot'` and `'user'`; `Conversation` gains `channel` and `startedAt`, `Message` gains `readAt`. No runtime change. Browser apps do not use API keys, so the key-scoped conversation endpoints are not wired here.
+
 ## 1.2.0 (2026-11-17)
 
 - Gap, not implemented (maintenance tier): the inbox and contacts API (labels, notes, saved replies, contacts, notifications). Use the JavaScript SDK from your server. Recorded in `parity.json`.

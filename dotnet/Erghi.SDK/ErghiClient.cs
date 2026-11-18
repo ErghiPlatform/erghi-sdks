@@ -36,6 +36,11 @@ public sealed class ErghiClient : IAsyncDisposable
 
     public string? VisitorId => _config.VisitorId;
 
+    /// <summary>True when the client was configured with an API key's client id and secret. Conversation
+    /// calls then use the key-scoped <c>/api/v1/agent/conversations</c> endpoints.</summary>
+    internal bool UsesClientCredentials =>
+        !string.IsNullOrEmpty(_config.ClientId) && !string.IsNullOrEmpty(_config.ClientSecret);
+
     // ── Connection state ─────────────────────────────────────────────────────
 
     public bool IsConnected => _hub?.State == HubConnectionState.Connected;

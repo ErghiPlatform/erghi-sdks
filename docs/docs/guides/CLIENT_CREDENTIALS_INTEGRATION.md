@@ -86,7 +86,7 @@ Content-Type: application/json
 }
 ```
 
-The endpoint also accepts `application/x-www-form-urlencoded`. Response:
+The endpoint also accepts `application/x-www-form-urlencoded` (the standard OAuth form post). Response:
 
 ```json
 {
@@ -102,10 +102,11 @@ Send the token as `Authorization: Bearer <access_token>`. It is scoped to the ke
 
 Keys are closed by default. A key can reach:
 
-- **The MCP endpoint** (`/api/mcp`) for conversations: listing and reading them (`chat:read`), replying and resolving (`chat:write`). Any MCP client library can connect to it with the bearer token.
+- **Conversation endpoints for keys** (`/api/v1/agent/conversations`): `GET` the list, one conversation and its messages (`chat:read`), `POST .../messages` to reply as an agent and `POST .../close` to resolve (`chat:write`). The workspace comes from the key; an id from another workspace answers `404`. Text replies only, no attachments. The SDKs call these when you give them a client ID and secret.
+- **The MCP endpoint** (`/api/mcp`) for the same conversation actions from an MCP client. Any MCP client library can connect to it with the bearer token.
 - **Setup endpoints opened to a scope**: branding and assistant persona, AI settings, the knowledge base and crawls, channels, action policies, widgets and the audit log. The [MCP server's source](https://github.com/ErghiPlatform/erghi-mcp/blob/main/internal/tools/catalog.go) lists the exact paths it uses.
 
-Everything else, including the member REST endpoints such as `/api/conversations`, returns `403` to a key. Those endpoints are for signed-in users of the admin app.
+Everything else, including the member REST endpoints such as `/api/conversations`, returns `403` to a key (use `/api/v1/agent/conversations` instead). Those endpoints are for signed-in users of the admin app.
 
 Every change made through a key is checked against its scopes and recorded in the audit log under the key's client ID.
 
@@ -123,6 +124,6 @@ const client = new ErghiClient({
 });
 ```
 
-Only call endpoints a key can reach (see above). The SDKs' conversation methods use the member endpoints, so with a key, read and answer conversations through the MCP endpoint instead.
+Only call endpoints a key can reach (see above). With a client ID and secret, the SDKs' conversation methods (list, get, messages, send, close) use `/api/v1/agent/conversations` and need `chat:read` / `chat:write`. Sending attachments, marking messages read and the inbox and contacts calls need a signed-in teammate's token.
 
 Keep the secret on your server. Never ship it to a browser or mobile app.

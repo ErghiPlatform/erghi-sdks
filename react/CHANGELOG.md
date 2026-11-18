@@ -1,5 +1,7 @@
 ## Unreleased
 
+- No code change. `@erghi-ai/sdk` 2.2.0 widens the `Conversation`/`Message` types to the PascalCase values the API sends and routes API-key conversation calls to the key-scoped endpoints; the hooks inherit both.
+
 - Gap, not implemented (maintenance tier): the inbox and contacts API (labels, notes, saved replies, contacts, notifications). Use the JavaScript SDK from your server. Recorded in `parity.json`.
 
 - No code change. Conversation Insights are available as `useErghi().client.insights` once `@erghi-ai/sdk` ships `insights` (see its changelog); this package has no hook for them.

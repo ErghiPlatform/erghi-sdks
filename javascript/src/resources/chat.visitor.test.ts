@@ -12,6 +12,7 @@ function makeClient() {
   const tokens = new Map<string, string>();
   const client = {
     getHttpClient: () => http,
+    usesClientCredentials: () => false,
     getVisitorId: () => 'visitor-1',
     setVisitorToken: (id: string, t: string) => tokens.set(id, t),
     getVisitorToken: (id: string) => tokens.get(id),

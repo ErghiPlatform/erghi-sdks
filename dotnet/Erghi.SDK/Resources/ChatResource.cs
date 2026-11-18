@@ -23,12 +23,19 @@ public sealed class ChatResource
         _client = client;
     }
 
+    private const string MemberConversations = "/api/conversations";
+    private const string KeyConversations = "/api/v1/agent/conversations";
+
+    /// <summary>A workspace API key (client id + secret) uses the key-scoped endpoints, which need the
+    /// <c>chat:read</c> / <c>chat:write</c> scopes; a signed-in teammate's token uses the member ones.</summary>
+    private string Base => _client.UsesClientCredentials ? KeyConversations : MemberConversations;
+
     // ── Conversations ────────────────────────────────────────────────────────
 
     /// <summary>Get a single conversation by ID.</summary>
     public async Task<Conversation> GetConversationAsync(string conversationId, CancellationToken ct = default)
     {
-        var response = await _http.GetAsync($"/api/conversations/{conversationId}", ct);
+        var response = await _http.GetAsync($"{Base}/{conversationId}", ct);
         return await ReadAsync<Conversation>(response, ct);
     }
 
@@ -39,7 +46,7 @@ public sealed class ChatResource
         var query = $"?page={page}&limit={limit}";
         if (status is not null) query += $"&status={status}";
 
-        var response = await _http.GetAsync($"/api/conversations{query}", ct);
+        var response = await _http.GetAsync($"{Base}{query}", ct);
         return await ReadAsync<PaginatedResponse<Conversation>>(response, ct);
     }
 
@@ -58,7 +65,7 @@ public sealed class ChatResource
     /// <summary>Close an open conversation.</summary>
     public async Task<Conversation> CloseConversationAsync(string conversationId, CancellationToken ct = default)
     {
-        var response = await _http.PostAsync($"/api/conversations/{conversationId}/close", null, ct);
+        var response = await _http.PostAsync($"{Base}/{conversationId}/close", null, ct);
         return await ReadAsync<Conversation>(response, ct);
     }
 
@@ -78,7 +85,7 @@ public sealed class ChatResource
         string conversationId, int page = 1, int limit = 50, CancellationToken ct = default)
     {
         var response = await _http.GetAsync(
-            $"/api/conversations/{conversationId}/messages?page={page}&limit={limit}", ct);
+            $"{Base}/{conversationId}/messages?page={page}&limit={limit}", ct);
         return await ReadAsync<PaginatedResponse<Message>>(response, ct);
     }
 
@@ -87,7 +94,7 @@ public sealed class ChatResource
         string conversationId, SendMessageRequest request, CancellationToken ct = default)
     {
         var response = await _http.PostAsJsonAsync(
-            $"/api/conversations/{conversationId}/messages", request, ct);
+            $"{Base}/{conversationId}/messages", request, ct);
         return await ReadAsync<Message>(response, ct);
     }
 
@@ -96,6 +103,11 @@ public sealed class ChatResource
         string conversationId, string content, Stream file, string fileName,
         string contentType = "application/octet-stream", CancellationToken ct = default)
     {
+        if (_client.UsesClientCredentials)
+            throw new ErghiException(
+                "Attachments cannot be sent with an API key; use a signed-in teammate's token.",
+                "ATTACHMENTS_NOT_SUPPORTED_FOR_API_KEYS");
+
         using var form = new MultipartFormDataContent();
         form.Add(new StringContent(content), "content");
         form.Add(new StreamContent(file) { Headers = { ContentType = new(contentType) } },
