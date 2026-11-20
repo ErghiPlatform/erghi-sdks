@@ -62,7 +62,6 @@ const EN: Record<string, string> = {
   'widget.offline.back': 'We\'re back {time}.',
   'widget.offline.aiStillHere': 'The AI assistant can still help.',
   'widget.offline.leaveMessage': 'Leave a message and we\'ll reply when we\'re back.',
-  'widget.prechat.prompt': 'Enter your email so we can follow up if we get disconnected.',
   'widget.prechat.placeholder': 'you@example.com',
   'widget.prechat.start': 'Start chat',
   'widget.prechat.invalid': 'Please enter a valid email address.',
@@ -71,6 +70,14 @@ const EN: Record<string, string> = {
   'widget.error.rateLimited': 'You\'re sending messages too fast. Please wait a moment and try again.',
   'widget.error.tooLong': 'That message is too long. Please shorten it and try again.',
   'widget.session.endedNewChat': 'This conversation has ended. Send a message to start a new chat.',
+  'widget.prechat.intro': 'Tell us how to reach you, in case we get disconnected.',
+  'widget.prechat.name': 'Name',
+  'widget.prechat.email': 'Email',
+  'widget.prechat.optional': '(optional)',
+  'widget.prechat.skip': 'Skip',
+  'widget.prechat.nameRequired': 'Please enter your name.',
+  'widget.prechat.emailRequired': 'Please enter your email.',
+  'widget.aria.prechat': 'Your contact details',
 };
 
 const AR: Record<string, string> = {
@@ -122,7 +129,6 @@ const AR: Record<string, string> = {
   'widget.offline.back': 'سنعود {time}.',
   'widget.offline.aiStillHere': 'لا يزال المساعد الذكي قادرًا على مساعدتك.',
   'widget.offline.leaveMessage': 'اترك رسالتك وسنرد عليك عند عودتنا.',
-  'widget.prechat.prompt': 'أدخل بريدك الإلكتروني لنتمكن من التواصل معك إذا انقطع الاتصال.',
   'widget.prechat.placeholder': 'you@example.com',
   'widget.prechat.start': 'ابدأ المحادثة',
   'widget.prechat.invalid': 'يُرجى إدخال بريد إلكتروني صالح.',
@@ -131,6 +137,14 @@ const AR: Record<string, string> = {
   'widget.error.rateLimited': 'ترسل الرسائل بسرعة كبيرة. يُرجى الانتظار قليلًا ثم المحاولة مرة أخرى.',
   'widget.error.tooLong': 'الرسالة طويلة جدًا. يُرجى اختصارها والمحاولة مرة أخرى.',
   'widget.session.endedNewChat': 'انتهت هذه المحادثة. أرسل رسالة لبدء محادثة جديدة.',
+  'widget.prechat.intro': 'أخبرنا كيف نتواصل معك في حال انقطع الاتصال.',
+  'widget.prechat.name': 'الاسم',
+  'widget.prechat.email': 'البريد الإلكتروني',
+  'widget.prechat.optional': '(اختياري)',
+  'widget.prechat.skip': 'تخطّي',
+  'widget.prechat.nameRequired': 'برجاء إدخال اسمك.',
+  'widget.prechat.emailRequired': 'برجاء إدخال بريدك الإلكتروني.',
+  'widget.aria.prechat': 'بيانات التواصل',
 };
 
 const ES: Record<string, string> = {
@@ -182,7 +196,6 @@ const ES: Record<string, string> = {
   'widget.offline.back': 'Volvemos {time}.',
   'widget.offline.aiStillHere': 'El asistente de IA sigue pudiendo ayudarte.',
   'widget.offline.leaveMessage': 'Déjanos un mensaje y te responderemos cuando volvamos.',
-  'widget.prechat.prompt': 'Introduce tu correo para poder contactarte si se corta la conexión.',
   'widget.prechat.placeholder': 'tu@ejemplo.com',
   'widget.prechat.start': 'Iniciar chat',
   'widget.prechat.invalid': 'Introduce un correo electrónico válido.',
@@ -191,6 +204,14 @@ const ES: Record<string, string> = {
   'widget.error.rateLimited': 'Estás enviando mensajes demasiado rápido. Espera un momento e inténtalo de nuevo.',
   'widget.error.tooLong': 'Ese mensaje es demasiado largo. Acórtalo e inténtalo de nuevo.',
   'widget.session.endedNewChat': 'Esta conversación ha terminado. Envía un mensaje para iniciar un chat nuevo.',
+  'widget.prechat.intro': 'Dinos cómo contactarte por si se corta la conexión.',
+  'widget.prechat.name': 'Nombre',
+  'widget.prechat.email': 'Correo electrónico',
+  'widget.prechat.optional': '(opcional)',
+  'widget.prechat.skip': 'Omitir',
+  'widget.prechat.nameRequired': 'Escribe tu nombre.',
+  'widget.prechat.emailRequired': 'Escribe tu correo electrónico.',
+  'widget.aria.prechat': 'Tus datos de contacto',
 };
 
 const DE: Record<string, string> = {
@@ -242,7 +263,6 @@ const DE: Record<string, string> = {
   'widget.offline.back': 'Wir sind {time} zurück.',
   'widget.offline.aiStillHere': 'Der KI-Assistent kann weiterhin helfen.',
   'widget.offline.leaveMessage': 'Hinterlassen Sie eine Nachricht, wir antworten, sobald wir zurück sind.',
-  'widget.prechat.prompt': 'Geben Sie Ihre E-Mail-Adresse ein, damit wir uns melden können, falls die Verbindung abbricht.',
   'widget.prechat.placeholder': 'sie@beispiel.de',
   'widget.prechat.start': 'Chat starten',
   'widget.prechat.invalid': 'Bitte geben Sie eine gültige E-Mail-Adresse ein.',
@@ -251,6 +271,14 @@ const DE: Record<string, string> = {
   'widget.error.rateLimited': 'Sie senden Nachrichten zu schnell. Bitte warten Sie einen Moment und versuchen Sie es erneut.',
   'widget.error.tooLong': 'Diese Nachricht ist zu lang. Bitte kürzen Sie sie und versuchen Sie es erneut.',
   'widget.session.endedNewChat': 'Dieses Gespräch ist beendet. Senden Sie eine Nachricht, um einen neuen Chat zu starten.',
+  'widget.prechat.intro': 'Sagen Sie uns, wie wir Sie erreichen können, falls die Verbindung abbricht.',
+  'widget.prechat.name': 'Name',
+  'widget.prechat.email': 'E-Mail',
+  'widget.prechat.optional': '(optional)',
+  'widget.prechat.skip': 'Überspringen',
+  'widget.prechat.nameRequired': 'Bitte geben Sie Ihren Namen ein.',
+  'widget.prechat.emailRequired': 'Bitte geben Sie Ihre E-Mail-Adresse ein.',
+  'widget.aria.prechat': 'Ihre Kontaktdaten',
 };
 
 const FR: Record<string, string> = {
@@ -302,7 +330,6 @@ const FR: Record<string, string> = {
   'widget.offline.back': 'Nous serons de retour {time}.',
   'widget.offline.aiStillHere': 'L\'assistant IA peut toujours vous aider.',
   'widget.offline.leaveMessage': 'Laissez un message, nous répondrons à notre retour.',
-  'widget.prechat.prompt': 'Saisissez votre e-mail pour que nous puissions vous recontacter en cas de coupure.',
   'widget.prechat.placeholder': 'vous@exemple.fr',
   'widget.prechat.start': 'Démarrer le chat',
   'widget.prechat.invalid': 'Veuillez saisir une adresse e-mail valide.',
@@ -311,6 +338,14 @@ const FR: Record<string, string> = {
   'widget.error.rateLimited': 'Vous envoyez des messages trop vite. Patientez un instant puis réessayez.',
   'widget.error.tooLong': 'Ce message est trop long. Veuillez le raccourcir et réessayer.',
   'widget.session.endedNewChat': 'Cette conversation est terminée. Envoyez un message pour démarrer un nouveau chat.',
+  'widget.prechat.intro': 'Dites-nous comment vous joindre si la connexion est interrompue.',
+  'widget.prechat.name': 'Nom',
+  'widget.prechat.email': 'E-mail',
+  'widget.prechat.optional': '(facultatif)',
+  'widget.prechat.skip': 'Passer',
+  'widget.prechat.nameRequired': 'Veuillez saisir votre nom.',
+  'widget.prechat.emailRequired': 'Veuillez saisir votre e-mail.',
+  'widget.aria.prechat': 'Vos coordonnées',
 };
 
 const NL: Record<string, string> = {
@@ -362,7 +397,6 @@ const NL: Record<string, string> = {
   'widget.offline.back': 'We zijn {time} terug.',
   'widget.offline.aiStillHere': 'De AI-assistent kan nog steeds helpen.',
   'widget.offline.leaveMessage': 'Laat een bericht achter, dan reageren we zodra we terug zijn.',
-  'widget.prechat.prompt': 'Vul je e-mailadres in zodat we contact kunnen opnemen als de verbinding wegvalt.',
   'widget.prechat.placeholder': 'jij@voorbeeld.nl',
   'widget.prechat.start': 'Chat starten',
   'widget.prechat.invalid': 'Voer een geldig e-mailadres in.',
@@ -371,6 +405,14 @@ const NL: Record<string, string> = {
   'widget.error.rateLimited': 'Je verstuurt berichten te snel. Wacht even en probeer het opnieuw.',
   'widget.error.tooLong': 'Dit bericht is te lang. Kort het in en probeer het opnieuw.',
   'widget.session.endedNewChat': 'Dit gesprek is beëindigd. Stuur een bericht om een nieuw gesprek te starten.',
+  'widget.prechat.intro': 'Laat ons weten hoe we je kunnen bereiken als de verbinding wegvalt.',
+  'widget.prechat.name': 'Naam',
+  'widget.prechat.email': 'E-mail',
+  'widget.prechat.optional': '(optioneel)',
+  'widget.prechat.skip': 'Overslaan',
+  'widget.prechat.nameRequired': 'Vul je naam in.',
+  'widget.prechat.emailRequired': 'Vul je e-mailadres in.',
+  'widget.aria.prechat': 'Je contactgegevens',
 };
 
 /**

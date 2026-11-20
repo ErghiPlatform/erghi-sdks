@@ -1,3 +1,12 @@
+## Unreleased
+
+- Added: a pre-chat form. When the workspace turns it on for a widget (`preChatFormEnabled` in the
+  public config), the widget asks for an optional name and email before the first message; either
+  can be required (`preChatNameRequired`, `preChatEmailRequired`), which hides the skip link. The
+  values travel only with the request that creates the conversation and are never stored. The form
+  is not shown to a visitor identified by the host page (identity token or hash) or when a saved
+  conversation resumes. Shadow DOM, RTL, all six languages.
+
 ## 1.4.0 (2026-11-18)
 
 - Changed: opening the chat no longer creates a conversation. The first message does, so visitors

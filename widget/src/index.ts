@@ -9,6 +9,10 @@ import { playMessageNotification } from './notification';
 import { markCampaignSeen, parseCampaigns, pickCampaign, PublicCampaign, readSeenCampaigns } from './campaigns';
 import { bundledTranslations, interpolate, isRtlLocale, WidgetDirection } from './locale';
 import {
+  cleanPreChatValues, parsePreChatSettings, PRECHAT_MAX_EMAIL, PRECHAT_MAX_NAME, PRECHAT_OFF, preChatPending,
+  PreChatError, PreChatSettings, PreChatValues, validatePreChat,
+} from './prechat';
+import {
   BrowserSpeaker, canRecordInBrowser, canSpeakInBrowser, detectLanguage, fileExtension,
   MAX_VOICE_NOTE_BYTES, MAX_VOICE_NOTE_SECONDS, speakableText, VoiceRecorder,
 } from './voice';
@@ -140,6 +144,14 @@ export default class ErghiWidget {
   private campaigns: PublicCampaign[] = [];
   private campaignTimer: ReturnType<typeof setTimeout> | null = null;
   private activeCampaign: { id: string; tempId: string; content: string } | null = null;
+  // The workspace's pre-chat form (name and email before the first message). The answer lives in
+  // memory only, until the request that creates the conversation carries it.
+  private preChat: PreChatSettings = PRECHAT_OFF;
+  private preChatAnswered = false;
+  private preChatValues: PreChatValues | null = null;
+  // The form waits until we know there is no saved conversation to restore.
+  private sessionChecked = false;
+  private chatBlocked = false;
   private isTyping = false;
   private knownMessageIds = new Set<string>();
   private ratedMessageIds = new Set<string>();
@@ -322,11 +334,115 @@ export default class ErghiWidget {
     };
     this.showPoweredBy = boolOr(data.showPoweredBy ?? data.ShowPoweredBy, false);
     this.campaigns = parseCampaigns(data.campaigns ?? data.Campaigns);
+    this.preChat = parsePreChatSettings(raw as Record<string, unknown>);
     this.footerLinks = {
       termsUrl: safeHttpsUrl(data.termsUrl ?? data.TermsUrl),
       privacyUrl: safeHttpsUrl(data.privacyUrl ?? data.PrivacyUrl),
       supportUrl: safeHttpsUrl(data.supportUrl ?? data.SupportUrl),
     };
+  }
+
+  /** The form's markup; hidden until updatePreChat decides it is needed. Labels name every field,
+   * and an optional field says so, a required one is marked aria-required. */
+  private buildPreChatHtml(): string {
+    const optional = ` <span class="prechat-optional">${escapeHtml(this.tr('widget.prechat.optional', '(optional)'))}</span>`;
+    const label = (id: string, key: string, fallback: string, required: boolean): string =>
+      `<label class="prechat-label" for="${id}">${escapeHtml(this.tr(key, fallback))}${required ? '' : optional}</label>`;
+    const canSkip = !this.preChat.nameRequired && !this.preChat.emailRequired;
+    return `
+        <form class="prechat" id="cf-prechat" novalidate hidden aria-label="${escapeHtml(this.tr('widget.aria.prechat', 'Your contact details'))}">
+          <p class="prechat-intro">${escapeHtml(this.tr('widget.prechat.intro', 'Tell us how to reach you, in case we get disconnected.'))}</p>
+          ${label('cf-prechat-name', 'widget.prechat.name', 'Name', this.preChat.nameRequired)}
+          <input type="text" id="cf-prechat-name" name="name" autocomplete="name" dir="auto" maxlength="${PRECHAT_MAX_NAME}"
+            aria-describedby="cf-prechat-name-error"${this.preChat.nameRequired ? ' aria-required="true"' : ''} />
+          <p class="prechat-error" id="cf-prechat-name-error" hidden></p>
+          ${label('cf-prechat-email', 'widget.prechat.email', 'Email', this.preChat.emailRequired)}
+          <input type="email" id="cf-prechat-email" name="email" autocomplete="email" inputmode="email" dir="ltr"
+            maxlength="${PRECHAT_MAX_EMAIL}" placeholder="${escapeHtml(this.tr('widget.prechat.placeholder', 'you@example.com'))}"
+            aria-describedby="cf-prechat-email-error"${this.preChat.emailRequired ? ' aria-required="true"' : ''} />
+          <p class="prechat-error" id="cf-prechat-email-error" hidden></p>
+          <div class="prechat-actions">
+            <button type="submit" class="prechat-submit" id="cf-prechat-start">${escapeHtml(this.tr('widget.prechat.start', 'Start chat'))}</button>
+            <button type="button" class="prechat-skip" id="cf-prechat-skip"${canSkip ? '' : ' hidden'}>${escapeHtml(this.tr('widget.prechat.skip', 'Skip'))}</button>
+          </div>
+        </form>`;
+  }
+
+  private isPreChatPending(): boolean {
+    return !this.chatBlocked && preChatPending({
+      settings: this.preChat,
+      answered: this.preChatAnswered,
+      hasConversation: !!this.conversationId,
+      hostIdentified: !!this.identityToken,
+    });
+  }
+
+  /** Shows the form in the composer's place while it is pending, and the composer otherwise. */
+  private updatePreChat(): void {
+    const form = this.$('cf-prechat') as HTMLFormElement | null;
+    if (!form) return;
+    const show = this.sessionChecked && this.isPreChatPending();
+    const wasShown = !form.hidden;
+    form.hidden = !show;
+    this.shadow?.querySelector('.root')?.classList.toggle('prechat-open', show);
+    // Keep keyboard and screen-reader focus on whatever is visible when the form comes or goes.
+    if (this.isOpen && wasShown !== show) this.focusComposerOrPreChat();
+  }
+
+  private focusComposerOrPreChat(): void {
+    const form = this.$('cf-prechat') as HTMLFormElement | null;
+    if (form && !form.hidden) {
+      const first = this.preChat.emailRequired && !this.preChat.nameRequired ? 'cf-prechat-email' : 'cf-prechat-name';
+      (this.$(first) as HTMLInputElement | null)?.focus();
+      return;
+    }
+    (this.$('cf-input') as HTMLInputElement | null)?.focus();
+  }
+
+  private submitPreChat(): void {
+    const name = (this.$('cf-prechat-name') as HTMLInputElement | null)?.value ?? '';
+    const email = (this.$('cf-prechat-email') as HTMLInputElement | null)?.value ?? '';
+    const values = cleanPreChatValues(name, email);
+    const errors = validatePreChat(values, this.preChat);
+    this.showPreChatErrors(errors);
+    if (errors.name || errors.email) return;
+    this.answerPreChat(values.name || values.email ? values : null);
+  }
+
+  /** Records the answer (null: skipped) and gives the visitor the composer. */
+  private answerPreChat(values: PreChatValues | null): void {
+    this.preChatValues = values;
+    this.preChatAnswered = true;
+    this.showPreChatErrors({});
+    this.updatePreChat();
+  }
+
+  private showPreChatErrors(errors: { name?: PreChatError; email?: PreChatError }): void {
+    const text: Record<PreChatError, string> = {
+      nameRequired: this.tr('widget.prechat.nameRequired', 'Please enter your name.'),
+      emailRequired: this.tr('widget.prechat.emailRequired', 'Please enter your email.'),
+      emailInvalid: this.tr('widget.prechat.invalid', 'Please enter a valid email address.'),
+    };
+    let focused = false;
+    for (const field of ['name', 'email'] as const) {
+      const input = this.$(`cf-prechat-${field}`) as HTMLInputElement | null;
+      const message = this.$(`cf-prechat-${field}-error`);
+      const error = errors[field];
+      if (message) {
+        message.textContent = error ? text[error] : '';
+        message.hidden = !error;
+      }
+      if (!input) continue;
+      if (error) {
+        input.setAttribute('aria-invalid', 'true');
+        if (!focused) {
+          input.focus();
+          focused = true;
+        }
+      } else {
+        input.removeAttribute('aria-invalid');
+      }
+    }
   }
 
   /** True if footerLinks has at least one configured link — controls whether the footer
@@ -377,6 +493,7 @@ export default class ErghiWidget {
     // The same JWT also gives the conversation a verified identity (identity.* for
     // integrations and action policies); a bare visitorId never does.
     this.identityToken = jwtToken;
+    this.updatePreChat();
     if (this.conversationId) void this.setIdentityToken(jwtToken);
     try {
       const res = await fetch(`${this.config.apiUrl}/api/conversations/identity`, {
@@ -410,6 +527,7 @@ export default class ErghiWidget {
    */
   public async setIdentityToken(jwt: string): Promise<boolean> {
     this.identityToken = jwt;
+    this.updatePreChat();
     if (!this.conversationId) return true;
     try {
       const res = await fetch(
@@ -565,6 +683,7 @@ export default class ErghiWidget {
         </div>
         <div class="messages" id="cf-messages"></div>
         <div class="typing" id="cf-typing"><span></span><span></span><span></span></div>
+        ${this.buildPreChatHtml()}
         <div class="file-chip-row" id="cf-chip-row" hidden>
           <span class="file-chip">
             <span class="file-chip-icon" aria-hidden="true">📎</span>
@@ -596,6 +715,8 @@ export default class ErghiWidget {
     this.applyVoiceSettings();
     this.addSystemMessage(this.greetingText());
     void this.tryRestoreSession().then(restored => {
+      this.sessionChecked = true;
+      this.updatePreChat();
       if (!restored) this.scheduleCampaign();
     });
 
@@ -635,6 +756,11 @@ export default class ErghiWidget {
       this.setPendingFile(null);
       (this.$('cf-input') as HTMLInputElement | null)?.focus();
     });
+    s.getElementById('cf-prechat')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.submitPreChat();
+    });
+    s.getElementById('cf-prechat-skip')?.addEventListener('click', () => this.answerPreChat(null));
     s.getElementById('cf-mic')?.addEventListener('click', () => void this.onMicClick());
     s.getElementById('cf-mic-cancel')?.addEventListener('click', () => this.cancelRecording());
     s.getElementById('cf-input')?.addEventListener('keydown', (e) => {
@@ -667,7 +793,7 @@ export default class ErghiWidget {
     this.$('cf-bubble')?.classList.remove('has-unread');
     this.hideTeaser();
     void this.ensureConversation();
-    (this.$('cf-input') as HTMLInputElement | null)?.focus();
+    this.focusComposerOrPreChat();
     this.scrollMessages(true);
   }
 
@@ -852,11 +978,20 @@ export default class ErghiWidget {
         metadata: this.buildMetadata(),
         // Only an id the widget received from /public; the server re-checks it is live.
         campaignId: this.activeCampaign?.id ?? undefined,
+        // Never alongside an identity token: the host app's identity is the one that counts (the
+        // server ignores the form for an identified visitor too).
+        preChat: identityToken ? undefined : this.preChatValues ?? undefined,
       }),
     });
   }
 
   private async startConversation(): Promise<void> {
+    if (this.isPreChatPending()) {
+      // The visitor's text stays in the input; they send it once they answer or skip the form.
+      this.updatePreChat();
+      this.focusComposerOrPreChat();
+      return;
+    }
     try {
       let res = await this.postConversation(this.identityToken);
       if (res.status === 401 && this.identityToken) {
@@ -866,7 +1001,19 @@ export default class ErghiWidget {
         console.warn('[Erghi] Identity token was rejected; starting the conversation without it');
         this.identityToken = null;
         window.dispatchEvent(new CustomEvent('erghi:identity-expired'));
+        if (this.isPreChatPending()) {
+          // Without a verified identity the visitor is anonymous after all: ask them first.
+          this.updatePreChat();
+          return;
+        }
         res = await this.postConversation(null);
+      }
+      if (res.status === 400 && this.preChatValues && !this.identityToken && await refusesPreChatEmail(res)) {
+        // The server refused the email typed in the form (it checks the same rule); ask again.
+        this.preChatAnswered = false;
+        this.updatePreChat();
+        this.showPreChatErrors({ email: 'emailInvalid' });
+        return;
       }
       if (!res.ok) {
         const code = res.status === 403 ? await readErrorCode(res) : null;
@@ -889,6 +1036,8 @@ export default class ErghiWidget {
       const data = await res.json();
       this.conversationId = data.id ?? data.Id;
       this.visitorToken = data.visitorToken ?? data.VisitorToken ?? null;
+      this.preChatValues = null;
+      this.updatePreChat();
       this.clearCampaignTimer();
       this.hideTeaser();
       this.saveSession();
@@ -908,6 +1057,8 @@ export default class ErghiWidget {
 
   /** The chat cannot work here (deactivated widget, refused origin): say so and stop accepting input. */
   private blockChat(message: string): void {
+    this.chatBlocked = true;
+    this.updatePreChat();
     this.addSystemMessage(message);
     const input = this.$('cf-input') as HTMLInputElement | null;
     if (input) input.disabled = true;
@@ -1867,6 +2018,8 @@ export default class ErghiWidget {
     this.clearSession();
     void this.realtime.disconnect();
     this.stopHeartbeat();
+    // A visitor who came back to a conversation and never saw the form is asked before the next one.
+    this.updatePreChat();
   }
 
   private async tryRestoreSession(): Promise<boolean> {
@@ -2014,6 +2167,17 @@ function formatClock(seconds: number): string {
 }
 
 /** The stable `code` from an Erghi error body, or null. */
+/** Whether a 400 from creating a conversation is the API refusing the pre-chat email. */
+async function refusesPreChatEmail(res: Response): Promise<boolean> {
+  try {
+    const body = await (typeof res.clone === 'function' ? res.clone() : res).json();
+    const errors = body?.errors;
+    return !!errors && typeof errors === 'object' && 'preChat.email' in errors;
+  } catch {
+    return false;
+  }
+}
+
 async function readErrorCode(res: Response): Promise<string | null> {
   try {
     const body = await res.json();
