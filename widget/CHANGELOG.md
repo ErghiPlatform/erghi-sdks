@@ -1,4 +1,4 @@
-## Unreleased
+## 1.5.0 (2026-11-20)
 
 - Added: a pre-chat form. When the workspace turns it on for a widget (`preChatFormEnabled` in the
   public config), the widget asks for an optional name and email before the first message; either
