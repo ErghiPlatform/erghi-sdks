@@ -37,6 +37,7 @@ const DARK_PALETTE = `
       --cf-text-faint: #7d8491;
       --cf-hover: #2f3440;
       --cf-accent: var(--cf-accent-dark);
+      --cf-danger: #f87171;
       color-scheme: dark;`;
 
 /** Injected into Shadow DOM — isolated from host page CSS */
@@ -70,6 +71,7 @@ export function buildStyles(look: WidgetLook): string {
       --cf-text-faint: #9095a1;
       --cf-hover: #e8eaef;
       --cf-accent: var(--cf-accent-light);
+      --cf-danger: #b91c1c;
       --cf-r-panel: ${r.panel}px;
       --cf-r-msg: ${r.message}px;
       --cf-r-control: ${r.control};
@@ -334,6 +336,68 @@ export function buildStyles(look: WidgetLook): string {
       flex-shrink: 0;
       align-items: center;
     }
+    /* Pre-chat form: takes the composer's place until the visitor answers or skips it. */
+    .prechat {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 12px 14px;
+      border-top: 1px solid var(--cf-border);
+      background: var(--cf-surface);
+      flex-shrink: 0;
+    }
+    .prechat[hidden] { display: none; }
+    .root.prechat-open .composer,
+    .root.prechat-open .file-chip-row { display: none; }
+    .prechat-intro { margin: 0 0 4px; font-size: 13px; color: var(--cf-text-muted); line-height: 1.4; }
+    .prechat-label { font-size: 12px; font-weight: 600; color: var(--cf-text); }
+    .prechat-optional { font-weight: 400; color: var(--cf-text-muted); }
+    .prechat input {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid var(--cf-border);
+      border-radius: var(--cf-r-control);
+      padding: 9px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--cf-canvas);
+      color: var(--cf-text);
+      outline: none;
+    }
+    .prechat input::placeholder { color: var(--cf-text-faint); }
+    .prechat input:focus {
+      border-color: var(--cf-accent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--cf-accent) 20%, transparent);
+    }
+    .prechat input[aria-invalid="true"] { border-color: var(--cf-danger); }
+    .prechat-error { margin: 0; font-size: 12px; color: var(--cf-danger); }
+    .prechat-error[hidden] { display: none; }
+    .prechat-actions { display: flex; gap: 8px; margin-top: 6px; align-items: center; }
+    .prechat-submit {
+      flex: 1;
+      min-height: 40px;
+      border: none;
+      border-radius: var(--cf-r-control);
+      background: var(--cf-primary);
+      color: #fff;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .prechat-skip {
+      min-height: 40px;
+      padding: 0 14px;
+      background: none;
+      border: 1px solid var(--cf-border);
+      border-radius: var(--cf-r-control);
+      color: var(--cf-text-muted);
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .prechat-skip:hover { background: var(--cf-hover); color: var(--cf-text); }
+    .prechat-skip[hidden] { display: none; }
     .file-chip-row {
       padding: 8px 14px 0;
       background: var(--cf-surface);
