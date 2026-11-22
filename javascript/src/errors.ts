@@ -57,3 +57,23 @@ export class NotFoundError extends ErghiError {
     Object.setPrototypeOf(this, NotFoundError.prototype);
   }
 }
+
+/**
+ * The platform refused a call with a machine-readable code, e.g. 409 `turn_closed`,
+ * `turn_superseded`, `human_engaged`, `handoff_unavailable` or 403 `configure_ai_required`.
+ * `code` stays `'API_ERROR'`; the platform's code is `errorCode` and its close reason, when it
+ * gives one, is `reason`.
+ */
+export class ErghiApiError extends ErghiError {
+  constructor(
+    message: string,
+    statusCode: number,
+    details?: any,
+    public readonly errorCode?: string,
+    public readonly reason?: string
+  ) {
+    super(message, 'API_ERROR', statusCode, details);
+    this.name = 'ErghiApiError';
+    Object.setPrototypeOf(this, ErghiApiError.prototype);
+  }
+}
