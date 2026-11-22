@@ -53,8 +53,23 @@
       "evidence": "dotnet/Erghi.SDK/Resources/InboxResource.cs + ContactsResource.cs; dotnet/tests/Erghi.SDK.Tests/InboxContractTests.cs",
       "note": "Workspace surface (member access token), never the visitor surface. Workspace API keys cannot hold view_conversations/manage_inbox_settings/manage_contacts (not grantable), so they get 403. Contacts, notifications, @mentions and unassign require platform PR #256 (not merged when this was written)."
     },
-    "rag": { "supported": false, "note": "Same platform-wide gap as javascript." },
-    "webhooks": { "supported": false, "note": "Same platform-wide gap as javascript." }
+    "rag": {
+      "supported": false,
+      "note": "Same platform-wide gap as javascript."
+    },
+    "webhooks": {
+      "supported": false,
+      "note": "Same platform-wide gap as javascript."
+    },
+    "reply_engine": {
+      "admin": true,
+      "runtime_rest": true,
+      "webhook_verifier": true,
+      "live_hub": true,
+      "verified": "2026-11-22",
+      "evidence": "dotnet/Erghi.SDK/Resources/ReplyEnginesResource.cs, AgentRuntimeResource.cs, ReplyEngine/AgentRuntimeClient.cs, ReplyEngine/StandardWebhooks.cs; tests: dotnet/tests/Erghi.SDK.Tests/ReplyEngine*.cs, AgentRuntimeClientTests.cs",
+      "note": "Unreleased; written against the platform reply-engine worktree (API version 2026-11-22), not yet verified against a deployed platform. Live hub client reconnects and calls Resume(lastSequence)."
+    }
   },
   "notes": "Has attachment support and conversation assignment that nothing else has -- worth checking whether those are actually used by a real customer before treating their absence elsewhere as urgent debt, rather than assuming dotnet is just 'ahead' by default. UpdateWidgetAsync gap vs angular is small and cheap to close."
 }

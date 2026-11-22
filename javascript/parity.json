@@ -60,6 +60,15 @@
     "webhooks": {
       "supported": false,
       "note": "No customer-facing outbound webhook registration API exists on the platform yet (only inbound provider webhooks like Telegram). Nothing to wrap."
+    },
+    "reply_engine": {
+      "admin": true,
+      "runtime_rest": true,
+      "webhook_verifier": true,
+      "live_hub": true,
+      "verified": "2026-11-22",
+      "evidence": "javascript/src/resources/replyEngines.ts, javascript/src/agentRuntime.ts, javascript/src/webhooks.ts; tests: replyEngines.test.ts, agentRuntime.test.ts, webhooks.test.ts",
+      "note": "Unreleased; written against the platform reply-engine worktree (API version 2026-11-22), not yet verified against a deployed platform. Live hub client reconnects and calls Resume(lastSequence)."
     }
   },
   "notes": "Reference implementation. Any capability added here and not propagated to dotnet/python/flutter/angular/widget within a release cycle is a real parity gap -- react inherits automatically since it wraps this package's client object directly."
