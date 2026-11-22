@@ -15,6 +15,7 @@ from typing_extensions import Self
 from websockets.asyncio.client import ClientConnection
 
 from .errors import (
+    ApiError,
     AuthenticationError,
     ErghiError,
     HubException,
@@ -28,6 +29,7 @@ from .resources.chat import ChatResource
 from .resources.contacts import ContactsResource
 from .resources.inbox import InboxResource
 from .resources.insights import InsightsResource
+from .resources.reply_engines import AgentRuntimeResource, ReplyEnginesResource
 from .resources.workspace import WorkspaceResource
 
 logger = logging.getLogger(__name__)
@@ -116,6 +118,8 @@ class ErghiClient:
         self.insights = InsightsResource(self)
         self.inbox = InboxResource(self)
         self.contacts = ContactsResource(self)
+        self.reply_engines = ReplyEnginesResource(self)
+        self.agent_runtime = AgentRuntimeResource(self)
 
     async def __aenter__(self) -> Self:
         """Async context manager entry"""
@@ -254,9 +258,13 @@ class ErghiClient:
                 str(error),
             )
             details = data.get("errors")
+            error_code = data.get("code") if isinstance(data.get("code"), str) else None
+            reason = data.get("reason") if isinstance(data.get("reason"), str) else None
         except (ValueError, AttributeError):
             message = str(error)
             details = None
+            error_code = None
+            reason = None
 
         status_code = response.status_code
 
@@ -270,7 +278,7 @@ class ErghiClient:
             retry_after = int(response.headers.get("Retry-After", "60"))
             return RateLimitError(message, retry_after)
         else:
-            return ErghiError(message, "API_ERROR", status_code, details)
+            return ApiError(message, status_code, details, error_code, reason)
 
     def set_access_token(self, token: str) -> None:
         """Set access token"""

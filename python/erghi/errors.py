@@ -69,3 +69,24 @@ class HubException(ErghiError):
 
     def __init__(self, message: str) -> None:
         super().__init__(message, "HUB_EXCEPTION")
+
+
+class ApiError(ErghiError):
+    """The platform refused a call with a machine-readable code, for example 409 ``turn_closed``,
+    ``turn_superseded``, ``human_engaged``, ``handoff_unavailable`` or 403 ``configure_ai_required``.
+
+    ``code`` stays ``"API_ERROR"`` (as before); the platform's code is ``error_code`` and the close
+    reason, when it gives one, is ``reason``.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+        details: Any | None = None,
+        error_code: str | None = None,
+        reason: str | None = None,
+    ) -> None:
+        super().__init__(message, "API_ERROR", status_code, details)
+        self.error_code = error_code
+        self.reason = reason
