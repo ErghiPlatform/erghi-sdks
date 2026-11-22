@@ -49,7 +49,7 @@ Repository = "https://github.com/ErghiPlatform/erghi-sdks"
 Issues = "https://github.com/ErghiPlatform/erghi-sdks/issues"
 
 [tool.setuptools]
-packages = ["erghi"]
+packages = ["erghi", "erghi.resources"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

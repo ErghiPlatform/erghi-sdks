@@ -7,7 +7,8 @@
   - New `ApiError` (a subclass of `ErghiError`, still `code == "API_ERROR"`) for 403/409 and other statuses the SDK did not map before; it adds `error_code` (the platform's machine code, for example `turn_closed`) and `reason`. Code that caught `ErghiError` keeps working.
   - Not in this SDK: the live-connection (SignalR) client; use the REST runtime calls or the webhook mode. Needs the platform release with reply engines (API version 2026-11-22).
 - Known issue, not changed here: `verify_webhook_signature` (the older helper) checks `X-Erghi-Signature` over the body only, which is not how the platform signs deliveries today; use `verify_webhook` for real webhook deliveries.
-- Suggested next version: 2.3.0 (additive).
+- Fix: the wheel did not contain the `erghi.resources` package (`[tool.setuptools] packages` listed only `erghi`), so `import erghi` failed on an installed 2.2.0 and earlier with `ModuleNotFoundError: erghi.resources`. Both packages are now listed; verified by building the wheel. This fix needs a release of its own soon, regardless of the reply engine.
+- Suggested next version: 2.3.0 (additive plus the packaging fix).
 
 ## 2.2.0 (2026-11-18)
 
