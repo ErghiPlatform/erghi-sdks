@@ -57,3 +57,20 @@ public sealed class NetworkException : ErghiException
     public NetworkException(string message, Exception? inner = null)
         : base(message, "NETWORK_ERROR", null, inner?.Message) { }
 }
+
+/// <summary>
+/// A reply-engine call the platform refused with a machine-readable code, for example 409 <c>turn_closed</c>,
+/// <c>turn_superseded</c>, <c>handoff_unavailable</c>, <c>human_engaged</c>, <c>conversation_closed</c>, <c>not_held</c>,
+/// 403 <c>configure_ai_required</c>. <see cref="ErghiException.Code"/> is that code; <see cref="Reason"/> is the
+/// close reason when the platform gives one.
+/// </summary>
+public sealed class ErghiApiException : ErghiException
+{
+    public string? Reason { get; }
+
+    public ErghiApiException(string message, string code, int statusCode, string? reason = null, object? details = null)
+        : base(message, code, statusCode, details)
+    {
+        Reason = reason;
+    }
+}

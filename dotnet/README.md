@@ -286,6 +286,62 @@ public async Task<IActionResult> HandleWebhook()
 }
 ```
 
+## Reply Engine (your own agent answers your widget)
+
+A reply engine sends a widget's visitor messages to **your** agent instead of Erghi AI. Four modes: `Webhook` (Erghi POSTs
+each turn to your URL), `LiveConnection` (your agent connects out to Erghi over SignalR, no public URL), `Queue` (SQS) and
+`CustomModel` (Erghi calls an OpenAI-compatible endpoint you name). The full protocol is in `docs/REPLY_ENGINE.md` of the platform.
+
+**Admin** (`configure_ai`; use a signed-in teammate token or an API key that holds it):
+
+```csharp
+var created = await client.ReplyEngines.CreateAsync(new CreateReplyEngineRequest
+{
+    Mode = ReplyEngineModes.Webhook, Name = "Support agent", Url = "https://agent.example.com/erghi", TimeoutSeconds = 20,
+});
+var signingSecret = created.Secret;   // whsec_..., returned ONCE: store it now
+await client.ReplyEngines.SetWidgetBindingAsync(widgetId, new WidgetReplyEngineBinding(Default: created.Id));
+var test = await client.ReplyEngines.TestAsync(created.Id);   // test.Ok / test.ErrorCode
+```
+
+**Verify a webhook** (Standard Webhooks: `webhook-id`, `webhook-timestamp`, `webhook-signature`; rejects deliveries older than 5 minutes).
+Always verify the raw body before parsing it:
+
+```csharp
+TurnRequest turn = ErghiWebhooks.VerifyAndParseTurn(signingSecret, h => Request.Headers[h].ToString(), rawBody);
+// throws WebhookVerificationException (Reason: missing_headers, bad_timestamp, timestamp_too_old,
+// timestamp_in_future, no_matching_signature). ErghiWebhooks.TryVerify returns a bool instead.
+```
+
+**Answer a turn** (API key client id and secret holding `agent:runtime`; the workspace is the key's):
+
+```csharp
+await using var client = new ErghiClient(new ErghiConfig { ApiUrl = "https://api.erghi.ai", ClientId = id, ClientSecret = secret });
+await client.AgentRuntime.TypingAsync(turn.TurnId);
+await client.AgentRuntime.ReplyAsync(turn.TurnId, AgentReply.Of($"{turn.TurnId}:1", "Your order shipped today."));
+// also: HandoffAsync, DeclineAsync, GetTurnAsync, TakeBackAsync(conversationId), PostBotMessageAsync
+```
+
+The idempotency key is required: a retry with the same key posts nothing twice. A turn that already ended throws
+`ErghiApiException` with `Code` `turn_closed` (see `Reason`) or `turn_superseded`; stop working on it.
+
+**Live connection** with automatic reconnect: after every reconnect the client calls the hub's `Resume(lastSequence)` so
+open turns sent while you were offline arrive again, and a turn is never raised twice:
+
+```csharp
+await using var agent = new AgentRuntimeClient(new AgentRuntimeOptions
+    { ApiUrl = "https://api.erghi.ai", EngineId = engineId, ClientId = id, ClientSecret = secret });
+agent.TurnRequested += async turn =>
+{
+    if ((await agent.AckAsync(turn.TurnId)).Claimed != true) return;   // another instance claimed it
+    await agent.ReplyCompleteAsync(turn.TurnId, AgentReply.Of($"{turn.TurnId}:1", "Hello!"));
+};
+await agent.StartAsync();
+```
+
+A runnable version of both modes is in `examples/ReplyEngine`. Store `agent.LastSequence` if you want a restarted process to catch up
+(`AgentRuntimeOptions.LastSequence`).
+
 ## Workspace Management
 
 ```csharp
