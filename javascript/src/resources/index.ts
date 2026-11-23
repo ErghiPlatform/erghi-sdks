@@ -5,3 +5,5 @@ export * from './insights';
 export * from './inbox';
 export * from './contacts';
 export * from './replyEngines';
+export * from './workforce';
+export * from './social';

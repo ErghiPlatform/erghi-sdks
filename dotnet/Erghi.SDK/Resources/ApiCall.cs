@@ -39,42 +39,61 @@ internal static class ApiCall
         return http.SendAsync(request, ct);
     }
 
+    /// <summary>GET that returns the body as text (CSV exports).</summary>
+    internal static async Task<string> GetTextAsync(HttpClient http, string path, CancellationToken ct)
+    {
+        var response = await SendRawAsync(http, HttpMethod.Get, path, null, ct);
+        var text = await response.Content.ReadAsStringAsync(ct);
+        ThrowIfError(response.StatusCode, text);
+        return text;
+    }
+
+    /// <summary>Builds <c>?a=1&amp;b=2</c> from the non-null parameters (empty when there are none).</summary>
+    internal static string Query(params (string Key, object? Value)[] parameters)
+    {
+        var parts = new List<string>();
+        foreach (var (key, value) in parameters)
+        {
+            var text = value switch
+            {
+                null => null,
+                bool b => b ? "true" : "false",
+                DateTimeOffset d => d.UtcDateTime.ToString("o", System.Globalization.CultureInfo.InvariantCulture),
+                IFormattable f => f.ToString(null, System.Globalization.CultureInfo.InvariantCulture),
+                _ => value.ToString(),
+            };
+            if (!string.IsNullOrEmpty(text)) parts.Add($"{key}={Uri.EscapeDataString(text)}");
+        }
+        return parts.Count == 0 ? "" : "?" + string.Join('&', parts);
+    }
+
     private static void ThrowIfError(HttpStatusCode status, string body, bool serverCodes = false)
     {
         var code = (int)status;
         if (code is >= 200 and < 300) return;
         var msg = TryGetMessage(body) ?? $"HTTP {code}";
+        var serverCode = TryGetString(body, "code");
         // Reply-engine calls: 403/409/... carry the platform's machine code (turn_closed, human_engaged, ...).
         if (serverCodes && code is not (401 or 404 or 429 or 400))
-            throw new ErghiApiException(msg, TryGetString(body, "code") ?? "HTTP_ERROR", code, TryGetString(body, "reason"), body);
+            throw new ErghiApiException(msg, serverCode ?? "HTTP_ERROR", code, TryGetString(body, "reason"), body) { ServerCode = serverCode };
         throw code switch
         {
-            401 => new AuthenticationException(msg),
-            400 => new ValidationException(msg, body),
-            404 => new NotFoundException(msg),
-            429 => new RateLimitException(msg),
-            _ => new ErghiException(msg, "HTTP_ERROR", code),
+            401 => new AuthenticationException(msg) { ServerCode = serverCode },
+            400 => new ValidationException(msg, body) { ServerCode = serverCode },
+            404 => new NotFoundException(msg) { ServerCode = serverCode },
+            429 => new RateLimitException(msg) { ServerCode = serverCode },
+            _ => new ErghiException(msg, "HTTP_ERROR", code, body) { ServerCode = serverCode },
         };
     }
 
-    private static string? TryGetString(string body, string key)
-    {
-        try
-        {
-            using var doc = JsonDocument.Parse(body);
-            if (doc.RootElement.TryGetProperty(key, out var prop) && prop.ValueKind == JsonValueKind.String)
-                return prop.GetString();
-        }
-        catch { }
-        return null;
-    }
+    private static string? TryGetMessage(string body) => TryGetString(body, "message", "error");
 
-    private static string? TryGetMessage(string body)
+    private static string? TryGetString(string body, params string[] keys)
     {
         try
         {
             using var doc = JsonDocument.Parse(body);
-            foreach (var key in new[] { "message", "error" })
+            foreach (var key in keys)
             {
                 if (doc.RootElement.TryGetProperty(key, out var prop) && prop.ValueKind == JsonValueKind.String)
                     return prop.GetString();

@@ -9,6 +9,11 @@ public class ErghiException : Exception
     public int? StatusCode { get; }
     public object? Details { get; }
 
+    /// <summary>The server's machine-readable code from the response body (for example
+    /// <c>offer_taken</c>, <c>private_reply_used</c>, <c>use_comment_reply</c>), or null when the
+    /// body had none. Set for the workspace (admin) resources.</summary>
+    public string? ServerCode { get; init; }
+
     public ErghiException(string message, string code, int? statusCode = null, object? details = null)
         : base(message)
     {

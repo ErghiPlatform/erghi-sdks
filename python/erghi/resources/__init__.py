@@ -7,6 +7,8 @@ from .chat import ChatResource
 from .contacts import ContactsResource
 from .inbox import InboxResource
 from .insights import InsightsResource
+from .social import SocialResource
+from .workforce import WorkforceResource
 from .workspace import WorkspaceResource
 
 __all__ = [
@@ -15,5 +17,7 @@ __all__ = [
     "ContactsResource",
     "InboxResource",
     "InsightsResource",
+    "SocialResource",
+    "WorkforceResource",
     "WorkspaceResource",
 ]

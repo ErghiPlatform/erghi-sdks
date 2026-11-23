@@ -32,6 +32,8 @@ public sealed class ErghiClient : IAsyncDisposable
     public WorkspaceResource Workspace { get; }
     public InsightsResource Insights { get; }
     public InboxResource Inbox { get; }
+    public WorkforceResource Workforce { get; }
+    public SocialResource Social { get; }
     public ContactsResource Contacts { get; }
     /// <summary>Reply engines: create and bind the agents that answer your widgets (needs <c>configure_ai</c>).</summary>
     public ReplyEnginesResource ReplyEngines { get; }
@@ -80,6 +82,8 @@ public sealed class ErghiClient : IAsyncDisposable
         Workspace = new WorkspaceResource(null!);
         Insights = new InsightsResource(null!);
         Inbox = new InboxResource(null!);
+        Workforce = new WorkforceResource(null!);
+        Social = new SocialResource(null!);
         Contacts = new ContactsResource(null!);
         ReplyEngines = new ReplyEnginesResource(null!);
         AgentRuntime = new AgentRuntimeResource(null!);
@@ -117,6 +121,8 @@ public sealed class ErghiClient : IAsyncDisposable
         Workspace = new WorkspaceResource(_http);
         Insights = new InsightsResource(_http);
         Inbox = new InboxResource(_http);
+        Workforce = new WorkforceResource(_http);
+        Social = new SocialResource(_http);
         Contacts = new ContactsResource(_http);
         ReplyEngines = new ReplyEnginesResource(_http);
         AgentRuntime = new AgentRuntimeResource(_http);

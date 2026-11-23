@@ -278,6 +278,29 @@ page = await client.contacts.list(search="ann", page_size=20)  # requires #256
 await client.contacts.block(page.items[0].id)
 ```
 
+## Workforce and Social Inbox
+
+Workspace operations; the workspace comes from the credential, never from a parameter. Management calls accept a `manage_workforce` / `moderate_social` API key. Own status and offers need `view_conversations`, which a key can never hold, so use a signed-in teammate's access token for those. Server error codes are in `error.details["code"]`.
+
+```python
+# Workforce: partial settings update, 0 turns a timer off
+await client.workforce.update_settings(idle_away_minutes=0, require_away_reason=True)
+reason = await client.workforce.create_away_reason("Lunch", max_minutes=30)
+await client.workforce.set_agent_status(agent_id, "away", reason_id=reason.id)
+report = await client.workforce.get_agent_status_report(from_="2026-11-01", to="2026-11-08")
+
+# Social inbox (403 social_inbox_unavailable when the workspace does not have it)
+page = await client.social.list_comments(needs_attention=True)
+await client.social.reply_to_comment(page.items[0].id, "Thanks, we have sent you a DM.")
+try:
+    await client.social.private_reply_to_comment(page.items[0].id, "Hi, how can we help?")
+except ErghiError as err:
+    if err.details and err.details.get("code") == "private_reply_used":
+        ...
+```
+
+Connecting a Facebook Page or Instagram account is a browser-only Meta login and is not part of the SDK; connect in the admin portal.
+
 ## Error Handling
 
 ```python

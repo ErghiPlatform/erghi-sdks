@@ -8,7 +8,11 @@
   - New `ErghiApiError` (extends `ErghiError`, `code` still `'API_ERROR'`) for 403/409 and other statuses the SDK did not map before; adds `errorCode` (the platform's machine code, e.g. `turn_closed`) and `reason`. Code that caught `ErghiError` keeps working.
   - Needs the platform release with reply engines (API version 2026-11-22).
 - Known issue, not changed here: `verifyWebhookSignature` (the older helper) checks `X-Erghi-Signature` over the body only, which is not how the platform signs deliveries today; use `verifyWebhook` for real webhook deliveries. Also, a client built with `clientId` and `clientSecret` fetches its token once and does not renew it when it expires (2 hours); the agent runtime hub client does renew.
-- Suggested next version: 2.3.0 (additive).
+- New: `client.workforce` for the platform's Workforce API: own and forced agent status, the live board, away reasons, routing skills, per-agent profiles, workforce settings, chat offers (`listMyOffers`, `acceptOffer`, `declineOffer`), the "why me" `getRoutingDecision`, and the agent status, timeline and performance reports (plus CSV exports). `updateSettings` is a true partial update: only the fields you set are sent, so an omitted field keeps its stored value, and `0` turns `idleAwayMinutes`, `signOutAfterHoursMinutes` or `autoAwayAfterMissedOffers` off. A workspace API key with `manage_workforce` can read the live board, away reasons, skills and settings and write everything under it; own status and offers belong to a signed-in teammate (an API key gets 403). Reports need `view_insights` and a plan with workforce analytics (403 `plan_required`).
+
+- New: `client.social` for the Facebook and Instagram social inbox: connections, per-connection settings (partial update), disconnect preview and disconnect, DM reply policy and delivery state, posts, comments (hide, unhide, public reply, private reply, mark done, ignore contact) and the social report (plus CSV). Needs a platform release that has the social inbox, and the workspace must be allowed to use it (403 `social_inbox_unavailable` otherwise). Connecting an account is a browser-only Meta login and is deliberately not wrapped. Server error codes (`private_reply_used`, `use_comment_reply`, `needs_reauth` and so on) are on `error.details.code`.
+
+- Version: additive, so the next release is a minor bump (2.3.0). Package version files are not changed here.
 
 ## 2.2.0 (2026-11-18)
 

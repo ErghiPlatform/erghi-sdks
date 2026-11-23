@@ -30,6 +30,8 @@ from .resources.contacts import ContactsResource
 from .resources.inbox import InboxResource
 from .resources.insights import InsightsResource
 from .resources.reply_engines import AgentRuntimeResource, ReplyEnginesResource
+from .resources.social import SocialResource
+from .resources.workforce import WorkforceResource
 from .resources.workspace import WorkspaceResource
 
 logger = logging.getLogger(__name__)
@@ -117,6 +119,8 @@ class ErghiClient:
         self.workspace = WorkspaceResource(self)
         self.insights = InsightsResource(self)
         self.inbox = InboxResource(self)
+        self.workforce = WorkforceResource(self)
+        self.social = SocialResource(self)
         self.contacts = ContactsResource(self)
         self.reply_engines = ReplyEnginesResource(self)
         self.agent_runtime = AgentRuntimeResource(self)
@@ -260,11 +264,13 @@ class ErghiClient:
             details = data.get("errors")
             error_code = data.get("code") if isinstance(data.get("code"), str) else None
             reason = data.get("reason") if isinstance(data.get("reason"), str) else None
+            body: Any = data
         except (ValueError, AttributeError):
             message = str(error)
             details = None
             error_code = None
             reason = None
+            body = None
 
         status_code = response.status_code
 
@@ -278,7 +284,15 @@ class ErghiClient:
             retry_after = int(response.headers.get("Retry-After", "60"))
             return RateLimitError(message, retry_after)
         else:
-            return ApiError(message, status_code, details, error_code, reason)
+            # Keep the whole body so the server's machine code (``details["code"]``, for example
+            # ``offer_taken`` or ``private_reply_used``) is not lost; ``error_code`` carries it too.
+            return ApiError(
+                message,
+                status_code,
+                body if body is not None else details,
+                error_code,
+                reason,
+            )
 
     def set_access_token(self, token: str) -> None:
         """Set access token"""

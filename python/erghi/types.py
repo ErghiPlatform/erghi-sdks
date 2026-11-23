@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class User(BaseModel):
@@ -459,3 +459,288 @@ class MentionableMember(BaseModel):
 
     class Config:
         populate_by_name = True
+
+
+# ---------------------------------------------------------------------------
+# Workforce (agent status, routing, offers) and the social inbox
+# ---------------------------------------------------------------------------
+
+
+class _Wire(BaseModel):
+    """Base for the workforce and social models: camelCase on the wire, snake_case in Python.
+
+    Unknown fields are kept (``extra="allow"``) so a newer server never breaks an older client.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class AgentStatus(_Wire):
+    """One agent's current status. ``note`` is always ``None`` for an API key."""
+
+    state: str
+    reason_id: Optional[str] = Field(None, alias="reasonId")
+    reason_name: Optional[str] = Field(None, alias="reasonName")
+    reason_colour: Optional[str] = Field(None, alias="reasonColour")
+    since: datetime
+    seq: int
+    source: str
+    changed_by_name: Optional[str] = Field(None, alias="changedByName")
+    note: Optional[str] = None
+    active_chats: int = Field(alias="activeChats")
+    capacity: int
+    away_reassign_minutes: Optional[int] = Field(None, alias="awayReassignMinutes")
+
+
+class AwayReason(_Wire):
+    id: str
+    name: str
+    colour: str
+    max_minutes: Optional[int] = Field(None, alias="maxMinutes")
+    reassign_chats: bool = Field(alias="reassignChats")
+    is_system: bool = Field(alias="isSystem")
+    system_key: Optional[str] = Field(None, alias="systemKey")
+    sort_order: int = Field(alias="sortOrder")
+    archived: bool
+
+
+class RoutingSkill(_Wire):
+    id: str
+    name: str
+    description: str
+    archived: bool
+    agent_count: int = Field(alias="agentCount")
+
+
+class AgentProfileSkill(_Wire):
+    id: str
+    name: str
+    level: int
+
+
+class AgentProfile(_Wire):
+    user_id: str = Field(alias="userId")
+    max_concurrent_chats: Optional[int] = Field(None, alias="maxConcurrentChats")
+    languages: List[str] = []
+    skills: List[AgentProfileSkill] = []
+
+
+class WorkforceRoutingSettings(_Wire):
+    ai_routing_enabled: bool = Field(alias="aiRoutingEnabled")
+    language_match: str = Field(alias="languageMatch")
+    skill_wait_seconds: int = Field(alias="skillWaitSeconds")
+    offer_mode: str = Field(alias="offerMode")
+    offer_timeout_seconds: int = Field(alias="offerTimeoutSeconds")
+
+
+class WorkforceFeatures(_Wire):
+    analytics: bool
+    ai_routing: bool = Field(alias="aiRouting")
+
+
+class WorkforceSettings(_Wire):
+    """``GET /api/v1/workforce/settings``. ``None`` on a minutes/count field means the feature is off."""
+
+    routing: WorkforceRoutingSettings
+    features: WorkforceFeatures
+    status_on_sign_in: str = Field(alias="statusOnSignIn")
+    require_away_reason: bool = Field(alias="requireAwayReason")
+    idle_away_minutes: Optional[int] = Field(None, alias="idleAwayMinutes")
+    sign_out_after_hours_minutes: Optional[int] = Field(None, alias="signOutAfterHoursMinutes")
+    auto_away_after_missed_offers: Optional[int] = Field(None, alias="autoAwayAfterMissedOffers")
+
+
+class ChatOfferSummary(_Wire):
+    offer_id: str = Field(alias="offerId")
+    conversation_id: str = Field(alias="conversationId")
+    attempt: int
+    offered_at: datetime = Field(alias="offeredAt")
+    expires_at: datetime = Field(alias="expiresAt")
+
+
+class RoutingDecisionOffer(_Wire):
+    offer_id: str = Field(alias="offerId")
+    agent_id: str = Field(alias="agentId")
+    agent_name: Optional[str] = Field(None, alias="agentName")
+    attempt: int
+    outcome: str
+    cancel_reason: Optional[str] = Field(None, alias="cancelReason")
+    offered_at: datetime = Field(alias="offeredAt")
+    resolved_at: Optional[datetime] = Field(None, alias="resolvedAt")
+    response_seconds: Optional[float] = Field(None, alias="responseSeconds")
+
+
+class RoutingDecisionCandidate(_Wire):
+    agent_id: str = Field(alias="agentId")
+    agent_name: Optional[str] = Field(None, alias="agentName")
+    score: Optional[float] = None
+    load: Optional[float] = None
+    language_match: Optional[bool] = Field(None, alias="languageMatch")
+
+
+class RoutingDecision(_Wire):
+    """Why a chat went to its agent ("why me")."""
+
+    conversation_id: str = Field(alias="conversationId")
+    decided_at: datetime = Field(alias="decidedAt")
+    step: str
+    fallback: Optional[str] = None
+    picked_agent_id: Optional[str] = Field(None, alias="pickedAgentId")
+    picked_agent_name: Optional[str] = Field(None, alias="pickedAgentName")
+    classifier: Optional[Dict[str, Any]] = None
+    candidates: List[RoutingDecisionCandidate] = []
+    offers: List[RoutingDecisionOffer] = []
+
+
+class SocialConnection(_Wire):
+    id: str
+    channel_type: str = Field(alias="channelType")
+    external_account_id: str = Field(alias="externalAccountId")
+    name: Optional[str] = None
+    parent_external_account_id: Optional[str] = Field(None, alias="parentExternalAccountId")
+    status: str
+    capabilities: Optional[Dict[str, bool]] = None
+    verified_at: Optional[datetime] = Field(None, alias="verifiedAt")
+    connected_at: datetime = Field(alias="connectedAt")
+    last_error_code: Optional[str] = Field(None, alias="lastErrorCode")
+    needs_reauth: bool = Field(alias="needsReauth")
+    reauth_reason: Optional[str] = Field(None, alias="reauthReason")
+
+
+class SocialConnectionSettings(_Wire):
+    connection_id: str = Field(alias="connectionId")
+    channel_type: str = Field(alias="channelType")
+    name: Optional[str] = None
+    dms_enabled: bool = Field(alias="dmsEnabled")
+    comments_enabled: bool = Field(alias="commentsEnabled")
+    auto_hide_spam: bool = Field(alias="autoHideSpam")
+    auto_hide_scam_impersonation: bool = Field(alias="autoHideScamImpersonation")
+    auto_hide_abuse: bool = Field(alias="autoHideAbuse")
+    comment_reply_mode: str = Field(alias="commentReplyMode")
+    auto_public_replies_enabled: bool = Field(alias="autoPublicRepliesEnabled")
+    public_acknowledgment_enabled: bool = Field(alias="publicAcknowledgmentEnabled")
+    reply_to_praise: bool = Field(alias="replyToPraise")
+    max_auto_public_replies_per_post_per_hour: int = Field(alias="maxAutoPublicRepliesPerPostPerHour")
+    allowed_link_domains: List[str] = Field([], alias="allowedLinkDomains")
+
+
+class SocialDisconnectPreview(_Wire):
+    connection_id: str = Field(alias="connectionId")
+    channel_type: str = Field(alias="channelType")
+    open_conversation_count: int = Field(alias="openConversationCount")
+    open_conversation_scope: str = Field(alias="openConversationScope")
+
+
+class SocialReplyPolicy(_Wire):
+    """The DM reply window of a Messenger or Instagram conversation."""
+
+    state: str
+    window_closes_at: Optional[datetime] = Field(None, alias="windowClosesAt")
+    human_only_until: Optional[datetime] = Field(None, alias="humanOnlyUntil")
+    requires_human_agent_tag: bool = Field(alias="requiresHumanAgentTag")
+    human_agent_approved: bool = Field(alias="humanAgentApproved")
+    reauth_reason: Optional[str] = Field(None, alias="reauthReason")
+    last_customer_message_at: Optional[datetime] = Field(None, alias="lastCustomerMessageAt")
+
+
+class SocialMessageDelivery(_Wire):
+    message_id: str = Field(alias="messageId")
+    status: str
+    error_code: Optional[str] = Field(None, alias="errorCode")
+    delivered_at: Optional[datetime] = Field(None, alias="deliveredAt")
+    read_at: Optional[datetime] = Field(None, alias="readAt")
+
+
+class SocialPost(_Wire):
+    id: str
+    connection_id: str = Field(alias="connectionId")
+    platform: str
+    external_post_id: str = Field(alias="externalPostId")
+    permalink: Optional[str] = None
+    caption_excerpt: Optional[str] = Field(None, alias="captionExcerpt")
+    media_type: Optional[str] = Field(None, alias="mediaType")
+    is_ad: bool = Field(alias="isAd")
+    comment_count: int = Field(alias="commentCount")
+    needs_attention_count: int = Field(alias="needsAttentionCount")
+    last_comment_at: Optional[datetime] = Field(None, alias="lastCommentAt")
+
+
+class SocialComment(_Wire):
+    id: str
+    connection_id: str = Field(alias="connectionId")
+    post_id: str = Field(alias="postId")
+    conversation_id: str = Field(alias="conversationId")
+    platform: str
+    external_comment_id: str = Field(alias="externalCommentId")
+    parent_external_comment_id: Optional[str] = Field(None, alias="parentExternalCommentId")
+    author_external_id: str = Field(alias="authorExternalId")
+    author_name: Optional[str] = Field(None, alias="authorName")
+    text: str
+    is_from_page: bool = Field(alias="isFromPage")
+    visibility: str
+    moderated_by: Optional[str] = Field(None, alias="moderatedBy")
+    moderated_by_user_id: Optional[str] = Field(None, alias="moderatedByUserId")
+    moderation_reason: Optional[str] = Field(None, alias="moderationReason")
+    moderation_confidence: Optional[float] = Field(None, alias="moderationConfidence")
+    classification: Optional[str] = None
+    sentiment: Optional[str] = None
+    language: Optional[str] = None
+    posted_at: datetime = Field(alias="postedAt")
+    private_reply_sent_at: Optional[datetime] = Field(None, alias="privateReplySentAt")
+    private_reply_conversation_id: Optional[str] = Field(None, alias="privateReplyConversationId")
+    can_private_reply: bool = Field(alias="canPrivateReply")
+    private_reply_expires_at: datetime = Field(alias="privateReplyExpiresAt")
+    handled_at: Optional[datetime] = Field(None, alias="handledAt")
+    ai_replied_at: Optional[datetime] = Field(None, alias="aiRepliedAt")
+    unanswered: bool
+    needs_attention: bool = Field(alias="needsAttention")
+
+
+class SocialPostPage(_Wire):
+    items: List[SocialPost] = []
+    total: int
+    page: int
+    page_size: int = Field(alias="pageSize")
+
+
+class SocialCommentPage(_Wire):
+    items: List[SocialComment] = []
+    total: int
+    page: int
+    page_size: int = Field(alias="pageSize")
+
+
+class SocialPrivateReplyResult(_Wire):
+    comment: SocialComment
+    conversation_id: str = Field(alias="conversationId")
+
+
+class SocialIgnoreResult(_Wire):
+    contact_id: str = Field(alias="contactId")
+    ignored: bool
+
+
+class SocialDmVolume(_Wire):
+    channel: str
+    inbound: int
+    outbound: int
+
+
+class SocialReport(_Wire):
+    from_: datetime = Field(alias="from")
+    to: datetime
+    comments_received: int = Field(alias="commentsReceived")
+    by_category: Dict[str, int] = Field({}, alias="byCategory")
+    by_sentiment: Dict[str, int] = Field({}, alias="bySentiment")
+    by_channel: Dict[str, int] = Field({}, alias="byChannel")
+    auto_hidden: int = Field(alias="autoHidden")
+    agent_hidden: int = Field(alias="agentHidden")
+    unhidden_by_agent: int = Field(alias="unhiddenByAgent")
+    false_positive_rate: Optional[float] = Field(None, alias="falsePositiveRate")
+    comments_answered: int = Field(alias="commentsAnswered")
+    comments_unanswered: int = Field(alias="commentsUnanswered")
+    median_response_seconds: Optional[float] = Field(None, alias="medianResponseSeconds")
+    avg_response_seconds: Optional[float] = Field(None, alias="avgResponseSeconds")
+    ai_public_replies_posted: int = Field(alias="aiPublicRepliesPosted")
+    ai_public_replies_refused: int = Field(alias="aiPublicRepliesRefused")
+    dm_volume: List[SocialDmVolume] = Field([], alias="dmVolume")

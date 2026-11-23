@@ -19,6 +19,8 @@ import { ChatResource } from './resources/chat';
 import { WorkspaceResource } from './resources/workspace';
 import { InsightsResource } from './resources/insights';
 import { InboxResource } from './resources/inbox';
+import { WorkforceResource } from './resources/workforce';
+import { SocialResource } from './resources/social';
 import { ContactsResource } from './resources/contacts';
 import { AgentRuntimeClient, clientCredentialsTokenFactory } from './agentRuntime';
 import { ReplyEnginesResource, AgentRuntimeResource } from './resources/replyEngines';
@@ -65,6 +67,8 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
   public readonly workspace: WorkspaceResource;
   public readonly insights: InsightsResource;
   public readonly inbox: InboxResource;
+  public readonly workforce: WorkforceResource;
+  public readonly social: SocialResource;
   public readonly contacts: ContactsResource;
   public readonly replyEngines: ReplyEnginesResource;
   public readonly agentRuntime: AgentRuntimeResource;
@@ -134,6 +138,8 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
     this.workspace = new WorkspaceResource(this);
     this.insights = new InsightsResource(this);
     this.inbox = new InboxResource(this);
+    this.workforce = new WorkforceResource(this);
+    this.social = new SocialResource(this);
     this.contacts = new ContactsResource(this);
     this.replyEngines = new ReplyEnginesResource(this);
     this.agentRuntime = new AgentRuntimeResource(this);

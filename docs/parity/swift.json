@@ -49,6 +49,29 @@
       "evidence": "Sources/ErghiSDK/Resources/InboxResource.swift + ContactsResource.swift in erghi-sdk-swift; Tests/ErghiSDKTests/InboxContractTests.swift",
       "note": "Workspace surface (member access token), never the visitor surface. Workspace API keys cannot hold view_conversations/manage_inbox_settings/manage_contacts (not grantable), so they get 403. Contacts, notifications, @mentions and unassign require platform PR #256 (not merged when this was written)."
     },
+    "workforce": {
+      "agent_status": false,
+      "away_reasons": false,
+      "routing_skills": false,
+      "agent_profiles": false,
+      "settings": false,
+      "offers": false,
+      "routing_decision": false,
+      "reports": false,
+      "verified": "2026-11-23",
+      "note": "Not yet wrapped in this SDK; added to dotnet, python and javascript first (2026-11-23). A parity gap to close, not a decision to skip."
+    },
+    "social_inbox": {
+      "connections": false,
+      "connection_settings": false,
+      "comments": false,
+      "posts": false,
+      "moderation": false,
+      "dm_reply_policy": false,
+      "report": false,
+      "verified": "2026-11-23",
+      "note": "Not yet wrapped in this SDK; added to dotnet, python and javascript first (2026-11-23). A parity gap to close, not a decision to skip."
+    },
     "rag": { "supported": false, "note": "Same platform-wide gap as javascript." },
     "webhooks": { "supported": false, "note": "Same platform-wide gap as javascript." }
   },

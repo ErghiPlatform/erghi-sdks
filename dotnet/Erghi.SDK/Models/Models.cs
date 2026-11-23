@@ -315,3 +315,284 @@ public record UserNotification(
 
 /// <summary>Requires platform PR #256.</summary>
 public record MentionableMember(string UserId, string? DisplayName);
+
+// ── Workforce ─────────────────────────────────────────────────────────────────
+
+/// <summary>One agent's current status. <c>Note</c> is always null for an API key.</summary>
+public record AgentStatus(
+    string State,
+    string? ReasonId,
+    string? ReasonName,
+    string? ReasonColour,
+    DateTimeOffset Since,
+    long Seq,
+    string Source,
+    string? ChangedByName,
+    string? Note,
+    int ActiveChats,
+    int Capacity,
+    int? AwayReassignMinutes
+);
+
+public record AwayReason(
+    string Id,
+    string Name,
+    string Colour,
+    int? MaxMinutes,
+    bool ReassignChats,
+    bool IsSystem,
+    string? SystemKey,
+    int SortOrder,
+    bool Archived
+);
+
+public record RoutingSkill(string Id, string Name, string Description, bool Archived, int AgentCount);
+
+public record AgentProfileSkill(string Id, string Name, int Level);
+
+public record AgentProfile(
+    string UserId,
+    int? MaxConcurrentChats,
+    List<string> Languages,
+    List<AgentProfileSkill> Skills
+);
+
+/// <summary>One skill of an agent: <c>Level</c> is 1 (basic), 2 (skilled) or 3 (expert).</summary>
+public record AgentSkillLevel(string SkillId, int Level);
+
+public record WorkforceRoutingSettings(
+    bool AiRoutingEnabled,
+    string LanguageMatch,
+    int SkillWaitSeconds,
+    string OfferMode,
+    int OfferTimeoutSeconds
+);
+
+public record WorkforceFeatures(bool Analytics, bool AiRouting);
+
+/// <summary>A null minutes/count field means the feature is off.</summary>
+public record WorkforceSettings(
+    WorkforceRoutingSettings Routing,
+    WorkforceFeatures Features,
+    string StatusOnSignIn,
+    bool RequireAwayReason,
+    int? IdleAwayMinutes,
+    int? SignOutAfterHoursMinutes,
+    int? AutoAwayAfterMissedOffers
+);
+
+/// <summary>
+/// Partial update of the workforce settings: a null property is not sent and keeps its stored
+/// value. <c>0</c> turns <see cref="IdleAwayMinutes"/>, <see cref="SignOutAfterHoursMinutes"/> and
+/// <see cref="AutoAwayAfterMissedOffers"/> off.
+/// </summary>
+public record UpdateWorkforceSettingsRequest
+{
+    public string? StatusOnSignIn { get; init; }
+    public bool? RequireAwayReason { get; init; }
+    public int? IdleAwayMinutes { get; init; }
+    public int? SignOutAfterHoursMinutes { get; init; }
+    public int? AutoAwayAfterMissedOffers { get; init; }
+    public bool? AiRoutingEnabled { get; init; }
+    /// <summary><c>off</c>, <c>preferred</c> or <c>required</c>.</summary>
+    public string? LanguageMatch { get; init; }
+    public int? SkillWaitSeconds { get; init; }
+    /// <summary><c>off</c> or <c>ring</c>.</summary>
+    public string? OfferMode { get; init; }
+    public int? OfferTimeoutSeconds { get; init; }
+}
+
+public record ChatOfferSummary(
+    string OfferId,
+    string ConversationId,
+    int Attempt,
+    DateTimeOffset OfferedAt,
+    DateTimeOffset ExpiresAt
+);
+
+public record RoutingDecisionOffer(
+    string OfferId,
+    string AgentId,
+    string? AgentName,
+    int Attempt,
+    string Outcome,
+    string? CancelReason,
+    DateTimeOffset OfferedAt,
+    DateTimeOffset? ResolvedAt,
+    double? ResponseSeconds
+);
+
+public record RoutingDecisionCandidate(
+    string AgentId,
+    string? AgentName,
+    double? Score,
+    double? Load,
+    bool? LanguageMatch
+);
+
+/// <summary>Why a chat went to its agent ("why me").</summary>
+public record RoutingDecision(
+    string ConversationId,
+    DateTimeOffset DecidedAt,
+    string Step,
+    string? Fallback,
+    string? PickedAgentId,
+    string? PickedAgentName,
+    System.Text.Json.JsonElement? Classifier,
+    List<RoutingDecisionCandidate> Candidates,
+    List<RoutingDecisionOffer> Offers
+);
+
+// ── Social inbox ──────────────────────────────────────────────────────────────
+
+public record SocialConnection(
+    string Id,
+    string ChannelType,
+    string ExternalAccountId,
+    string? Name,
+    string? ParentExternalAccountId,
+    string Status,
+    Dictionary<string, bool>? Capabilities,
+    DateTimeOffset? VerifiedAt,
+    DateTimeOffset ConnectedAt,
+    string? LastErrorCode,
+    bool NeedsReauth,
+    string? ReauthReason
+);
+
+public record SocialConnectionSettings(
+    string ConnectionId,
+    string ChannelType,
+    string? Name,
+    bool DmsEnabled,
+    bool CommentsEnabled,
+    bool AutoHideSpam,
+    bool AutoHideScamImpersonation,
+    bool AutoHideAbuse,
+    string CommentReplyMode,
+    bool AutoPublicRepliesEnabled,
+    bool PublicAcknowledgmentEnabled,
+    bool ReplyToPraise,
+    int MaxAutoPublicRepliesPerPostPerHour,
+    List<string> AllowedLinkDomains
+);
+
+/// <summary>
+/// Partial update of a connection's settings: a null property is not sent and keeps its stored
+/// value. A non-null <see cref="AllowedLinkDomains"/> replaces the list (an empty list clears it).
+/// </summary>
+public record UpdateSocialConnectionSettingsRequest
+{
+    public bool? AutoHideSpam { get; init; }
+    public bool? AutoHideScamImpersonation { get; init; }
+    public bool? AutoHideAbuse { get; init; }
+    /// <summary><c>off</c>, <c>suggest</c> or <c>auto</c>.</summary>
+    public string? CommentReplyMode { get; init; }
+    public bool? AutoPublicRepliesEnabled { get; init; }
+    public bool? PublicAcknowledgmentEnabled { get; init; }
+    public bool? ReplyToPraise { get; init; }
+    public int? MaxAutoPublicRepliesPerPostPerHour { get; init; }
+    public List<string>? AllowedLinkDomains { get; init; }
+    /// <summary>Turning either on is refused (400 <c>capability_requires_reconnect</c>): reconnect the account.</summary>
+    public bool? DmsEnabled { get; init; }
+    public bool? CommentsEnabled { get; init; }
+}
+
+public record SocialDisconnectPreview(
+    string ConnectionId,
+    string ChannelType,
+    int OpenConversationCount,
+    string OpenConversationScope
+);
+
+/// <summary>The DM reply window of a Messenger or Instagram conversation.</summary>
+public record SocialReplyPolicy(
+    string State,
+    DateTimeOffset? WindowClosesAt,
+    DateTimeOffset? HumanOnlyUntil,
+    bool RequiresHumanAgentTag,
+    bool HumanAgentApproved,
+    string? ReauthReason,
+    DateTimeOffset? LastCustomerMessageAt
+);
+
+public record SocialMessageDelivery(
+    string MessageId,
+    string Status,
+    string? ErrorCode,
+    DateTimeOffset? DeliveredAt,
+    DateTimeOffset? ReadAt
+);
+
+public record SocialPost(
+    string Id,
+    string ConnectionId,
+    string Platform,
+    string ExternalPostId,
+    string? Permalink,
+    string? CaptionExcerpt,
+    string? MediaType,
+    bool IsAd,
+    int CommentCount,
+    int NeedsAttentionCount,
+    DateTimeOffset? LastCommentAt
+);
+
+public record SocialComment(
+    string Id,
+    string ConnectionId,
+    string PostId,
+    string ConversationId,
+    string Platform,
+    string ExternalCommentId,
+    string? ParentExternalCommentId,
+    string AuthorExternalId,
+    string? AuthorName,
+    string Text,
+    bool IsFromPage,
+    string Visibility,
+    string? ModeratedBy,
+    string? ModeratedByUserId,
+    string? ModerationReason,
+    double? ModerationConfidence,
+    string? Classification,
+    string? Sentiment,
+    string? Language,
+    DateTimeOffset PostedAt,
+    DateTimeOffset? PrivateReplySentAt,
+    string? PrivateReplyConversationId,
+    bool CanPrivateReply,
+    DateTimeOffset PrivateReplyExpiresAt,
+    DateTimeOffset? HandledAt,
+    DateTimeOffset? AiRepliedAt,
+    bool Unanswered,
+    bool NeedsAttention
+);
+
+public record SocialPage<T>(List<T> Items, int Total, int Page, int PageSize);
+
+public record SocialPrivateReplyResult(SocialComment Comment, string ConversationId);
+
+public record SocialIgnoreResult(string ContactId, bool Ignored);
+
+public record SocialDmVolume(string Channel, int Inbound, int Outbound);
+
+public record SocialReport(
+    DateTimeOffset From,
+    DateTimeOffset To,
+    int CommentsReceived,
+    Dictionary<string, int> ByCategory,
+    Dictionary<string, int> BySentiment,
+    Dictionary<string, int> ByChannel,
+    int AutoHidden,
+    int AgentHidden,
+    int UnhiddenByAgent,
+    double? FalsePositiveRate,
+    int CommentsAnswered,
+    int CommentsUnanswered,
+    double? MedianResponseSeconds,
+    double? AvgResponseSeconds,
+    int AiPublicRepliesPosted,
+    int AiPublicRepliesRefused,
+    List<SocialDmVolume> DmVolume
+);
