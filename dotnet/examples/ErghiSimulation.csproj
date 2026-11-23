@@ -17,6 +17,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="ReplyEngine/**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../Erghi.SDK/Erghi.SDK.csproj" />
   </ItemGroup>
 

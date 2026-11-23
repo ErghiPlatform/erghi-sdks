@@ -12,6 +12,7 @@ import {
   RateLimitError,
   NetworkError,
   NotFoundError,
+  ErghiApiError,
 } from './errors';
 import { AuthResource } from './resources/auth';
 import { ChatResource } from './resources/chat';
@@ -19,6 +20,8 @@ import { WorkspaceResource } from './resources/workspace';
 import { InsightsResource } from './resources/insights';
 import { InboxResource } from './resources/inbox';
 import { ContactsResource } from './resources/contacts';
+import { AgentRuntimeClient, clientCredentialsTokenFactory } from './agentRuntime';
+import { ReplyEnginesResource, AgentRuntimeResource } from './resources/replyEngines';
 
 type WebSocketEvents = {
   [K in WebSocketEventType]: (data?: any) => void;
@@ -63,6 +66,8 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
   public readonly insights: InsightsResource;
   public readonly inbox: InboxResource;
   public readonly contacts: ContactsResource;
+  public readonly replyEngines: ReplyEnginesResource;
+  public readonly agentRuntime: AgentRuntimeResource;
 
   constructor(config: ErghiConfig = {}) {
     super();
@@ -130,6 +135,8 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
     this.insights = new InsightsResource(this);
     this.inbox = new InboxResource(this);
     this.contacts = new ContactsResource(this);
+    this.replyEngines = new ReplyEnginesResource(this);
+    this.agentRuntime = new AgentRuntimeResource(this);
   }
 
   /**
@@ -139,6 +146,27 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
    */
   public usesClientCredentials(): boolean {
     return Boolean(this.config.clientId && this.config.clientSecret);
+  }
+
+  /**
+   * A live-connection client for a reply engine in LiveConnection mode. Needs this client built with
+   * an API key's `clientId` and `clientSecret` (scope `agent:runtime`); call `start()` on the result.
+   * The workspace is the key's, never a parameter.
+   */
+  public createAgentRuntimeClient(engineId: string, options: { lastSequence?: number } = {}): AgentRuntimeClient {
+    if (!this.config.clientId || !this.config.clientSecret) {
+      throw new AuthenticationError('Client ID and Client Secret are required for the agent runtime hub');
+    }
+    return new AgentRuntimeClient({
+      apiUrl: this.config.apiUrl,
+      engineId,
+      lastSequence: options.lastSequence,
+      accessTokenFactory: clientCredentialsTokenFactory(
+        this.config.apiUrl,
+        this.config.clientId,
+        this.config.clientSecret
+      ),
+    });
   }
 
   /**
@@ -477,7 +505,13 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
       case 429:
         return new RateLimitError(message, parseInt(response.headers['retry-after'] || '60'));
       default:
-        return new ErghiError(message, 'API_ERROR', response.status, data);
+        return new ErghiApiError(
+          message,
+          response.status,
+          data,
+          typeof data?.code === 'string' ? data.code : undefined,
+          typeof data?.reason === 'string' ? data.reason : undefined
+        );
     }
   }
 

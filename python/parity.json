@@ -31,7 +31,13 @@
       "voice_note": false,
       "evidence": "python/erghi/resources/chat.py:18-121 -- full parity with javascript's chat.ts."
     },
-    "widgets": { "create": false, "list": false, "get": false, "update": false, "note": "No widget resource file at all -- javascript at least has createWidget; python has none. Real gap." },
+    "widgets": {
+      "create": false,
+      "list": false,
+      "get": false,
+      "update": false,
+      "note": "No widget resource file at all -- javascript at least has createWidget; python has none. Real gap."
+    },
     "realtime": {
       "supported": true,
       "protocol": "signalr-hub-over-websocket",
@@ -47,8 +53,23 @@
       "evidence": "python/erghi/resources/inbox.py + contacts.py; python/tests/test_inbox.py",
       "note": "Workspace surface (member access token), never the visitor surface. Workspace API keys cannot hold view_conversations/manage_inbox_settings/manage_contacts (not grantable), so they get 403. Contacts, notifications, @mentions and unassign require platform PR #256 (not merged when this was written)."
     },
-    "rag": { "supported": false, "note": "Same platform-wide gap as javascript." },
-    "webhooks": { "supported": false, "note": "Same platform-wide gap as javascript." }
+    "rag": {
+      "supported": false,
+      "note": "Same platform-wide gap as javascript."
+    },
+    "webhooks": {
+      "supported": false,
+      "note": "Same platform-wide gap as javascript."
+    },
+    "reply_engine": {
+      "admin": true,
+      "runtime_rest": true,
+      "webhook_verifier": true,
+      "live_hub": false,
+      "verified": "2026-11-22",
+      "evidence": "python/erghi/resources/reply_engines.py, python/erghi/webhooks.py; tests: python/tests/test_reply_engine.py",
+      "note": "Unreleased; written against the platform reply-engine worktree (API version 2026-11-22), not yet verified against a deployed platform. No live hub client (REST + webhook only)."
+    }
   },
   "notes": "Auth+chat are the strongest parity story in the whole repo (matches javascript method-for-method). Widget management is the one real gap -- worth a small follow-up PR before calling this SDK fully caught up."
 }

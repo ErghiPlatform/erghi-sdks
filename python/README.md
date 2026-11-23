@@ -229,6 +229,41 @@ def handle_webhook(request):
     # ... handle event
 ```
 
+## Reply Engine (your own agent answers visitors)
+
+Bind an agent of your own to a widget so it answers visitors instead of Erghi AI. The workspace always comes from your credential, never from a parameter.
+
+```python
+from erghi import ErghiClient, ReplyEngineWrite
+
+async with ErghiClient(api_url="https://api.erghi.ai", access_token=teammate_token) as client:
+    engine = await client.reply_engines.create(
+        ReplyEngineWrite(name="Support agent", mode="Webhook", url="https://agent.example.com/erghi")
+    )
+    print(engine.secret)  # whsec_..., shown once: store it
+    await client.reply_engines.set_widget_binding("<widget-id>", default=engine.id)
+```
+
+Receive turns on your webhook, verify the raw body, and answer with an API key that holds `agent:runtime`:
+
+```python
+from erghi import AgentReply, ErghiClient, WebhookVerificationError, parse_turn_webhook
+
+# inside your web handler (raw_body is bytes, headers the request headers)
+try:
+    turn = parse_turn_webhook(WEBHOOK_SECRET, headers, raw_body)
+except WebhookVerificationError:
+    return 401
+
+agent = ErghiClient(api_url="https://api.erghi.ai", client_id=KEY_ID, client_secret=KEY_SECRET)
+await agent.agent_runtime.typing(turn.turn_id)
+await agent.agent_runtime.reply(
+    turn.turn_id, AgentReply.of(f"{turn.turn_id}-1", "Hello from my agent")
+)
+```
+
+A turn that ended answers 409: `ApiError` with `error_code` `turn_closed` or `turn_superseded`. Stop work on it.
+
 ## Inbox and Contacts
 
 Workspace operations: use a signed-in teammate's access token on your server (workspace API keys cannot hold these permissions), never in a visitor's browser. The workspace comes from the credential. Contacts, notifications and `unassign` need platform PR #256; see the Inbox and contacts guide (`docs/docs/guides/INBOX_AND_CONTACTS.md` in erghi-sdks).

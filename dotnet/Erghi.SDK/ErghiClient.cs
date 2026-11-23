@@ -33,6 +33,10 @@ public sealed class ErghiClient : IAsyncDisposable
     public InsightsResource Insights { get; }
     public InboxResource Inbox { get; }
     public ContactsResource Contacts { get; }
+    /// <summary>Reply engines: create and bind the agents that answer your widgets (needs <c>configure_ai</c>).</summary>
+    public ReplyEnginesResource ReplyEngines { get; }
+    /// <summary>Answer turns from your own agent (needs an API key with <c>agent:runtime</c>).</summary>
+    public AgentRuntimeResource AgentRuntime { get; }
 
     public string? VisitorId => _config.VisitorId;
 
@@ -77,6 +81,8 @@ public sealed class ErghiClient : IAsyncDisposable
         Insights = new InsightsResource(null!);
         Inbox = new InboxResource(null!);
         Contacts = new ContactsResource(null!);
+        ReplyEngines = new ReplyEnginesResource(null!);
+        AgentRuntime = new AgentRuntimeResource(null!);
 
         var handler = new M2MAuthHandler(config, token =>
         {
@@ -112,6 +118,8 @@ public sealed class ErghiClient : IAsyncDisposable
         Insights = new InsightsResource(_http);
         Inbox = new InboxResource(_http);
         Contacts = new ContactsResource(_http);
+        ReplyEngines = new ReplyEnginesResource(_http);
+        AgentRuntime = new AgentRuntimeResource(_http);
     }
 
     /// <summary>

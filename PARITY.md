@@ -9,7 +9,7 @@ What each of the 7 Erghi SDKs actually implements right now, verified against re
 `docs/parity/swift.json` (a manually-synced reference copy, since Swift lives in
 [`erghi-sdk-swift`](https://github.com/ErghiPlatform/erghi-sdk-swift), a separate repo).
 
-Regenerated on: 2026-11-16
+Regenerated on: 2026-11-22
 
 ## Maintenance tier
 

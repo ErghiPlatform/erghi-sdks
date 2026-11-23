@@ -40,9 +40,44 @@ from .types import (
 )
 
 __version__ = "2.2.0"
+from .errors import ApiError
+from .reply_types import (
+    AgentHandoff,
+    AgentReply,
+    AgentReplyMessage,
+    AgentReplyResult,
+    AgentTurn,
+    BotMessageResult,
+    ReplyEngine,
+    ReplyEngineHealth,
+    ReplyEngineList,
+    ReplyEngineName,
+    ReplyEngineTestResult,
+    ReplyEngineWrite,
+    ReplyTurnLogPage,
+    TurnRequest,
+    WidgetReplyEngine,
+)
+from .webhooks import (
+    WebhookVerificationError,
+    is_valid_webhook,
+    parse_turn_webhook,
+    verify_webhook,
+)
+from .webhooks import (
+    sign as sign_webhook,
+)
+
 __all__ = [
+    "AgentHandoff",
+    "AgentReply",
+    "AgentReplyMessage",
+    "AgentReplyResult",
+    "AgentTurn",
+    "ApiError",
     "AuthResponse",
     "AuthenticationError",
+    "BotMessageResult",
     "CannedResponse",
     "CannedResponseList",
     "ContactDetail",
@@ -68,10 +103,24 @@ __all__ = [
     "NotFoundError",
     "RateLimitError",
     "RegisterRequest",
+    "ReplyEngine",
+    "ReplyEngineHealth",
+    "ReplyEngineList",
+    "ReplyEngineName",
+    "ReplyEngineTestResult",
+    "ReplyEngineWrite",
+    "ReplyTurnLogPage",
+    "TurnRequest",
     "User",
     "UserNotification",
     "ValidationError",
+    "WebhookVerificationError",
+    "WidgetReplyEngine",
     "Workspace",
     "generate_identity_hash",
+    "is_valid_webhook",
+    "parse_turn_webhook",
+    "sign_webhook",
+    "verify_webhook",
     "verify_webhook_signature",
 ]

@@ -291,6 +291,62 @@ const workspace = await client.workspace.create({
 client.workspace.switchWorkspace('workspace-id');
 ```
 
+## Reply Engine (your own agent answers visitors)
+
+Bind an agent of your own to a widget so it answers visitors instead of Erghi AI. The workspace always comes from your credential, never from a parameter.
+
+```ts
+import { ErghiClient } from '@erghi-ai/sdk';
+
+const admin = new ErghiClient({ apiUrl: 'https://api.erghi.ai', accessToken: teammateToken });
+const engine = await admin.replyEngines.create({
+  name: 'Support agent',
+  mode: 'Webhook',
+  url: 'https://agent.example.com/erghi',
+});
+console.log(engine.secret); // whsec_..., shown once: store it
+await admin.replyEngines.setWidgetBinding('<widget-id>', { default: engine.id });
+```
+
+Webhook mode: verify the RAW body, then answer with an API key that holds `agent:runtime`:
+
+```ts
+import { ErghiClient, parseTurnWebhook, WebhookVerificationError } from '@erghi-ai/sdk';
+
+const agent = new ErghiClient({ apiUrl: 'https://api.erghi.ai', clientId, clientSecret });
+
+app.post('/erghi', express.raw({ type: '*/*' }), async (req, res) => {
+  try {
+    const turn = parseTurnWebhook(process.env.ERGHI_WEBHOOK_SECRET!, req.headers, req.body);
+    await agent.agentRuntime.typing(turn.turn_id);
+    await agent.agentRuntime.reply(turn.turn_id, {
+      idempotency_key: `${turn.turn_id}-1`,
+      messages: [{ content: 'Hello from my agent' }],
+    });
+    res.sendStatus(202);
+  } catch (e) {
+    res.sendStatus(e instanceof WebhookVerificationError ? 401 : 500);
+  }
+});
+```
+
+Live connection mode keeps a SignalR connection open, reconnects on its own and re-requests open turns after a reconnect:
+
+```ts
+const runtime = agent.createAgentRuntimeClient('<engine-id>', { lastSequence: loadSavedSequence() });
+runtime.on('turnRequested', async (turn) => {
+  const result = await runtime.replyComplete(turn.turn_id, {
+    idempotency_key: `${turn.turn_id}-1`,
+    messages: [{ content: 'Hello' }],
+  });
+  if (!result.ok) console.warn('refused', result.code); // e.g. turn_closed
+  saveSequence(runtime.lastSequence);
+});
+await runtime.start();
+```
+
+A turn that ended answers 409 (`ErghiApiError` with `errorCode` `turn_closed` or `turn_superseded`): stop work on it.
+
 ## Inbox and Contacts
 
 Workspace operations: use a signed-in teammate's access token on your server (workspace API keys cannot hold these permissions), never in a visitor's browser. The workspace comes from the credential. Contacts, notifications and `unassign` need platform PR #256; see the Inbox and contacts guide (`docs/docs/guides/INBOX_AND_CONTACTS.md` in erghi-sdks).
