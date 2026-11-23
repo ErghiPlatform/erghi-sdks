@@ -28,6 +28,8 @@ from .resources.chat import ChatResource
 from .resources.contacts import ContactsResource
 from .resources.inbox import InboxResource
 from .resources.insights import InsightsResource
+from .resources.social import SocialResource
+from .resources.workforce import WorkforceResource
 from .resources.workspace import WorkspaceResource
 
 logger = logging.getLogger(__name__)
@@ -115,6 +117,8 @@ class ErghiClient:
         self.workspace = WorkspaceResource(self)
         self.insights = InsightsResource(self)
         self.inbox = InboxResource(self)
+        self.workforce = WorkforceResource(self)
+        self.social = SocialResource(self)
         self.contacts = ContactsResource(self)
 
     async def __aenter__(self) -> Self:
@@ -254,9 +258,11 @@ class ErghiClient:
                 str(error),
             )
             details = data.get("errors")
+            body: Any = data
         except (ValueError, AttributeError):
             message = str(error)
             details = None
+            body = None
 
         status_code = response.status_code
 
@@ -270,7 +276,9 @@ class ErghiClient:
             retry_after = int(response.headers.get("Retry-After", "60"))
             return RateLimitError(message, retry_after)
         else:
-            return ErghiError(message, "API_ERROR", status_code, details)
+            # Keep the whole body so the server's machine code (``details["code"]``, for example
+            # ``offer_taken`` or ``private_reply_used``) is not lost.
+            return ErghiError(message, "API_ERROR", status_code, body if body is not None else details)
 
     def set_access_token(self, token: str) -> None:
         """Set access token"""
