@@ -18,6 +18,8 @@ import { ChatResource } from './resources/chat';
 import { WorkspaceResource } from './resources/workspace';
 import { InsightsResource } from './resources/insights';
 import { InboxResource } from './resources/inbox';
+import { WorkforceResource } from './resources/workforce';
+import { SocialResource } from './resources/social';
 import { ContactsResource } from './resources/contacts';
 
 type WebSocketEvents = {
@@ -62,6 +64,8 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
   public readonly workspace: WorkspaceResource;
   public readonly insights: InsightsResource;
   public readonly inbox: InboxResource;
+  public readonly workforce: WorkforceResource;
+  public readonly social: SocialResource;
   public readonly contacts: ContactsResource;
 
   constructor(config: ErghiConfig = {}) {
@@ -129,6 +133,8 @@ export class ErghiClient extends EventEmitter<WebSocketEvents> {
     this.workspace = new WorkspaceResource(this);
     this.insights = new InsightsResource(this);
     this.inbox = new InboxResource(this);
+    this.workforce = new WorkforceResource(this);
+    this.social = new SocialResource(this);
     this.contacts = new ContactsResource(this);
   }
 

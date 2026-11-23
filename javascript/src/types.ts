@@ -452,3 +452,378 @@ export interface MentionableMember {
   userId: string;
   displayName: string | null;
 }
+
+// -- Workforce (agent status, routing, offers) ---------------------------------------------------
+
+/** `online` is the legacy spelling of `ready`; the server still accepts it. */
+export type AgentState = 'ready' | 'away' | 'offline';
+
+/** One agent's current status. `note` is always `null` for an API key. */
+export interface AgentStatus {
+  state: AgentState;
+  reasonId: string | null;
+  reasonName: string | null;
+  reasonColour: string | null;
+  since: string;
+  seq: number;
+  source: string;
+  changedByName: string | null;
+  note: string | null;
+  activeChats: number;
+  capacity: number;
+  awayReassignMinutes: number | null;
+}
+
+export interface SetAgentStatusRequest {
+  state: AgentState | 'online';
+  /** Required when the workspace's `requireAwayReason` is on and `state` is `away`. */
+  reasonId?: string;
+  note?: string;
+  /** With `state: 'away'`, the agent's assigned chats return to the queue now. */
+  returnChats?: boolean;
+}
+
+export interface AwayReason {
+  id: string;
+  name: string;
+  colour: string;
+  /** Break limit in minutes. Reported (`overLimitSeconds`), never enforced. */
+  maxMinutes: number | null;
+  reassignChats: boolean;
+  isSystem: boolean;
+  systemKey: string | null;
+  sortOrder: number;
+  archived: boolean;
+}
+
+export interface SaveAwayReasonRequest {
+  name?: string;
+  color?: string;
+  maxMinutes?: number;
+  /**
+   * The server reads an omitted value as `false`, so send it on every update (PUT) to keep the
+   * stored setting.
+   */
+  reassignChats?: boolean;
+  sortOrder?: number;
+  /** On update: `false` restores an archived reason, `true` archives it. */
+  archived?: boolean;
+}
+
+export interface RoutingSkill {
+  id: string;
+  name: string;
+  description: string;
+  archived: boolean;
+  /** Agents that hold the skill. */
+  agentCount: number;
+}
+
+export interface SaveRoutingSkillRequest {
+  name?: string;
+  description?: string;
+  /** On update: `false` restores an archived skill, `true` archives it. */
+  archived?: boolean;
+}
+
+export interface AgentSkillLevel {
+  skillId: string;
+  /** 1 basic, 2 skilled, 3 expert. */
+  level: 1 | 2 | 3;
+}
+
+export interface AgentProfile {
+  userId: string;
+  /** `null` falls back to the workspace default; 0 means never auto-assign. */
+  maxConcurrentChats: number | null;
+  languages: string[];
+  skills: { id: string; name: string; level: number }[];
+}
+
+export interface SaveAgentProfileRequest {
+  maxConcurrentChats?: number | null;
+  languages?: string[];
+  /** Replaces the agent's skills when present; an empty array clears them; omit to leave them. */
+  skills?: AgentSkillLevel[];
+}
+
+export type LanguageMatchMode = 'off' | 'preferred' | 'required';
+export type OfferMode = 'off' | 'ring';
+
+export interface WorkforceRoutingSettings {
+  aiRoutingEnabled: boolean;
+  languageMatch: LanguageMatchMode;
+  skillWaitSeconds: number;
+  offerMode: OfferMode;
+  offerTimeoutSeconds: number;
+}
+
+export interface WorkforceSettings {
+  routing: WorkforceRoutingSettings;
+  features: { analytics: boolean; aiRouting: boolean };
+  statusOnSignIn: AgentState | string;
+  requireAwayReason: boolean;
+  /** `null` = the feature is off. */
+  idleAwayMinutes: number | null;
+  signOutAfterHoursMinutes: number | null;
+  autoAwayAfterMissedOffers: number | null;
+}
+
+/**
+ * A partial update. Leave a field out (or `undefined`) to keep the stored value; the SDK never
+ * sends a default. For `idleAwayMinutes`, `signOutAfterHoursMinutes` and
+ * `autoAwayAfterMissedOffers`, `0` turns the feature off (a read reports an off feature as `null`).
+ */
+export interface UpdateWorkforceSettingsRequest {
+  statusOnSignIn?: AgentState | string;
+  requireAwayReason?: boolean;
+  idleAwayMinutes?: number;
+  signOutAfterHoursMinutes?: number;
+  autoAwayAfterMissedOffers?: number;
+  routing?: Partial<WorkforceRoutingSettings>;
+}
+
+/**
+ * The live board: `queue` (waiting chats, wait times, by priority and team) and `agents` (state,
+ * load, skills). The server builds this object ad hoc and it grows, so only the stable top-level
+ * keys are typed; read the rest from the index signature.
+ */
+export interface WorkforceLive {
+  queue: Record<string, unknown>;
+  agents: Record<string, unknown>[];
+  [key: string]: unknown;
+}
+
+export interface ChatOfferSummary {
+  offerId: string;
+  conversationId: string;
+  attempt: number;
+  offeredAt: string;
+  expiresAt: string;
+}
+
+export interface RoutingDecisionOffer {
+  offerId: string;
+  agentId: string;
+  agentName: string | null;
+  attempt: number;
+  /** `open`, `accepted`, `declined`, `expired` or `cancelled`. */
+  outcome: string;
+  cancelReason: string | null;
+  offeredAt: string;
+  resolvedAt: string | null;
+  responseSeconds: number | null;
+}
+
+/** Why a chat went to its agent ("why me"). */
+export interface RoutingDecision {
+  conversationId: string;
+  decidedAt: string;
+  /** `skill_match`, `widened`, `language_fallback`, `no_ai` or `manual`. */
+  step: string;
+  fallback: string | null;
+  pickedAgentId: string;
+  pickedAgentName: string | null;
+  classifier: {
+    skills: { id: string; name: string; confidence: number }[];
+    language: string | null;
+    priority: string | null;
+    sentiment: string | null;
+    confidence: number | null;
+    reason: string | null;
+  } | null;
+  candidates: { agentId: string; agentName: string | null; score: number; load: number; languageMatch: boolean }[];
+  offers: RoutingDecisionOffer[];
+}
+
+/** Query for the workforce reports. The range is at most 92 days; `timeZone` is an IANA id. */
+export interface WorkforceReportQuery {
+  from?: string | Date;
+  to?: string | Date;
+  timeZone?: string;
+  /** `agent`, `team` or `day` (report-specific; see docs/WORKFORCE.md). */
+  groupBy?: string;
+}
+
+/** A workforce report. Rows are returned as the server builds them (not typed field by field). */
+export type WorkforceReport = Record<string, unknown>;
+
+// -- Social inbox (Facebook and Instagram) ---------------------------------------------------------
+
+export interface SocialConnection {
+  id: string;
+  channelType: 'messenger' | 'instagram' | string;
+  externalAccountId: string;
+  name: string | null;
+  parentExternalAccountId: string | null;
+  status: string;
+  capabilities: { dms: boolean; comments: boolean } | null;
+  verifiedAt: string | null;
+  connectedAt: string;
+  lastErrorCode: string | null;
+  needsReauth: boolean;
+  /** `token_expired`, `permission_revoked`, `password_changed`, `app_removed` or `unknown`. */
+  reauthReason: string | null;
+}
+
+export type CommentReplyMode = 'off' | 'suggest' | 'auto';
+
+export interface SocialConnectionSettings {
+  connectionId: string;
+  channelType: string;
+  name: string | null;
+  dmsEnabled: boolean;
+  commentsEnabled: boolean;
+  autoHideSpam: boolean;
+  autoHideScamImpersonation: boolean;
+  autoHideAbuse: boolean;
+  commentReplyMode: CommentReplyMode;
+  autoPublicRepliesEnabled: boolean;
+  publicAcknowledgmentEnabled: boolean;
+  replyToPraise: boolean;
+  maxAutoPublicRepliesPerPostPerHour: number;
+  allowedLinkDomains: string[];
+}
+
+/**
+ * A partial update: a field you leave out keeps its stored value. `dmsEnabled` and
+ * `commentsEnabled` can only be turned off here; turning one on needs a reconnect (400
+ * `capability_requires_reconnect`).
+ */
+export interface UpdateSocialConnectionSettingsRequest {
+  autoHideSpam?: boolean;
+  autoHideScamImpersonation?: boolean;
+  autoHideAbuse?: boolean;
+  commentReplyMode?: CommentReplyMode;
+  autoPublicRepliesEnabled?: boolean;
+  publicAcknowledgmentEnabled?: boolean;
+  replyToPraise?: boolean;
+  /** 0 to 200. */
+  maxAutoPublicRepliesPerPostPerHour?: number;
+  /** Replaces the list. Full domains only (`help.example.com`), at most 20. */
+  allowedLinkDomains?: string[];
+  dmsEnabled?: boolean;
+  commentsEnabled?: boolean;
+}
+
+export interface SocialDisconnectPreview {
+  connectionId: string;
+  channelType: string;
+  /** Open conversations of this channel type (not of this one connection). */
+  openConversationCount: number;
+  openConversationScope: string;
+}
+
+export interface SocialReplyPolicy {
+  /** For example `open`, `human_only`, `closed`, `not_connected`, `not_applicable`. */
+  state: string;
+  windowClosesAt: string | null;
+  humanOnlyUntil: string | null;
+  requiresHumanAgentTag: boolean;
+  humanAgentApproved: boolean;
+  reauthReason: string | null;
+  lastCustomerMessageAt: string | null;
+}
+
+export interface SocialMessageDelivery {
+  messageId: string;
+  status: string;
+  errorCode: string | null;
+  deliveredAt: string | null;
+  readAt: string | null;
+}
+
+export interface SocialPage<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface SocialPost {
+  id: string;
+  connectionId: string;
+  platform: string;
+  externalPostId: string;
+  permalink: string | null;
+  captionExcerpt: string | null;
+  mediaType: string | null;
+  isAd: boolean;
+  commentCount: number;
+  needsAttentionCount: number;
+  lastCommentAt: string | null;
+}
+
+export interface SocialComment {
+  id: string;
+  connectionId: string;
+  postId: string;
+  conversationId: string;
+  platform: string;
+  externalCommentId: string;
+  parentExternalCommentId: string | null;
+  authorExternalId: string;
+  authorName: string | null;
+  text: string;
+  isFromPage: boolean;
+  /** `Visible`, `Hidden` or `Deleted`. */
+  visibility: string;
+  moderatedBy: string | null;
+  moderatedByUserId: string | null;
+  moderationReason: string | null;
+  moderationConfidence: number | null;
+  classification: string | null;
+  sentiment: string | null;
+  language: string | null;
+  postedAt: string;
+  privateReplySentAt: string | null;
+  privateReplyConversationId: string | null;
+  canPrivateReply: boolean;
+  privateReplyExpiresAt: string;
+  handledAt: string | null;
+  aiRepliedAt: string | null;
+  unanswered: boolean;
+  needsAttention: boolean;
+}
+
+export interface SocialPostQuery {
+  connectionId?: string;
+  page?: number;
+  /** Capped at 100 by the server. */
+  pageSize?: number;
+}
+
+export interface SocialCommentQuery extends SocialPostQuery {
+  postId?: string;
+  /** `question`, `complaint`, `praise`, `spam`, `scam_impersonation`, `abuse` or `other`. */
+  category?: string;
+  hidden?: boolean;
+  needsAttention?: boolean;
+  unanswered?: boolean;
+}
+
+export interface SocialPrivateReplyResult {
+  comment: SocialComment;
+  /** The DM conversation the private reply opened. */
+  conversationId: string;
+}
+
+export interface SocialReport {
+  from: string;
+  to: string;
+  commentsReceived: number;
+  byCategory: Record<string, number>;
+  bySentiment: Record<string, number>;
+  byChannel: Record<string, number>;
+  autoHidden: number;
+  agentHidden: number;
+  unhiddenByAgent: number;
+  falsePositiveRate: number | null;
+  commentsAnswered: number;
+  commentsUnanswered: number;
+  medianResponseSeconds: number | null;
+  avgResponseSeconds: number | null;
+  aiPublicRepliesPosted: number;
+  aiPublicRepliesRefused: number;
+  dmVolume: { channel: string; inbound: number; outbound: number }[];
+}

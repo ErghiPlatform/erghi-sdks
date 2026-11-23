@@ -4,3 +4,5 @@ export * from './workspace';
 export * from './insights';
 export * from './inbox';
 export * from './contacts';
+export * from './workforce';
+export * from './social';

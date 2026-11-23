@@ -305,6 +305,31 @@ const page = await client.contacts.list({ search: 'ann', pageSize: 20 }); // req
 await client.contacts.block(page.items[0].id);
 ```
 
+## Workforce and Social Inbox
+
+Workspace operations, like the inbox: use a server-side credential, never a visitor's browser. The workspace comes from the credential, never from a parameter. Server error codes are on `error.details.code`.
+
+```typescript
+// Workforce (an API key with manage_workforce can read the board and write the setup)
+const live = await client.workforce.getLive();
+const reason = await client.workforce.createAwayReason({ name: 'Lunch', maxMinutes: 60, reassignChats: false });
+// A partial update: only what you set is sent. 0 turns a timer off.
+await client.workforce.updateSettings({ idleAwayMinutes: 10, signOutAfterHoursMinutes: 0 });
+const report = await client.workforce.getAgentPerformanceReport({ from: '2026-11-01', to: '2026-11-30', timeZone: 'Africa/Cairo' });
+
+// A signed-in teammate (member token): own status and chat offers
+await client.workforce.setMyStatus({ state: 'away', reasonId: reason.id });
+const offers = await client.workforce.listMyOffers();
+if (offers.length) await client.workforce.acceptOffer(offers[0].offerId);
+
+// Social inbox (Facebook and Instagram)
+const comments = await client.social.listComments({ needsAttention: true, pageSize: 20 });
+await client.social.replyToComment(comments.items[0].id, 'Thanks for asking! Check our help centre.');
+await client.social.updateConnectionSettings(connectionId, { autoHideAbuse: true });
+```
+
+Connecting a Facebook Page or Instagram account is a browser-only Meta login: do it in the admin portal. To reply to a comment, use `replyToComment` or `privateReplyToComment`; sending to a comment conversation through the ordinary message call is refused with `use_comment_reply`.
+
 ## Error Handling
 
 ```typescript
