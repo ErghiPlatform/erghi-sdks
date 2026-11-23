@@ -314,6 +314,36 @@ var page = await client.Contacts.ListAsync(search: "ann", pageSize: 20); // requ
 await client.Contacts.BlockAsync(page.Items[0].Id);
 ```
 
+## Workforce and Social Inbox
+
+Workspace operations; the workspace comes from the credential, never from a parameter. Management calls accept a `manage_workforce` / `moderate_social` API key. Own status and offers need `view_conversations`, which a key can never hold, so use a signed-in teammate's access token for those. The server's error code is in `ErghiException.ServerCode`.
+
+```csharp
+// Workforce: partial settings update, 0 turns a timer off
+await client.Workforce.UpdateSettingsAsync(new UpdateWorkforceSettingsRequest
+{
+    IdleAwayMinutes = 0,
+    RequireAwayReason = true,
+});
+var reason = await client.Workforce.CreateAwayReasonAsync("Lunch", maxMinutes: 30);
+await client.Workforce.SetAgentStatusAsync(agentId, "away", reasonId: reason.Id);
+var report = await client.Workforce.GetAgentStatusReportAsync(from: DateTimeOffset.UtcNow.AddDays(-7));
+
+// Social inbox (403 social_inbox_unavailable when the workspace does not have it)
+var comments = await client.Social.ListCommentsAsync(needsAttention: true);
+await client.Social.ReplyToCommentAsync(comments.Items[0].Id, "Thanks, we have sent you a DM.");
+try
+{
+    await client.Social.PrivateReplyToCommentAsync(comments.Items[0].Id, "Hi, how can we help?");
+}
+catch (ErghiException ex) when (ex.ServerCode == "private_reply_used")
+{
+    // Meta allows one private reply per comment
+}
+```
+
+Connecting a Facebook Page or Instagram account is a browser-only Meta login and is not part of the SDK; connect in the admin portal.
+
 ## Error Handling
 
 ```csharp

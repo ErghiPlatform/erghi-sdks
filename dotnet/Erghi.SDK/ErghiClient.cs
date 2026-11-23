@@ -32,6 +32,8 @@ public sealed class ErghiClient : IAsyncDisposable
     public WorkspaceResource Workspace { get; }
     public InsightsResource Insights { get; }
     public InboxResource Inbox { get; }
+    public WorkforceResource Workforce { get; }
+    public SocialResource Social { get; }
     public ContactsResource Contacts { get; }
 
     public string? VisitorId => _config.VisitorId;
@@ -76,6 +78,8 @@ public sealed class ErghiClient : IAsyncDisposable
         Workspace = new WorkspaceResource(null!);
         Insights = new InsightsResource(null!);
         Inbox = new InboxResource(null!);
+        Workforce = new WorkforceResource(null!);
+        Social = new SocialResource(null!);
         Contacts = new ContactsResource(null!);
 
         var handler = new M2MAuthHandler(config, token =>
@@ -111,6 +115,8 @@ public sealed class ErghiClient : IAsyncDisposable
         Workspace = new WorkspaceResource(_http);
         Insights = new InsightsResource(_http);
         Inbox = new InboxResource(_http);
+        Workforce = new WorkforceResource(_http);
+        Social = new SocialResource(_http);
         Contacts = new ContactsResource(_http);
     }
 
