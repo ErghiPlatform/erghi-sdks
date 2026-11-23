@@ -96,6 +96,27 @@ const INBOX_COLS = [
   ['notifications', 'Notifications + mentions (PR #256)'],
 ];
 
+const WORKFORCE_COLS = [
+  ['agent_status', 'Agent status'],
+  ['away_reasons', 'Away reasons'],
+  ['routing_skills', 'Routing skills'],
+  ['agent_profiles', 'Agent profiles'],
+  ['settings', 'Settings'],
+  ['offers', 'Chat offers'],
+  ['routing_decision', 'Why me'],
+  ['reports', 'Reports'],
+];
+
+const SOCIAL_COLS = [
+  ['connections', 'Connections'],
+  ['connection_settings', 'Connection settings'],
+  ['comments', 'Comments'],
+  ['posts', 'Posts'],
+  ['moderation', 'Moderation'],
+  ['dm_reply_policy', 'DM reply policy'],
+  ['report', 'Report'],
+];
+
 function realtimeSection(manifests) {
   const header = '| SDK | Realtime | Protocol |';
   const sep = '|---|---|---|';
@@ -157,6 +178,8 @@ ${section('Auth', AUTH_COLS, manifests, 'auth')}
 ${section('Chat / conversations', CHAT_COLS, manifests, 'chat')}
 ${section('Widget management', WIDGET_COLS, manifests, 'widgets')}
 ${section('Inbox: labels, notes, saved replies, contacts (workspace/admin API; visitor-side SDKs: —)', INBOX_COLS, manifests.filter(({ data }) => data.capabilities?.inbox), 'inbox')}
+${section('Workforce: agent status, routing, offers, reports (workspace/admin API; visitor-side SDKs: —)', WORKFORCE_COLS, manifests.filter(({ data }) => data.capabilities?.workforce), 'workforce')}
+${section('Social inbox: Facebook and Instagram connections, comments, report (workspace/admin API; visitor-side SDKs: —)', SOCIAL_COLS, manifests.filter(({ data }) => data.capabilities?.social_inbox), 'social_inbox')}
 ${realtimeSection(manifests)}
 ${platformGapsSection(manifests)}
 ## How to keep this honest

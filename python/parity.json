@@ -5,8 +5,8 @@
   "display_name": "Python",
   "tier": "active",
   "tier_reason": "Full independent client, near-1:1 parity with javascript on auth+chat.",
-  "last_verified_against_api": "2026-10-12",
-  "last_verified_by": "contract audit: every SDK path diffed against server routes + gateway map, plus per-SDK wire tests",
+  "last_verified_against_api": "2026-11-23",
+  "last_verified_by": "workforce and social-inbox wrappers diffed against the Erghi controller source and request models, plus per-SDK wire tests",
   "verification_method": "Read python/erghi/resources/*.py directly.",
   "capabilities": {
     "auth": {
@@ -46,6 +46,31 @@
       "verified": "2026-11-16",
       "evidence": "python/erghi/resources/inbox.py + contacts.py; python/tests/test_inbox.py",
       "note": "Workspace surface (member access token), never the visitor surface. Workspace API keys cannot hold view_conversations/manage_inbox_settings/manage_contacts (not grantable), so they get 403. Contacts, notifications, @mentions and unassign require platform PR #256 (not merged when this was written)."
+    },
+    "workforce": {
+      "agent_status": true,
+      "away_reasons": true,
+      "routing_skills": true,
+      "agent_profiles": true,
+      "settings": true,
+      "offers": true,
+      "routing_decision": true,
+      "reports": true,
+      "verified": "2026-11-23",
+      "evidence": "python/erghi/resources/workforce.py + social.py; python/tests/test_workforce.py + test_social.py",
+      "note": "Workspace surface. manage_workforce is a grantable API-key permission (status force, sign-out, away reasons, skills, profiles, settings); own status, offers and routing-decision need view_conversations, which a key can never hold, so they need a member token. Reports need view_insights and a plan with workforce analytics. Live board and report bodies are loosely typed (the server builds them ad hoc). PUT profile is not partial. Requires the platform release that adds the Workforce API (not merged when this was written)."
+    },
+    "social_inbox": {
+      "connections": true,
+      "connection_settings": true,
+      "comments": true,
+      "posts": true,
+      "moderation": true,
+      "dm_reply_policy": true,
+      "report": true,
+      "verified": "2026-11-23",
+      "evidence": "python/erghi/resources/workforce.py + social.py; python/tests/test_workforce.py + test_social.py",
+      "note": "Workspace surface. moderate_social is a grantable API-key permission (hide, reply, private reply, done, ignore); connections and settings need configure_ai, the report needs view_insights. The social inbox ships dark (403 social_inbox_unavailable). The Meta OAuth connect flow is deliberately not wrapped (browser-only). Requires the platform release that adds the social inbox (not merged when this was written)."
     },
     "rag": { "supported": false, "note": "Same platform-wide gap as javascript." },
     "webhooks": { "supported": false, "note": "Same platform-wide gap as javascript." }

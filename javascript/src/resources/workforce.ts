@@ -138,7 +138,12 @@ export class WorkforceResource {
     return (await this.http.get<AgentProfile>(`/api/v1/workforce/agents/${seg(agentId)}/profile`)).data;
   }
 
-  /** Needs `manage_workforce`. `skills` replaces the agent's skills when present; 404 `skill_not_found` for an unknown skill id. */
+  /**
+   * Needs `manage_workforce`. NOT a partial update: send the whole profile. The server resets an omitted
+   * `maxConcurrentChats` to the workspace default and an omitted `languages` to empty. Only `skills` is left
+   * alone when omitted; when present it replaces the agent's skills (an empty array clears them).
+   * 404 `skill_not_found` for an unknown skill id.
+   */
   async saveAgentProfile(agentId: string, request: SaveAgentProfileRequest): Promise<AgentProfile> {
     return (await this.http.put<AgentProfile>(`/api/v1/workforce/agents/${seg(agentId)}/profile`, request)).data;
   }
