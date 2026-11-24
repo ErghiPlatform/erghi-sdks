@@ -1,3 +1,13 @@
+## 1.6.0 (2026-11-24)
+
+- Added: streaming replies. When a workspace's reply engine streams (a custom model with `stream`
+  on, or a Live engine sending `ReplyDelta`), the widget shows the reply as it is written, in one
+  bubble with a caret, and replaces it with the final message. Draft text is plain text (the final
+  message renders links and markdown), is hidden from screen readers until it is final, and is
+  dropped if the stream stops for 60 seconds. If the final message never arrived, the widget fetches
+  it. Needs an Erghi platform release that sends `MessageDraft` events; with an older one nothing
+  changes.
+
 ## 1.5.0 (2026-11-20)
 
 - Added: a pre-chat form. When the workspace turns it on for a widget (`preChatFormEnabled` in the

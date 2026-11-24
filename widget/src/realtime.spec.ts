@@ -65,6 +65,28 @@ describe('ConversationRealtimeClient', () => {
     expect(typing).toEqual([true, false]);
   });
 
+  it('reports MessageDraft and MessageDraftEnd for this conversation only', async () => {
+    const drafts: Array<{ draftId: string; delta: string }> = [];
+    const ends: Array<{ draftId: string; messageIds: string[] }> = [];
+    await client.connect('https://api.test.com', 'conv-1', 'visitor-token-abc', {
+      onMessage: () => undefined,
+      onDraft: (d) => drafts.push(d),
+      onDraftEnd: (e) => ends.push(e),
+    });
+
+    registeredHandlers.get('MessageDraft')?.({ conversationId: 'conv-1', draftId: 'd1', delta: 'Hel' });
+    registeredHandlers.get('MessageDraft')?.({ ConversationId: 'CONV-1', DraftId: 'd1', Delta: 'lo' });
+    registeredHandlers.get('MessageDraft')?.({ conversationId: 'conv-2', draftId: 'd9', delta: 'other' });
+    registeredHandlers.get('MessageDraft')?.({ conversationId: 'conv-1', draftId: 'd1', delta: '' });
+    registeredHandlers.get('MessageDraft')?.({ conversationId: 'conv-1', delta: 'no id' });
+    registeredHandlers.get('MessageDraftEnd')?.({ conversationId: 'conv-1', draftId: 'd1', messageIds: ['m1', 7] });
+    registeredHandlers.get('MessageDraftEnd')?.({ conversationId: 'conv-1', draftId: 'd2' });
+    registeredHandlers.get('MessageDraftEnd')?.({ conversationId: 'conv-2', draftId: 'd9', messageIds: [] });
+
+    expect(drafts).toEqual([{ draftId: 'd1', delta: 'Hel' }, { draftId: 'd1', delta: 'lo' }]);
+    expect(ends).toEqual([{ draftId: 'd1', messageIds: ['m1'] }, { draftId: 'd2', messageIds: [] }]);
+  });
+
   it('normalizes camelCase sources into MessageSource objects', () => {
     emitMessageReceived({
       id: 'm1',

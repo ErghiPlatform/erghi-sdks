@@ -203,6 +203,18 @@ export function buildStyles(look: WidgetLook): string {
       border: 1px solid var(--cf-border);
       border-end-start-radius: 4px;
     }
+    /* A reply still being written: plain text with a blinking caret. */
+    .msg.draft .msg-text { white-space: pre-wrap; }
+    .msg.draft .msg-text::after {
+      content: '';
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      margin-inline-start: 2px;
+      vertical-align: text-bottom;
+      background: currentColor;
+      animation: cf-caret 1s steps(1) infinite;
+    }
     .msg.system {
       align-self: center;
       background: transparent;
@@ -622,12 +634,15 @@ export function buildStyles(look: WidgetLook): string {
       from { opacity: 0; transform: translateY(12px) scale(.98); }
       to { opacity: 1; transform: translateY(0) scale(1); }
     }
+    @keyframes cf-caret {
+      50% { opacity: 0; }
+    }
     @keyframes cf-bounce {
       0%, 60%, 100% { transform: translateY(0); }
       30% { transform: translateY(-5px); }
     }
     @media (prefers-reduced-motion: reduce) {
-      .panel, .bubble, .bubble.has-unread, .typing span { animation: none; transition: none; }
+      .panel, .bubble, .bubble.has-unread, .typing span, .msg.draft .msg-text::after { animation: none; transition: none; }
     }
     @media (max-width: 480px) {
       /* Only the launcher's corner: a full-width root would block taps across the page's bottom

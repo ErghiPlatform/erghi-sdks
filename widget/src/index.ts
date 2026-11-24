@@ -153,6 +153,10 @@ export default class ErghiWidget {
   private sessionChecked = false;
   private chatBlocked = false;
   private isTyping = false;
+  /** Streaming drafts by draftId; each is replaced by the message(s) its reply posts. */
+  private drafts = new Map<string, {
+    el: HTMLElement; textEl: HTMLElement; text: string; idle: ReturnType<typeof setTimeout> | null;
+  }>();
   private knownMessageIds = new Set<string>();
   private ratedMessageIds = new Set<string>();
   private realtime = new ConversationRealtimeClient();
@@ -166,6 +170,11 @@ export default class ErghiWidget {
   private static readonly REPLY_TIMEOUT_MS = 30_000;
   // Once the server reports it is generating: its own budget for one reply.
   private static readonly GENERATION_TIMEOUT_MS = 90_000;
+  /** A streaming draft with no new text for this long is dropped (its engine went away mid-reply). */
+  private static readonly DRAFT_IDLE_MS = 60_000;
+  /** A reply is at most 5 messages of 4000 characters; nothing longer is kept on screen. */
+  private static readonly DRAFT_MAX_CHARS = 20_000;
+  private static readonly MAX_DRAFTS = 3;
   private lastInactivityWarningAt = 0;
   private pendingFile: File | null = null;
   /** Sends that failed, by the id of their (still visible) bubble, so Retry can send them again. */
@@ -902,6 +911,7 @@ export default class ErghiWidget {
     this.stopHeartbeat();
     this.stopFallbackPoll();
     this.clearReplyTimeout();
+    this.clearDrafts();
     this.clearCampaignTimer();
     this.cancelRecording();
     this.stopSpeaking();
@@ -1531,6 +1541,7 @@ export default class ErghiWidget {
 
   private async connectRealtime(): Promise<void> {
     if (!this.conversationId) return;
+    this.clearDrafts();
 
     try {
       await this.realtime.connect(this.config.apiUrl, this.conversationId, this.visitorToken, {
@@ -1538,11 +1549,14 @@ export default class ErghiWidget {
         onClosed: () => this.handleSessionEnded(),
         onContextRequired: () => this.handleContextRequired(),
         onAssistantTyping: (isTyping) => this.handleAssistantTyping(isTyping),
+        onDraft: ({ draftId, delta }) => this.handleDraft(draftId, delta),
+        onDraftEnd: ({ draftId, messageIds }) => this.handleDraftEnd(draftId, messageIds),
         // The server posts the queue and agent-connected notices as system messages in the
         // visitor's language (handled by onMessage); assignment only updates widget state.
         onAssigned: (payload) => {
           this.displayConfig.assignedAgentName = payload.agentName;
           this.assignedAt = Date.now();
+          this.clearDrafts();
           this.pruneWaitingNotices();
           this.awaitingReply = false;
           this.clearReplyTimeout();
@@ -1587,6 +1601,7 @@ export default class ErghiWidget {
     if (sender === 'system') {
       if (this.knownMessageIds.has(msg.id)) return;
       this.knownMessageIds.add(msg.id);
+      this.clearDrafts();
       this.appendMessageEl({ id: msg.id, content: msg.content, sender: 'system' });
       const noticeEl = this.$('cf-messages')?.lastElementChild;
       if (noticeEl) this.serverNotices.push({ el: noticeEl, at: Date.now() });
@@ -1603,6 +1618,8 @@ export default class ErghiWidget {
     }
     if (this.knownMessageIds.has(msg.id)) return;
     this.knownMessageIds.add(msg.id);
+    // The finished reply takes the draft's place (MessageDraftEnd follows and forgets it).
+    this.clearDrafts();
     this.appendMessageEl({
       id: msg.id, content: msg.content, sender: msg.sender, sources: msg.sources, actions: msg.actions,
     });
@@ -1705,6 +1722,71 @@ export default class ErghiWidget {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
+  }
+
+  /** Shows part of a reply that is still being written (reply engine streaming). Plain text while
+   * it streams: half-written markdown would flicker, and the final message is rendered properly. */
+  private handleDraft(draftId: string, delta: string): void {
+    const box = this.$('cf-messages');
+    if (!box) return;
+    let draft = this.drafts.get(draftId);
+    if (!draft) {
+      if (this.drafts.size >= ErghiWidget.MAX_DRAFTS) return;
+      const el = document.createElement('div');
+      el.className = 'msg bot draft';
+      el.setAttribute('data-draft-id', draftId);
+      // Screen readers get the finished message once, not every partial update.
+      el.setAttribute('aria-hidden', 'true');
+      const label = this.senderLabel('bot');
+      if (label) {
+        const labelEl = document.createElement('div');
+        labelEl.className = 'msg-label';
+        labelEl.textContent = label;
+        el.appendChild(labelEl);
+      }
+      const textEl = document.createElement('div');
+      textEl.className = 'msg-text';
+      textEl.setAttribute('dir', 'auto');
+      el.appendChild(textEl);
+      draft = { el, textEl, text: '', idle: null };
+      this.drafts.set(draftId, draft);
+    }
+    draft.text = (draft.text + delta).slice(0, ErghiWidget.DRAFT_MAX_CHARS);
+    // Server text: textContent only, never innerHTML.
+    draft.textEl.textContent = draft.text;
+    const isNew = !draft.el.isConnected;
+    if (isNew) box.appendChild(draft.el);
+    if (draft.idle) clearTimeout(draft.idle);
+    draft.idle = setTimeout(() => this.removeDraft(draftId), ErghiWidget.DRAFT_IDLE_MS);
+    // The reply is visibly on its way: the dots go, and the no-reply timer restarts so a long
+    // stream is not reported as a failure (a stream that dies still is, after the full wait).
+    if (this.isTyping) {
+      this.isTyping = false;
+      this.$('cf-typing')?.classList.remove('visible');
+    }
+    if (this.awaitingReply) {
+      this.clearReplyTimeout();
+      this.replyTimeoutTimer = setTimeout(() => this.handleReplyTimeout(), ErghiWidget.GENERATION_TIMEOUT_MS);
+    }
+    this.scrollMessages(isNew);
+  }
+
+  private handleDraftEnd(draftId: string, messageIds: string[]): void {
+    this.removeDraft(draftId);
+    // The messages that replaced the draft never arrived (the connection blinked): fetch them.
+    if (messageIds.some(id => !this.knownMessageIds.has(id))) void this.fetchMissedMessages();
+  }
+
+  private removeDraft(draftId: string): void {
+    const draft = this.drafts.get(draftId);
+    if (!draft) return;
+    if (draft.idle) clearTimeout(draft.idle);
+    draft.el.remove();
+    this.drafts.delete(draftId);
+  }
+
+  private clearDrafts(): void {
+    for (const id of Array.from(this.drafts.keys())) this.removeDraft(id);
   }
 
   private setTyping(on: boolean): void {
@@ -2009,6 +2091,7 @@ export default class ErghiWidget {
   }
 
   private handleSessionEnded(): void {
+    this.clearDrafts();
     this.addSystemMessage(this.tr('widget.session.endedNewChat', 'This conversation has ended. Send a message to start a new chat.'));
     this.conversationId = null;
     this.visitorToken = null;

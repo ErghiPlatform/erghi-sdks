@@ -31,6 +31,12 @@ export type RealtimeHandlers = {
   onContextRequired?: () => void;
   /** The server started (true) or finished (false) generating an AI reply for this turn. */
   onAssistantTyping?: (isTyping: boolean) => void;
+  /** Part of a reply that is still being written (reply engine streaming). Append `delta` to the
+   * draft named `draftId`; the final message arrives as MessageReceived and replaces it. */
+  onDraft?: (payload: { draftId: string; delta: string }) => void;
+  /** The draft is finished. `messageIds` are the messages that replaced it (already sent as
+   * MessageReceived), or empty when the stream produced no message. */
+  onDraftEnd?: (payload: { draftId: string; messageIds: string[] }) => void;
 };
 
 export class ConversationRealtimeClient {
@@ -98,6 +104,30 @@ export class ConversationRealtimeClient {
 
     this.hub.on('AssistantTyping', (raw: Record<string, unknown>) => {
       handlers.onAssistantTyping?.(Boolean(raw?.['isTyping'] ?? raw?.['IsTyping']));
+    });
+
+    // A draft for another conversation is never shown: the hub group is per conversation, but a
+    // reconnect after a session switch must not leak an old stream into the new thread.
+    const isOtherConversation = (raw: Record<string, unknown>): boolean => {
+      const id = raw?.['conversationId'] ?? raw?.['ConversationId'];
+      return typeof id === 'string' && id !== '' && id.toLowerCase() !== conversationId.toLowerCase();
+    };
+
+    this.hub.on('MessageDraft', (raw: Record<string, unknown>) => {
+      if (!raw || isOtherConversation(raw)) return;
+      const draftId = raw['draftId'] ?? raw['DraftId'];
+      const delta = raw['delta'] ?? raw['Delta'];
+      if (typeof draftId !== 'string' || !draftId || typeof delta !== 'string' || !delta) return;
+      handlers.onDraft?.({ draftId, delta });
+    });
+
+    this.hub.on('MessageDraftEnd', (raw: Record<string, unknown>) => {
+      if (!raw || isOtherConversation(raw)) return;
+      const draftId = raw['draftId'] ?? raw['DraftId'];
+      if (typeof draftId !== 'string' || !draftId) return;
+      const ids = raw['messageIds'] ?? raw['MessageIds'];
+      const messageIds = Array.isArray(ids) ? ids.filter((x): x is string => typeof x === 'string') : [];
+      handlers.onDraftEnd?.({ draftId, messageIds });
     });
 
     this.hub.on('ConversationInactivityWarning', (raw: Record<string, unknown>) => {

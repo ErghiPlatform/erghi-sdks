@@ -852,6 +852,95 @@ describe('ErghiWidget', () => {
     });
   });
 
+  describe('Streaming drafts (reply engine)', () => {
+    const connect = async (): Promise<RealtimeHandlers> => {
+      let captured: RealtimeHandlers | undefined;
+      jest.spyOn(ConversationRealtimeClient.prototype, 'connect')
+        .mockImplementation(async (_url, _id, _token, handlers) => { captured = handlers; });
+      widget.open();
+      (widget as any).conversationId = 'conv-draft';
+      await (widget as any).connectRealtime();
+      return captured as RealtimeHandlers;
+    };
+    const drafts = () => Array.from(getShadowRoot()?.querySelectorAll('.msg.draft') ?? []);
+    const botTexts = () =>
+      Array.from(getShadowRoot()?.querySelectorAll('.msg.bot:not(.draft) .msg-text') ?? []).map((el) => el.textContent);
+
+    afterEach(() => jest.useRealTimers());
+
+    it('grows one draft bubble as plain text and hides the typing dots', async () => {
+      const handlers = await connect();
+      (widget as any).setTyping(true);
+
+      handlers.onDraft?.({ draftId: 'd1', delta: '**Hel' });
+      handlers.onDraft?.({ draftId: 'd1', delta: 'lo** <img src=x onerror=alert(1)>' });
+
+      expect(drafts()).toHaveLength(1);
+      const text = drafts()[0].querySelector('.msg-text') as HTMLElement;
+      expect(text.textContent).toBe('**Hello** <img src=x onerror=alert(1)>');
+      expect(text.querySelector('img')).toBeNull();
+      expect(drafts()[0].getAttribute('aria-hidden')).toBe('true');
+      expect(getShadowRoot()?.getElementById('cf-typing')?.classList.contains('visible')).toBe(false);
+    });
+
+    it('replaces the draft with the final message, and DraftEnd forgets it', async () => {
+      const handlers = await connect();
+      handlers.onDraft?.({ draftId: 'd1', delta: 'Hello' });
+
+      handlers.onMessage({ id: 'm1', content: 'Hello there', sender: 'bot' } as Parameters<RealtimeHandlers['onMessage']>[0]);
+      expect(drafts()).toHaveLength(0);
+      expect(botTexts()).toContain('Hello there');
+
+      handlers.onDraftEnd?.({ draftId: 'd1', messageIds: ['m1'] });
+      handlers.onDraft?.({ draftId: 'd2', delta: 'Next' });
+      expect(drafts()).toHaveLength(1);
+      expect(drafts()[0].getAttribute('data-draft-id')).toBe('d2');
+    });
+
+    it('removes a draft whose stream ended without a message', async () => {
+      const handlers = await connect();
+      handlers.onDraft?.({ draftId: 'd1', delta: 'Partial' });
+      handlers.onDraftEnd?.({ draftId: 'd1', messageIds: [] });
+      expect(drafts()).toHaveLength(0);
+    });
+
+    it('fetches the final messages when DraftEnd names one it never received', async () => {
+      const handlers = await connect();
+      const fetchMissed = jest.spyOn(widget as any, 'fetchMissedMessages').mockResolvedValue(undefined);
+      handlers.onDraft?.({ draftId: 'd1', delta: 'Hi' });
+      handlers.onDraftEnd?.({ draftId: 'd1', messageIds: ['never-seen'] });
+      expect(fetchMissed).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops a draft that stops streaming', async () => {
+      jest.useFakeTimers();
+      const handlers = await connect();
+      handlers.onDraft?.({ draftId: 'd1', delta: 'Hi' });
+      jest.advanceTimersByTime(59_000);
+      expect(drafts()).toHaveLength(1);
+      handlers.onDraft?.({ draftId: 'd1', delta: ' there' });
+      jest.advanceTimersByTime(59_000);
+      expect(drafts()).toHaveLength(1);
+      jest.advanceTimersByTime(2_000);
+      expect(drafts()).toHaveLength(0);
+    });
+
+    it('caps how much draft text and how many drafts it keeps', async () => {
+      const handlers = await connect();
+      handlers.onDraft?.({ draftId: 'd1', delta: 'x'.repeat(30_000) });
+      expect((drafts()[0].querySelector('.msg-text') as HTMLElement).textContent).toHaveLength(20_000);
+      for (const id of ['d2', 'd3', 'd4', 'd5']) handlers.onDraft?.({ draftId: id, delta: id });
+      expect(drafts()).toHaveLength(3);
+    });
+
+    it('clears drafts when the widget is destroyed', async () => {
+      const handlers = await connect();
+      handlers.onDraft?.({ draftId: 'd1', delta: 'Hi' });
+      widget.destroy();
+      expect((widget as any).drafts.size).toBe(0);
+    });
+  });
+
   describe('Handoff notices after an agent joins', () => {
     const systemTexts = () =>
       Array.from(getShadowRoot()?.querySelectorAll('.msg.system .msg-text') ?? []).map((el) => el.textContent);
