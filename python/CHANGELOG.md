@@ -1,3 +1,9 @@
+## 2.4.0 (2026-11-24)
+
+- New: contact merge on `client.contacts`: `list_merge_suggestions()` (pairs that share a verified email or phone number, never a name; at most 100), `merge(target_contact_id, source_contact_id)` and `dismiss_merge_suggestion(contact_a_id, contact_b_id)`. `merge` is **irreversible**: the source contact's conversations, notes and channel identities move to the target, and the source contact is deleted. It needs a signed-in teammate's token with `manage_contacts` who can see every conversation; a teammate limited to some inboxes gets 403 `contact_out_of_scope`, and an API key gets 403 (`manage_contacts` is never grantable to a key). A conflict raises `ErghiError` with status 409 and `details["code"] == "merge_conflicting_identities"`. New models `MergeContact`, `ContactMergeSuggestion`, `ContactMergeResult`. Needs the platform release that adds these routes (the Erghi deploy planned for 1 December); an older platform answers 404.
+- New: `client.social.list_inbox_connections()` reads `GET /api/v1/social/connections`: the connected Pages and Instagram accounts with only id, channel, name and status, for callers that can moderate but lack `configure_ai`. `list_connections()` is unchanged. New model `SocialInboxConnection`. Needs the platform release that adds these routes (the Erghi deploy planned for 1 December); an older platform answers 404.
+- Fix: `erghi.__version__` said `2.2.0` in the 2.3.0 release; it now matches the package version.
+
 ## 2.3.0 (2026-11-24)
 
 - New: reply engine. Let your own agent answer a widget's visitors instead of Erghi AI.

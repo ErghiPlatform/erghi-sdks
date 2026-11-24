@@ -35,6 +35,14 @@ public sealed class SocialResource
     public Task<List<SocialConnection>> ListConnectionsAsync(CancellationToken ct = default) =>
         SendAsync<List<SocialConnection>>(_http, HttpMethod.Get, "/api/v1/channels/meta/connections", null, ct);
 
+    /// <summary>
+    /// The same accounts as <see cref="ListConnectionsAsync"/>, with only id, channel, name and status, for callers
+    /// without <c>configure_ai</c>: needs <c>view_conversations</c> or an API key with <c>moderate_social</c>. Use it
+    /// to fill a connection filter for <see cref="ListPostsAsync"/> / comments.
+    /// </summary>
+    public Task<List<SocialInboxConnection>> ListInboxConnectionsAsync(CancellationToken ct = default) =>
+        SendAsync<List<SocialInboxConnection>>(_http, HttpMethod.Get, "/api/v1/social/connections", null, ct);
+
     public Task<SocialConnectionSettings> GetConnectionSettingsAsync(string connectionId, CancellationToken ct = default) =>
         SendAsync<SocialConnectionSettings>(_http, HttpMethod.Get,
             $"/api/v1/channels/meta/connections/{Seg(connectionId)}/settings", null, ct);

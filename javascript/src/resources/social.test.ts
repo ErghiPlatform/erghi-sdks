@@ -14,6 +14,8 @@ describe('SocialResource', () => {
     const { http, social } = make({});
     await social.listConnections();
     expect(http.get).toHaveBeenCalledWith('/api/v1/channels/meta/connections');
+    await social.listInboxConnections();
+    expect(http.get).toHaveBeenLastCalledWith('/api/v1/social/connections');
     await social.getConnectionSettings('k1');
     expect(http.get).toHaveBeenLastCalledWith('/api/v1/channels/meta/connections/k1/settings');
     await social.updateConnectionSettings('k1', { autoHideAbuse: false, commentReplyMode: 'auto', replyToPraise: undefined });

@@ -13,6 +13,7 @@ from ..types import (
     SocialConnectionSettings,
     SocialDisconnectPreview,
     SocialIgnoreResult,
+    SocialInboxConnection,
     SocialMessageDelivery,
     SocialPostPage,
     SocialPrivateReplyResult,
@@ -69,6 +70,15 @@ class SocialResource:
         """Active Facebook Pages and Instagram accounts of the workspace."""
         response = await self.client.request("GET", "/api/v1/channels/meta/connections")
         return [SocialConnection.model_validate(x) for x in response.json()]
+
+    async def list_inbox_connections(self) -> List[SocialInboxConnection]:
+        """The same accounts as :meth:`list_connections`, with only id, channel, name and status.
+
+        For callers without ``configure_ai``: needs ``view_conversations`` or an API key with
+        ``moderate_social``. Use it to fill a connection filter for posts and comments.
+        """
+        response = await self.client.request("GET", "/api/v1/social/connections")
+        return [SocialInboxConnection.model_validate(x) for x in response.json()]
 
     async def get_connection_settings(self, connection_id: str) -> SocialConnectionSettings:
         response = await self.client.request(

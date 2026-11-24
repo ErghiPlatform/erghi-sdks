@@ -124,4 +124,14 @@ describe('ContactsResource', () => {
     await contacts.deleteNote('k1', 'n1');
     expect(http.delete).toHaveBeenCalledWith('/api/v1/contacts/k1/notes/n1');
   });
+
+  it('lists merge suggestions, merges into the target and dismisses a pair', async () => {
+    const { http, contacts } = make([]);
+    await contacts.listMergeSuggestions();
+    expect(http.get).toHaveBeenCalledWith('/api/v1/contacts/merge-suggestions');
+    await contacts.merge('keep/1', 'gone');
+    expect(http.post).toHaveBeenLastCalledWith('/api/v1/contacts/keep%2F1/merge', { sourceContactId: 'gone' });
+    await contacts.dismissMergeSuggestion('a', 'b');
+    expect(http.post).toHaveBeenLastCalledWith('/api/v1/contacts/merge-dismissals', { contactAId: 'a', contactBId: 'b' });
+  });
 });

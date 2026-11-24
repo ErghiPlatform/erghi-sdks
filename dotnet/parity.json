@@ -48,8 +48,9 @@
       "conversation_notes": true,
       "canned_responses": true,
       "contacts": true,
+      "contact_merge": true,
       "notifications": true,
-      "verified": "2026-11-16",
+      "verified": "2026-11-24",
       "evidence": "dotnet/Erghi.SDK/Resources/InboxResource.cs + ContactsResource.cs; dotnet/tests/Erghi.SDK.Tests/InboxContractTests.cs",
       "note": "Workspace surface (member access token), never the visitor surface. Workspace API keys cannot hold view_conversations/manage_inbox_settings/manage_contacts (not grantable), so they get 403. Contacts, notifications, @mentions and unassign require platform PR #256 (not merged when this was written)."
     },

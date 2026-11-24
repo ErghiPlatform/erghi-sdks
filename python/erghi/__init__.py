@@ -23,6 +23,8 @@ from .types import (
     ChatOfferSummary,
     ContactDetail,
     ContactEraseResult,
+    ContactMergeResult,
+    ContactMergeSuggestion,
     ContactNote,
     ContactPage,
     ContactSummary,
@@ -36,6 +38,7 @@ from .types import (
     InsightSummary,
     LoginRequest,
     MentionableMember,
+    MergeContact,
     Message,
     RegisterRequest,
     RoutingDecision,
@@ -46,6 +49,7 @@ from .types import (
     SocialConnectionSettings,
     SocialDisconnectPreview,
     SocialIgnoreResult,
+    SocialInboxConnection,
     SocialMessageDelivery,
     SocialPost,
     SocialPostPage,
@@ -58,7 +62,7 @@ from .types import (
     Workspace,
 )
 
-__version__ = "2.2.0"
+__version__ = "2.4.0"
 from .errors import ApiError
 from .reply_types import (
     AgentHandoff,
@@ -105,6 +109,8 @@ __all__ = [
     "ChatOfferSummary",
     "ContactDetail",
     "ContactEraseResult",
+    "ContactMergeResult",
+    "ContactMergeSuggestion",
     "ContactNote",
     "ContactPage",
     "ContactSummary",
@@ -121,6 +127,7 @@ __all__ = [
     "InsightSummary",
     "LoginRequest",
     "MentionableMember",
+    "MergeContact",
     "Message",
     "NetworkError",
     "NotFoundError",
@@ -141,6 +148,7 @@ __all__ = [
     "SocialConnectionSettings",
     "SocialDisconnectPreview",
     "SocialIgnoreResult",
+    "SocialInboxConnection",
     "SocialMessageDelivery",
     "SocialPost",
     "SocialPostPage",

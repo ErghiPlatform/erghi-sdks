@@ -9,7 +9,7 @@ What each of the 7 Erghi SDKs actually implements right now, verified against re
 `docs/parity/swift.json` (a manually-synced reference copy, since Swift lives in
 [`erghi-sdk-swift`](https://github.com/ErghiPlatform/erghi-sdk-swift), a separate repo).
 
-Regenerated on: 2026-11-23
+Regenerated on: 2026-11-24
 
 ## Maintenance tier
 
@@ -72,15 +72,15 @@ Regenerated on: 2026-11-23
 
 ### Inbox: labels, notes, saved replies, contacts (workspace/admin API; visitor-side SDKs: —)
 
-| SDK | Labels | Conversation notes | Saved replies | Contacts (PR #256) | Notifications + mentions (PR #256) |
-|---|---|---|---|---|---|
-| JavaScript / TypeScript | ✅ | ✅ | ✅ | ✅ | ✅ |
-| React | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Angular | ❌ | ❌ | ❌ | ❌ | ❌ |
-| .NET / C# | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Python | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Flutter / Dart | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Swift | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SDK | Labels | Conversation notes | Saved replies | Contacts (PR #256) | Contact merge | Notifications + mentions (PR #256) |
+|---|---|---|---|---|---|---|
+| JavaScript / TypeScript | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| React | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Angular | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| .NET / C# | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Python | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Flutter / Dart | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| Swift | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
 
 ### Workforce: agent status, routing, offers, reports (workspace/admin API; visitor-side SDKs: —)
 

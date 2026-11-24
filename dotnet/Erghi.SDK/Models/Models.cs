@@ -300,6 +300,27 @@ public record ContactNote(
 
 public record ContactEraseResult(int ConversationsDeleted, int MessagesDeleted);
 
+/// <summary>One side of a merge suggestion. <c>Channels</c> lists the channels the contact has an identity on.</summary>
+public record MergeContact(
+    string Id,
+    string? Name,
+    string? Email,
+    string? Phone,
+    List<string> Channels,
+    DateTime FirstSeenAt,
+    DateTime LastSeenAt
+);
+
+/// <summary>
+/// Two contacts that share a verified identifier: the same email, or the same phone number (which includes
+/// a WhatsApp number the platform reported). Never based on a name. <c>MatchedOn</c> is <c>email</c> or
+/// <c>phone</c>; <c>SuggestedTargetId</c> is the contact seen first, the one to keep.
+/// </summary>
+public record ContactMergeSuggestion(string MatchedOn, MergeContact ContactA, MergeContact ContactB, string SuggestedTargetId);
+
+/// <summary><c>MergedContactId</c> no longer exists; its history now belongs to <c>ContactId</c>.</summary>
+public record ContactMergeResult(string ContactId, string MergedContactId);
+
 /// <summary>Requires platform PR #256.</summary>
 public record UserNotification(
     string Id,
@@ -444,6 +465,12 @@ public record RoutingDecision(
 );
 
 // ── Social inbox ──────────────────────────────────────────────────────────────
+
+/// <summary>
+/// A connected Facebook Page or Instagram account as the moderation views list it. Readable with
+/// <c>view_conversations</c> or <c>moderate_social</c>, unlike <see cref="SocialConnection"/>, which needs <c>configure_ai</c>.
+/// </summary>
+public record SocialInboxConnection(string Id, string ChannelType, string? Name, string Status);
 
 public record SocialConnection(
     string Id,

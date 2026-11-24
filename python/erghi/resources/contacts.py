@@ -9,6 +9,8 @@ from urllib.parse import quote
 from ..types import (
     ContactDetail,
     ContactEraseResult,
+    ContactMergeResult,
+    ContactMergeSuggestion,
     ContactNote,
     ContactPage,
 )
@@ -27,6 +29,10 @@ class ContactsResource:
     Workspace (admin / server-side) operations: the workspace comes from the API key or access
     token. Reading needs ``view_conversations``; update, block, unblock and erase need
     ``manage_contacts``. An API key can read contact notes but cannot author them.
+
+    Merging needs a signed-in teammate's token with ``manage_contacts`` who can see every
+    conversation (a teammate limited to some inboxes gets 403 ``contact_out_of_scope``). API keys
+    get 403: ``manage_contacts`` is never grantable to a key.
     """
 
     def __init__(self, client: ErghiClient) -> None:
@@ -116,4 +122,36 @@ class ContactsResource:
         """The author or someone with ``manage_contacts`` can delete"""
         await self.client.request(
             "DELETE", f"/api/v1/contacts/{_seg(contact_id)}/notes/{_seg(note_id)}"
+        )
+
+    async def list_merge_suggestions(self) -> builtins.list[ContactMergeSuggestion]:
+        """Pairs of contacts that share a verified email or phone number (at most 100).
+
+        Pairs that would put two identities on one channel, and dismissed pairs, are left out.
+        """
+        response = await self.client.request("GET", "/api/v1/contacts/merge-suggestions")
+        return [ContactMergeSuggestion.model_validate(x) for x in response.json()]
+
+    async def merge(self, target_contact_id: str, source_contact_id: str) -> ContactMergeResult:
+        """IRREVERSIBLY merges ``source_contact_id`` into ``target_contact_id``.
+
+        The source's conversations, notes and channel identities move to the target, the target
+        keeps its own name, email and phone (filling only blanks from the source), and the source
+        contact is deleted. 400 ``merge_same_contact``; 409 ``merge_conflicting_identities`` when
+        both have an identity on the same channel. Sends the ``contact.merged`` webhook and writes
+        the security audit log.
+        """
+        response = await self.client.request(
+            "POST",
+            f"/api/v1/contacts/{_seg(target_contact_id)}/merge",
+            json={"sourceContactId": source_contact_id},
+        )
+        return ContactMergeResult.model_validate(response.json())
+
+    async def dismiss_merge_suggestion(self, contact_a_id: str, contact_b_id: str) -> None:
+        """Stops suggesting this pair. Order does not matter, and repeating it is harmless."""
+        await self.client.request(
+            "POST",
+            "/api/v1/contacts/merge-dismissals",
+            json={"contactAId": contact_a_id, "contactBId": contact_b_id},
         )

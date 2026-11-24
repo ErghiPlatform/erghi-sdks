@@ -48,6 +48,7 @@
       "conversation_notes": false,
       "canned_responses": false,
       "contacts": false,
+      "contact_merge": false,
       "notifications": false,
       "verified": "2026-11-16",
       "note": "Maintenance tier: gap recorded deliberately, not built. angular has its own independent HttpClient services, so this does NOT arrive via an @erghi-ai/sdk bump. Revisit if the founder re-tiers angular."
