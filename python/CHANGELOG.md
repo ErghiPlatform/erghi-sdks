@@ -1,4 +1,4 @@
-## Unreleased
+## 2.3.0 (2026-11-24)
 
 - New: reply engine. Let your own agent answer a widget's visitors instead of Erghi AI.
   - `client.reply_engines` (admin, needs `configure_ai`): list, list_names, get, create, update, delete, enable, disable, rotate_secret, test, health, list_turns, get_widget_binding, set_widget_binding. Typed pydantic models (`ReplyEngine`, `ReplyEngineWrite`, `ReplyEngineHealth`...). The `whsec_` signing secret is returned once, on create and rotate_secret.
@@ -13,8 +13,6 @@
 - New: `client.social` for the Facebook and Instagram social inbox: connections, per-connection settings (partial update), disconnect preview and disconnect, DM reply policy and delivery state, posts, comments (hide, unhide, public reply, private reply, mark done, ignore contact) and the social report (plus CSV). Moderation takes an API key with `moderate_social`; connections and settings need `configure_ai`; the report needs `view_insights`. A workspace without the social inbox gets 403 `social_inbox_unavailable`. Connecting an account is a browser-only Meta login and is deliberately not wrapped. Additive.
 
 - Change: for 403, 409 and other non-validation errors the raised `ErghiError.details` is now the parsed response body (it was `None` unless the body had an `errors` field), so the server's machine code is available as `error.details["code"]` (for example `offer_taken`, `private_reply_used`, `use_comment_reply`). Messages, codes and status codes are unchanged; code that never read `details` is unaffected.
-
-- Version: additive, so the next release is a minor bump (2.3.0). Package version files are not changed here.
 
 ## 2.2.0 (2026-11-18)
 

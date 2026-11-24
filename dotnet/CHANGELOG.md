@@ -1,4 +1,4 @@
-## Unreleased
+## 3.3.0 (2026-11-24)
 
 - New: reply engines (your own agent answers your widget's visitors instead of Erghi AI). `client.ReplyEngines` (admin, needs `configure_ai`): list, names, get, create, update, delete, enable/disable, rotate secret, test, health, turn log, and `GetWidgetBindingAsync` / `SetWidgetBindingAsync`. `client.AgentRuntime` (API key with `agent:runtime`): `GetTurnAsync`, `ReplyAsync`, `TypingAsync`, `HandoffAsync`, `DeclineAsync`, `TakeBackAsync`, `PostBotMessageAsync`. `ErghiWebhooks` verifies the Standard Webhooks signature (timing-safe, rejects timestamps more than 5 minutes off) and parses the `turn.requested` body into `TurnRequest`. `AgentRuntimeClient` is a SignalR client for `/hubs/agent-runtime` that reconnects forever with backoff, calls `Resume(lastSequence)` after each reconnect and never raises a turn twice. Needs the platform release that adds `/api/v1/reply-engines` and `/hubs/agent-runtime`; an older platform answers 404.
 - New: `ErghiApiException` carries the platform's machine code (`turn_closed`, `turn_superseded`, `human_engaged`, `handoff_unavailable`, `configure_ai_required`...) for 403/409 answers of the reply-engine calls. Existing calls keep their exception types.
@@ -8,8 +8,6 @@
 - New: `client.Social` for the Facebook and Instagram social inbox: connections, per-connection settings (partial update through `UpdateSocialConnectionSettingsRequest`), disconnect preview and disconnect, DM reply policy and delivery state, posts, comments (hide, unhide, public reply, private reply, mark done, ignore contact) and the social report (plus CSV). Moderation takes an API key with `moderate_social`; connections and settings need `configure_ai`; the report needs `view_insights`. A workspace without the social inbox gets 403 `social_inbox_unavailable`. Connecting an account is a browser-only Meta login and is deliberately not wrapped. Additive.
 
 - New: `ErghiException.ServerCode` carries the server's machine-readable `code` (for example `offer_taken`, `private_reply_used`, `use_comment_reply`) for the workspace (admin) resources, and `ErghiException.Details` now holds the raw response body for status codes other than 400, 401, 404 and 429 (it was null). Messages, `Code` and `StatusCode` are unchanged. Additive.
-
-- Version: additive, so the next release is a minor bump (3.3.0). Package version files are not changed here.
 
 ## 3.2.0 (2026-11-18)
 
