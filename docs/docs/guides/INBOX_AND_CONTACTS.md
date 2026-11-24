@@ -1,6 +1,6 @@
 ---
 title: Inbox and contacts API
-description: Labels, private notes, saved replies, contacts and notifications from the server-side SDKs: who can call each one, what the API key can and cannot do, and which calls need the platform release that has not shipped yet.
+description: "Labels, private notes, saved replies, contacts and notifications from the server-side SDKs: who can call each one, what the API key can and cannot do, and which calls need the platform release that has not shipped yet."
 ---
 
 # Inbox and contacts API

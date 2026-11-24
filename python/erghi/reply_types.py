@@ -221,7 +221,7 @@ class AgentReply(_Snake):
     handoff: Optional[AgentHandoff] = None
 
     @classmethod
-    def of(cls, idempotency_key: str, *messages: str) -> "AgentReply":
+    def of(cls, idempotency_key: str, *messages: str) -> AgentReply:
         """A reply of plain text messages."""
         return cls(
             idempotency_key=idempotency_key,

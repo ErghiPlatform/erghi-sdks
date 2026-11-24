@@ -51,7 +51,7 @@ def _body_text(body: Union[str, bytes]) -> str:
 
 def sign(secret: str, webhook_id: str, timestamp: int, body: Union[str, bytes]) -> str:
     """The ``webhook-signature`` value Erghi would send. Useful in your own tests."""
-    signed = f"{webhook_id}.{timestamp}.{_body_text(body)}".encode("utf-8")
+    signed = f"{webhook_id}.{timestamp}.{_body_text(body)}".encode()
     digest = hmac.new(_key(secret), signed, hashlib.sha256).digest()
     return "v1," + base64.b64encode(digest).decode("ascii")
 
@@ -92,7 +92,7 @@ def verify_webhook(
     if -age > tolerance_seconds:
         raise WebhookVerificationError("timestamp_in_future")
 
-    signed = f"{webhook_id}.{int(timestamp)}.{_body_text(body)}".encode("utf-8")
+    signed = f"{webhook_id}.{int(timestamp)}.{_body_text(body)}".encode()
     expected = hmac.new(key, signed, hashlib.sha256).digest()
     matched = False
     for part in signature.split():

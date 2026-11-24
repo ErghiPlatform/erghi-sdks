@@ -620,7 +620,9 @@ class SocialConnectionSettings(_Wire):
     auto_public_replies_enabled: bool = Field(alias="autoPublicRepliesEnabled")
     public_acknowledgment_enabled: bool = Field(alias="publicAcknowledgmentEnabled")
     reply_to_praise: bool = Field(alias="replyToPraise")
-    max_auto_public_replies_per_post_per_hour: int = Field(alias="maxAutoPublicRepliesPerPostPerHour")
+    max_auto_public_replies_per_post_per_hour: int = Field(
+        alias="maxAutoPublicRepliesPerPostPerHour"
+    )
     allowed_link_domains: List[str] = Field([], alias="allowedLinkDomains")
 
 

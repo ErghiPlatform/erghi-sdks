@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from urllib.parse import quote
 
 from ..types import (
-    SocialCommentPage,
     SocialComment,
+    SocialCommentPage,
     SocialConnection,
     SocialConnectionSettings,
     SocialDisconnectPreview,
@@ -175,7 +175,8 @@ class SocialResource:
         page_size: Optional[int] = None,
     ) -> SocialCommentPage:
         """Comments, newest first. ``category`` is ``question``, ``complaint``, ``praise``,
-        ``spam``, ``scam_impersonation``, ``abuse`` or ``other`` (400 ``invalid_category`` otherwise)."""
+        ``spam``, ``scam_impersonation``, ``abuse`` or ``other`` (400 ``invalid_category`` otherwise).
+        """
         params: Dict[str, Any] = {}
         _set(params, "connectionId", connection_id)
         _set(params, "postId", post_id)
