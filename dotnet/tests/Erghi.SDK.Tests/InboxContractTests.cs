@@ -201,4 +201,33 @@ public class InboxContractTests
         Assert.Equal("/api/v1/contacts/k-1/notes/n-1", stub.Seen[1].Uri.AbsolutePath);
         Assert.Equal("DELETE", stub.Seen[2].Method.Method);
     }
+
+    [Fact]
+    public async Task ContactMerge_Suggestions_Merge_Dismiss()
+    {
+        var (stub, http) = Http("""[{"matchedOn":"phone","contactA":{"id":"k-1","name":"Ann","email":null,"phone":"+201000","channels":["whatsapp"],"firstSeenAt":"2026-11-01T10:00:00Z","lastSeenAt":"2026-11-02T10:00:00Z"},"contactB":{"id":"k-2","name":null,"email":null,"phone":"+201000","channels":[],"firstSeenAt":"2026-11-03T10:00:00Z","lastSeenAt":"2026-11-03T10:00:00Z"},"suggestedTargetId":"k-1"}]""");
+        var list = await new ContactsResource(http).ListMergeSuggestionsAsync();
+        Assert.Equal(("phone", "whatsapp", "k-1"), (list[0].MatchedOn, list[0].ContactA.Channels[0], list[0].SuggestedTargetId));
+        Assert.Equal("/api/v1/contacts/merge-suggestions", stub.Seen[0].Uri.AbsolutePath);
+
+        var (stub2, http2) = Http("""{"contactId":"k-1","mergedContactId":"k-2"}""");
+        var merged = await new ContactsResource(http2).MergeAsync("k-1", "k-2");
+        Assert.Equal("k-2", merged.MergedContactId);
+        Assert.Equal(("POST", "/api/v1/contacts/k-1/merge", """{"sourceContactId":"k-2"}"""),
+            (stub2.Seen[0].Method.Method, stub2.Seen[0].Uri.AbsolutePath, stub2.Seen[0].Body));
+
+        var (stub3, http3) = Http("", HttpStatusCode.NoContent);
+        await new ContactsResource(http3).DismissMergeSuggestionAsync("k-1", "k-2");
+        Assert.Equal(("/api/v1/contacts/merge-dismissals", """{"contactAId":"k-1","contactBId":"k-2"}"""),
+            (stub3.Seen[0].Uri.AbsolutePath, stub3.Seen[0].Body));
+    }
+
+    [Fact]
+    public async Task ContactMerge_Conflict_SurfacesTheServerCode()
+    {
+        var (_, http) = Http("""{"error":"Both contacts already have an account on the same channel, so they cannot be merged.","code":"merge_conflicting_identities"}""", HttpStatusCode.Conflict);
+        var ex = await Assert.ThrowsAsync<ErghiException>(() => new ContactsResource(http).MergeAsync("k-1", "k-2"));
+        Assert.Equal(409, ex.StatusCode);
+        Assert.Equal("merge_conflicting_identities", ex.ServerCode);
+    }
 }

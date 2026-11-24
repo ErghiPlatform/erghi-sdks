@@ -95,6 +95,7 @@ async def test_connections_and_settings() -> None:
 
     client, seen = make_client(respond)
     assert (await client.social.list_connections())[0].id == "n-1"
+    assert (await client.social.list_inbox_connections())[0].channel_type == "facebook"
     await client.social.get_connection_settings("n-1")
     await client.social.update_connection_settings(
         "n-1", comment_reply_mode="auto", auto_hide_abuse=False, allowed_link_domains=[]
@@ -103,13 +104,14 @@ async def test_connections_and_settings() -> None:
     await client.social.disconnect_connection("n-1")
     assert [(r.method, r.url.path) for r in seen] == [
         ("GET", "/api/v1/channels/meta/connections"),
+        ("GET", "/api/v1/social/connections"),
         ("GET", "/api/v1/channels/meta/connections/n-1/settings"),
         ("PUT", "/api/v1/channels/meta/connections/n-1/settings"),
         ("GET", "/api/v1/channels/meta/connections/n-1/disconnect-preview"),
         ("DELETE", "/api/v1/channels/meta/connections/n-1"),
     ]
     # Only the passed fields are sent; an empty list is still sent (it clears the list).
-    assert body(seen[2]) == {
+    assert body(seen[3]) == {
         "commentReplyMode": "auto",
         "autoHideAbuse": False,
         "allowedLinkDomains": [],

@@ -44,6 +44,7 @@
       "conversation_notes": true,
       "canned_responses": true,
       "contacts": true,
+      "contact_merge": false,
       "notifications": true,
       "verified": "2026-11-16",
       "evidence": "Sources/ErghiSDK/Resources/InboxResource.swift + ContactsResource.swift in erghi-sdk-swift; Tests/ErghiSDKTests/InboxContractTests.swift",

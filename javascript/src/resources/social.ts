@@ -4,6 +4,7 @@ import {
   SocialCommentQuery,
   SocialConnection,
   SocialConnectionSettings,
+  SocialInboxConnection,
   SocialDisconnectPreview,
   SocialMessageDelivery,
   SocialPage,
@@ -56,6 +57,15 @@ export class SocialResource {
   /** Active Facebook Pages and Instagram accounts of the workspace. */
   async listConnections(): Promise<SocialConnection[]> {
     return (await this.http.get<SocialConnection[]>('/api/v1/channels/meta/connections')).data;
+  }
+
+  /**
+   * The same accounts as `listConnections`, with only id, channel, name and status, for callers
+   * without `configure_ai`: needs `view_conversations` or an API key with `moderate_social`. Use it
+   * to fill a connection filter for `listPosts` / `listComments`.
+   */
+  async listInboxConnections(): Promise<SocialInboxConnection[]> {
+    return (await this.http.get<SocialInboxConnection[]>('/api/v1/social/connections')).data;
   }
 
   async getConnectionSettings(connectionId: string): Promise<SocialConnectionSettings> {

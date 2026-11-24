@@ -93,6 +93,7 @@ const INBOX_COLS = [
   ['conversation_notes', 'Conversation notes'],
   ['canned_responses', 'Saved replies'],
   ['contacts', 'Contacts (PR #256)'],
+  ['contact_merge', 'Contact merge'],
   ['notifications', 'Notifications + mentions (PR #256)'],
 ];
 

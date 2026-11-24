@@ -592,6 +592,51 @@ class RoutingDecision(_Wire):
     offers: List[RoutingDecisionOffer] = []
 
 
+class MergeContact(_Wire):
+    """One side of a merge suggestion. ``channels`` lists the channels the contact has an identity on."""
+
+    id: str
+    name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    channels: List[str] = []
+    first_seen_at: datetime = Field(alias="firstSeenAt")
+    last_seen_at: datetime = Field(alias="lastSeenAt")
+
+
+class ContactMergeSuggestion(_Wire):
+    """Two contacts that share a verified email or phone number (never a name).
+
+    ``matched_on`` is ``email`` or ``phone``; ``suggested_target_id`` is the contact seen first,
+    the one to keep.
+    """
+
+    matched_on: str = Field(alias="matchedOn")
+    contact_a: MergeContact = Field(alias="contactA")
+    contact_b: MergeContact = Field(alias="contactB")
+    suggested_target_id: str = Field(alias="suggestedTargetId")
+
+
+class ContactMergeResult(_Wire):
+    """``merged_contact_id`` no longer exists; its history now belongs to ``contact_id``."""
+
+    contact_id: str = Field(alias="contactId")
+    merged_contact_id: str = Field(alias="mergedContactId")
+
+
+class SocialInboxConnection(_Wire):
+    """A connected account as the moderation views list it.
+
+    Readable with ``view_conversations`` or ``moderate_social``, unlike :class:`SocialConnection`,
+    which needs ``configure_ai``.
+    """
+
+    id: str
+    channel_type: str = Field(alias="channelType")
+    name: Optional[str] = None
+    status: str
+
+
 class SocialConnection(_Wire):
     id: str
     channel_type: str = Field(alias="channelType")

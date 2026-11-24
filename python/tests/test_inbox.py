@@ -267,3 +267,60 @@ async def test_contact_notes() -> None:
     assert seen[2].url.path == "/api/v1/contacts/k-1/notes/n-1"
     await client.contacts.delete_note("k-1", "n-1")
     assert seen[3].method == "DELETE"
+
+
+@pytest.mark.asyncio
+async def test_contact_merge_suggestions_merge_and_dismiss() -> None:
+    side = {
+        "id": "k-1",
+        "name": "Ann",
+        "email": None,
+        "phone": "+201000",
+        "channels": ["whatsapp"],
+        "firstSeenAt": "2026-11-01T10:00:00Z",
+        "lastSeenAt": "2026-11-02T10:00:00Z",
+    }
+    suggestion = {
+        "matchedOn": "phone",
+        "contactA": side,
+        "contactB": {**side, "id": "k-2", "channels": []},
+        "suggestedTargetId": "k-1",
+    }
+
+    def respond(r: httpx.Request) -> httpx.Response:
+        if r.url.path.endswith("/merge-dismissals"):
+            return httpx.Response(204)
+        if r.url.path.endswith("/merge"):
+            return httpx.Response(200, json={"contactId": "k-1", "mergedContactId": "k-2"})
+        return httpx.Response(200, json=[suggestion])
+
+    client, seen = make_client(respond)
+    found = await client.contacts.list_merge_suggestions()
+    assert (found[0].matched_on, found[0].contact_a.channels, found[0].suggested_target_id) == (
+        "phone",
+        ["whatsapp"],
+        "k-1",
+    )
+    assert (await client.contacts.merge("k/1", "k-2")).merged_contact_id == "k-2"
+    await client.contacts.dismiss_merge_suggestion("k-1", "k-2")
+    assert [(r.method, r.url.raw_path.decode()) for r in seen] == [
+        ("GET", "/api/v1/contacts/merge-suggestions"),
+        ("POST", "/api/v1/contacts/k%2F1/merge"),
+        ("POST", "/api/v1/contacts/merge-dismissals"),
+    ]
+    assert body(seen[1]) == {"sourceContactId": "k-2"}
+    assert body(seen[2]) == {"contactAId": "k-1", "contactBId": "k-2"}
+
+
+@pytest.mark.asyncio
+async def test_contact_merge_conflict_code_is_available() -> None:
+    client, _ = make_client(
+        lambda r: httpx.Response(
+            409, json={"error": "same channel", "code": "merge_conflicting_identities"}
+        )
+    )
+    with pytest.raises(ErghiError) as info:
+        await client.contacts.merge("k-1", "k-2")
+    assert info.value.status_code == 409
+    assert info.value.details["code"] == "merge_conflicting_identities"
+

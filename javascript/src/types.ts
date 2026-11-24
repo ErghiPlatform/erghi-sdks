@@ -435,6 +435,35 @@ export interface ContactEraseResult {
   messagesDeleted: number;
 }
 
+/** One side of a merge suggestion. `channels` lists the channels the contact has an identity on. */
+export interface MergeContact {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  channels: string[];
+  firstSeenAt: string;
+  lastSeenAt: string;
+}
+
+/**
+ * Two contacts that share a verified identifier (the same email, or the same phone number, which
+ * includes a WhatsApp number the platform reported). Never based on a name. `suggestedTargetId` is
+ * the contact seen first, which is the one to keep.
+ */
+export interface ContactMergeSuggestion {
+  matchedOn: 'email' | 'phone' | string;
+  contactA: MergeContact;
+  contactB: MergeContact;
+  suggestedTargetId: string;
+}
+
+/** `mergedContactId` no longer exists; its history now belongs to `contactId`. */
+export interface ContactMergeResult {
+  contactId: string;
+  mergedContactId: string;
+}
+
 /** Requires platform PR #256. */
 export interface UserNotification {
   id: string;
@@ -649,6 +678,17 @@ export interface WorkforceReportQuery {
 export type WorkforceReport = Record<string, unknown>;
 
 // -- Social inbox (Facebook and Instagram) ---------------------------------------------------------
+
+/**
+ * A connected Facebook Page or Instagram account as the moderation views list it: readable with
+ * `view_conversations` or `moderate_social`, unlike `SocialConnection`, which needs `configure_ai`.
+ */
+export interface SocialInboxConnection {
+  id: string;
+  channelType: 'messenger' | 'instagram' | string;
+  name: string | null;
+  status: string;
+}
 
 export interface SocialConnection {
   id: string;

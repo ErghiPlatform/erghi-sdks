@@ -68,6 +68,10 @@ public class SocialContractTests
         Assert.Equal("n-1", (await social.ListConnectionsAsync())[0].Id);
         Assert.Equal("/api/v1/channels/meta/connections", Path(stub, 0));
 
+        var (istub, isocial) = Make("""[{"id":"n-1","channelType":"instagram","name":null,"status":"Active"}]""");
+        Assert.Equal("instagram", (await isocial.ListInboxConnectionsAsync())[0].ChannelType);
+        Assert.Equal("/api/v1/social/connections", Path(istub, 0));
+
         var (pstub, psocial) = Make("""{"connectionId":"n-1","channelType":"facebook","openConversationCount":3,"openConversationScope":"workspace"}""");
         Assert.Equal(3, (await psocial.GetDisconnectPreviewAsync("n-1")).OpenConversationCount);
         Assert.Equal("/api/v1/channels/meta/connections/n-1/disconnect-preview", Path(pstub, 0));

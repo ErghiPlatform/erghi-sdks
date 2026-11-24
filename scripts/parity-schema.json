@@ -13,7 +13,7 @@
     "chat": "{create_conversation, list_conversations, get_conversation, close_conversation, send_message, get_messages, mark_read, typing_indicator, tool_context, voice_note}: bool (tool_context = signed identity token + secure context for integration calls; voice_note = visitor voice note sent for transcription), plus 'evidence' or 'note'",
     "widgets": "{create, list, get, update}: bool, plus 'evidence' or 'note'",
     "realtime": "{supported: bool, protocol: string}, plus 'evidence'",
-    "inbox": "{labels, conversation_notes, canned_responses, contacts, notifications}: bool, plus 'verified', 'evidence' and 'note'. Absent for visitor-side SDKs.",
+    "inbox": "{labels, conversation_notes, canned_responses, contacts, contact_merge, notifications}: bool, plus 'verified', 'evidence' and 'note'. Absent for visitor-side SDKs.",
     "workforce": "{agent_status, away_reasons, routing_skills, agent_profiles, settings, offers, routing_decision, reports}: bool, plus 'verified', 'evidence' and 'note'. Workspace/admin surface; absent for visitor-side SDKs.",
     "social_inbox": "{connections, connection_settings, comments, posts, moderation, dm_reply_policy, report}: bool, plus 'verified', 'evidence' and 'note'. Workspace/admin surface; the Meta OAuth connect flow is deliberately not wrapped. Absent for visitor-side SDKs.",
     "rag": "{supported: bool}, plus 'note' -- true for zero SDKs today; RagController.cs exists platform-side and nothing wraps it yet",

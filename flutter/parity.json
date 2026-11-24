@@ -42,6 +42,7 @@
       "conversation_notes": true,
       "canned_responses": true,
       "contacts": true,
+      "contact_merge": false,
       "notifications": true,
       "verified": "2026-11-16",
       "evidence": "flutter/lib/src/resources/inbox_resource.dart + contacts_resource.dart; flutter/test/inbox_contract_test.dart",
