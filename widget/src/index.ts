@@ -1072,6 +1072,9 @@ export default class ErghiWidget {
   }
 
   private async startConversation(): Promise<void> {
+    // The last conversation ended, but an agent may have reopened it since: carry on in it rather
+    // than leave the reopened one orphaned in the inbox.
+    if (this.hasEndedSession() && await this.tryRestoreSession()) return;
     if (this.isPreChatPending()) {
       // The visitor's text stays in the input; they send it once they answer or skip the form.
       this.updatePreChat();
@@ -2176,6 +2179,31 @@ export default class ErghiWidget {
     }
   }
 
+  /** Keeps an ended conversation's id and token, so the widget can pick it up again if an agent
+   * reopens it. Only the visitor's own token can read it, so nothing else can take it over. */
+  private saveEndedSession(): void {
+    if (!this.conversationId) return;
+    try {
+      localStorage.setItem(this.sessionKey(), JSON.stringify({
+        conversationId: this.conversationId,
+        visitorToken: this.visitorToken,
+        savedAt: Date.now(),
+        ended: true,
+      }));
+    } catch {
+      // private mode / storage full
+    }
+  }
+
+  private hasEndedSession(): boolean {
+    try {
+      const raw = localStorage.getItem(this.sessionKey());
+      return !!raw && JSON.parse(raw)?.ended === true;
+    } catch {
+      return false;
+    }
+  }
+
   private clearSession(): void {
     try {
       localStorage.removeItem(this.sessionKey());
@@ -2187,13 +2215,13 @@ export default class ErghiWidget {
   private handleSessionEnded(): void {
     this.clearDrafts();
     this.addSystemMessage(this.tr('widget.session.endedNewChat', 'This conversation has ended. Send a message to start a new chat.'));
+    this.saveEndedSession();
     this.conversationId = null;
     this.visitorToken = null;
     this.secureContextExpiresAt = 0;
     this.awaitingReply = false;
     this.humanHandled = !this.aiEnabled;
     this.clearReplyTimeout();
-    this.clearSession();
     void this.realtime.disconnect();
     this.stopHeartbeat();
     // A visitor who came back to a conversation and never saw the form is asked before the next one.
@@ -2211,10 +2239,14 @@ export default class ErghiWidget {
 
     let conversationId: string;
     let visitorToken: string | null = null;
+    let ended = false;
+    let savedAt = 0;
     try {
       const parsed = JSON.parse(raw);
       conversationId = parsed.conversationId as string;
       visitorToken = (parsed.visitorToken as string | null | undefined) ?? null;
+      ended = parsed.ended === true;
+      savedAt = Number(parsed.savedAt) || 0;
     } catch {
       this.clearSession();
       return false;
@@ -2225,19 +2257,23 @@ export default class ErghiWidget {
       const convRes = await fetch(`${this.config.apiUrl}/api/conversations/${conversationId}`, {
         headers: visitorToken ? { 'X-Visitor-Token': visitorToken } : undefined,
       });
+      // A closed conversation answers 401 to its visitor. An ended one is kept for a while in case
+      // it is reopened; anything else that fails is dropped.
+      const keepEnded = ended && Date.now() - savedAt < ENDED_SESSION_TTL_MS;
       if (!convRes.ok) {
-        this.clearSession();
+        if (!(keepEnded && convRes.status === 401)) this.clearSession();
         return false;
       }
       const conv = await convRes.json();
       const status = String(conv.status ?? conv.Status ?? '').toLowerCase();
       if (status === 'closed' || status === 'resolved') {
-        this.clearSession();
+        if (!keepEnded) this.clearSession();
         return false;
       }
 
       this.conversationId = conversationId;
       this.visitorToken = visitorToken;
+      if (ended) this.saveSession();
       if (status === 'queued' || status === 'assigned') this.humanHandled = true;
       void this.loadPublicBranding(conv.workspaceId ?? conv.WorkspaceId);
       await this.loadMessageHistory();
@@ -2317,6 +2353,8 @@ const FILE_REJECTED_STATUSES = new Set([400, 413, 415, 422]);
 
 /** The attachment upload was refused or failed; `reason` is the server's own words, when it sent any. */
 const MAX_MESSAGE_LENGTH = 4000;
+/** How long an ended conversation is remembered in case an agent reopens it. */
+const ENDED_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** The message POST was refused; `code` is the server's stable error code, when it sent one. */
 class SendError extends Error {

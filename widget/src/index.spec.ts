@@ -335,6 +335,74 @@ describe('ErghiWidget', () => {
     });
   });
 
+  describe('A conversation reopened after it ended', () => {
+    const key = 'erghi:session:test-widget-uuid';
+    const conversationCalls = () => (global.fetch as jest.Mock).mock.calls.filter(
+      (c: unknown[]) => String(c[0]) === 'https://api.test.com/api/conversations' && (c[1] as RequestInit)?.method === 'POST');
+
+    beforeEach(async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ id: 'conv-old', visitorToken: 'tok-old', messages: [], active: true }),
+      });
+      await widget.open();
+      await (widget as any).startConversation();
+      await flushPromises();
+      (widget as any).handleSessionEnded();
+    });
+
+    it('remembers the ended conversation instead of forgetting it', () => {
+      const saved = JSON.parse(localStorage.getItem(key) || '{}');
+      expect(saved).toMatchObject({ conversationId: 'conv-old', visitorToken: 'tok-old', ended: true });
+      expect((widget as any).conversationId).toBeNull();
+    });
+
+    it('carries on in the conversation when an agent reopened it', async () => {
+      (global.fetch as jest.Mock).mockClear();
+      (global.fetch as jest.Mock).mockImplementation(async (url: string) => ({
+        ok: true,
+        status: 200,
+        json: async () => (url.endsWith('/api/conversations/conv-old')
+          ? { id: 'conv-old', status: 'Active' }
+          : { id: 'conv-new', visitorToken: 'tok-new', messages: [], active: true }),
+      }));
+
+      await (widget as any).startConversation(); // the visitor's next message does this
+      await flushPromises();
+
+      expect((widget as any).conversationId).toBe('conv-old');
+      expect((widget as any).visitorToken).toBe('tok-old');
+      expect(conversationCalls()).toHaveLength(0);
+      expect(JSON.parse(localStorage.getItem(key) || '{}').ended).toBeUndefined();
+    });
+
+    it('starts a new conversation while the old one is still closed, and keeps it for later', async () => {
+      (global.fetch as jest.Mock).mockClear();
+      (global.fetch as jest.Mock).mockImplementation(async (url: string) => (url.endsWith('/api/conversations/conv-old')
+        ? { ok: false, status: 401, json: async () => ({}) }
+        : { ok: true, status: 200, json: async () => ({ id: 'conv-new', visitorToken: 'tok-new', messages: [], active: true }) }));
+
+      await (widget as any).startConversation();
+      await flushPromises();
+
+      expect((widget as any).conversationId).toBe('conv-new');
+      expect(conversationCalls()).toHaveLength(1);
+      expect(JSON.parse(localStorage.getItem(key) || '{}')).toMatchObject({ conversationId: 'conv-new' });
+    });
+
+    it('keeps a still-closed ended conversation on reload, and forgets it once it is old', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 401, json: async () => ({}) });
+      expect(await (widget as any).tryRestoreSession()).toBe(false);
+      expect(localStorage.getItem(key)).not.toBeNull();
+
+      localStorage.setItem(key, JSON.stringify({
+        conversationId: 'conv-old', visitorToken: 'tok-old', ended: true, savedAt: Date.now() - 8 * 24 * 3600 * 1000,
+      }));
+      expect(await (widget as any).tryRestoreSession()).toBe(false);
+      expect(localStorage.getItem(key)).toBeNull();
+    });
+  });
+
   describe('Resuming a suspended page (mobile webviews)', () => {
     const setVisibility = (state: 'visible' | 'hidden') =>
       Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
