@@ -1,3 +1,11 @@
+## 1.6.2 (2026-11-27)
+
+- Fixed: when an agent reopens a conversation the visitor saw end, the visitor's next message (or
+  opening the widget, or reloading the page) carries on in that conversation instead of starting a
+  new one and leaving the reopened one with no visitor. The widget keeps the ended conversation's
+  id and visitor token for 7 days for this; while it is still closed, the next message starts a new
+  conversation as before.
+
 ## 1.6.1 (2026-11-27)
 
 - Fixed: a visitor whose chat was queued for or assigned to a person, or whose widget has AI turned
