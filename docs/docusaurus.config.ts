@@ -6,7 +6,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'Erghi SDK Documentation',
-  tagline: 'Real-time Chat and Messaging Infrastructure',
+  tagline: 'Add Erghi\'s AI customer-support chat to your web, mobile and server apps',
   favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -14,14 +14,14 @@ const config: Config = {
     v4: true, // Improve compatibility with the upcoming Docusaurus v4
   },
 
-  // Deployed to Cloudflare Pages (project "erghi-docs") with a custom domain,
+  // Deployed to S3 + CloudFront (Erghi repo, infrastructure/aws/docs.tf),
   // not GitHub Pages -- see .github/workflows/deploy-docs.yml.
   url: 'https://docs.erghi.ai',
   baseUrl: '/',
 
   // Only used if someone runs the legacy `npm run deploy` (docusaurus deploy)
   // script, which pushes to a gh-pages branch -- not part of the actual CI
-  // pipeline, which deploys via Cloudflare Pages instead. Left set so that
+  // pipeline, which deploys to S3 + CloudFront instead. Left set so that
   // fallback script doesn't error out if ever run manually.
   organizationName: 'ErghiPlatform',
   projectName: 'erghi-sdks',
