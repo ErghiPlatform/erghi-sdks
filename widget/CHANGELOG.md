@@ -1,3 +1,16 @@
+## 1.6.1 (2026-11-27)
+
+- Fixed: a visitor whose chat was queued for or assigned to a person, or whose widget has AI turned
+  off, no longer sees typing dots after each message and a false "We're having trouble getting a
+  response" notice 30 seconds later. This also holds for a conversation restored after a page reload.
+- Fixed: a deactivated or deleted widget no longer shows its launcher. Only a 404 from the widget
+  config counts; a timeout, network error or 5xx still shows the widget with default settings.
+- Fixed: business hours are shown. While the team is away, the header says so and a line under it
+  gives the reopening time in the visitor's own time zone and language, then says the AI can still
+  help (or, with AI off, that a message will be answered later). It switches back at the reopening
+  time. Needs an Erghi platform release that sends `businessHours` in the public widget config;
+  with an older one nothing changes.
+
 ## 1.6.0 (2026-11-24)
 
 - Added: streaming replies. When a workspace's reply engine streams (a custom model with `stream`
