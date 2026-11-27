@@ -156,6 +156,16 @@ export function buildStyles(look: WidgetLook): string {
       white-space: nowrap;
     }
     .header-sub { font-size: 12px; opacity: .9; margin: 2px 0 0; }
+    .away-notice {
+      margin: 0;
+      padding: 8px 16px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--cf-text-muted);
+      background: var(--cf-raised);
+      border-bottom: 1px solid var(--cf-border);
+    }
+    .away-notice[hidden] { display: none; }
     .icon-btn {
       background: rgba(255,255,255,.15);
       border: none;

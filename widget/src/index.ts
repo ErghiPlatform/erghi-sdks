@@ -182,6 +182,17 @@ export default class ErghiWidget {
   /** System notices the server posted (queue position, connecting, connected) and when they came. */
   private serverNotices: Array<{ el: Element; at: number }> = [];
   private assignedAt = 0;
+  /** A person answers this conversation (it was queued for or assigned to an agent, or the widget's
+   * AI is off), so there is no AI reply to wait for: sending shows no typing dots and arms no
+   * "trouble getting a response" timer. An AssistantTyping event still arms it if the AI does answer. */
+  private humanHandled = false;
+  /** The widget's AI setting from the public config; off means every conversation is human. */
+  private aiEnabled = true;
+  /** Opening hours from the public config: null when none apply (always open). */
+  private openingHours: { isOpen: boolean; nextOpenAt: number | null } | null = null;
+  private openingHoursTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The API said this widget does not exist or is inactive: nothing is rendered or started. */
+  private unavailable = false;
   private translations: Record<string, string> = {};
   private locale = 'en';
   // Empty names fall back to localized defaults in senderLabel() at render time.
@@ -266,7 +277,14 @@ export default class ErghiWidget {
   }
 
   private async bootstrap(): Promise<void> {
-    await Promise.all([this.loadWidgetEmbedConfig(), this.loadTranslations()]);
+    const [found] = await Promise.all([this.loadWidgetEmbedConfig(), this.loadTranslations()]);
+    if (!found) {
+      this.unavailable = true;
+      // The API answered that this widget does not exist or was deactivated: no launcher, since
+      // a visitor could not start a chat anyway. A timeout or outage still renders with defaults.
+      console.info('[Erghi] Widget not found or inactive; not showing the chat launcher.');
+      return;
+    }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => this.render());
     } else {
@@ -312,13 +330,16 @@ export default class ErghiWidget {
    * isn't shown until this settles: a slow API must not leave a customer's page without chat.
    * A response that arrives after the timeout is dropped (the request is aborted), so the widget
    * never restyles itself after appearing.
+   * Resolves false only when the API says the widget does not exist or is inactive (404).
    */
-  private async loadWidgetEmbedConfig(): Promise<void> {
-    const raw = await fetchJsonWithTimeout(
+  private async loadWidgetEmbedConfig(): Promise<boolean> {
+    const result = await fetchWithTimeout(
       `${this.config.apiUrl}/api/widgets/${encodeURIComponent(this.config.widgetId)}/public`,
       STARTUP_FETCH_TIMEOUT_MS
     );
-    if (!raw || typeof raw !== 'object') return;
+    if (!result.ok) return result.status !== 404;
+    const raw = result.body;
+    if (!raw || typeof raw !== 'object') return true;
     const data = raw as PublicWidgetConfig;
     const primaryColor = normalizeHex(data.primaryColor);
     if (primaryColor && !this.explicit.primaryColor) this.config.primaryColor = primaryColor;
@@ -349,6 +370,56 @@ export default class ErghiWidget {
       privacyUrl: safeHttpsUrl(data.privacyUrl ?? data.PrivacyUrl),
       supportUrl: safeHttpsUrl(data.supportUrl ?? data.SupportUrl),
     };
+    this.aiEnabled = boolOr(data.enableAI ?? data.EnableAI, true);
+    this.humanHandled = !this.aiEnabled;
+    this.openingHours = parseOpeningHours(data.businessHours ?? data.BusinessHours);
+    return true;
+  }
+
+  private isAway(): boolean {
+    return !!this.openingHours && !this.openingHours.isOpen;
+  }
+
+  /** The header line under the title; while the team is away it says so instead of promising a
+   * reply in minutes. */
+  private headerSubtitle(): string {
+    return this.isAway()
+      ? this.tr('widget.offline.team', 'Our team is offline right now.')
+      : this.tr('widget.header.subtitle', 'We typically reply in minutes');
+  }
+
+  /** The line under the header while away: when the team is back (in the visitor's own time zone
+   * and language), then that the AI can still help, or that a message will be answered later. */
+  private awayNoticeText(): string {
+    const next = this.openingHours?.nextOpenAt;
+    const back = next == null ? '' : this.trf('widget.offline.back', "We're back {time}.", {
+      time: formatReopening(next, this.locale),
+    });
+    const then = this.aiEnabled
+      ? this.tr('widget.offline.aiStillHere', 'The AI assistant can still help.')
+      : this.tr('widget.offline.leaveMessage', "Leave a message and we'll reply when we're back.");
+    return [back, then].filter(Boolean).join(' ');
+  }
+
+  /** Shows the current opening state, and flips it back to open when the next opening comes. */
+  private applyOpeningHours(): void {
+    const sub = this.shadow?.getElementById('cf-header-sub');
+    if (sub) sub.textContent = this.headerSubtitle();
+    const notice = this.shadow?.getElementById('cf-away');
+    if (notice) {
+      notice.hidden = !this.isAway();
+      notice.textContent = this.isAway() ? this.awayNoticeText() : '';
+    }
+    if (this.openingHoursTimer) clearTimeout(this.openingHoursTimer);
+    this.openingHoursTimer = null;
+    const next = this.openingHours?.nextOpenAt;
+    if (!this.openingHours || this.openingHours.isOpen || next == null) return;
+    // setTimeout overflows past ~24.8 days; check again daily until the reopening is that close.
+    const delay = Math.max(0, Math.min(next - Date.now(), 24 * 60 * 60 * 1000));
+    this.openingHoursTimer = setTimeout(() => {
+      if (this.openingHours && next <= Date.now()) this.openingHours = { isOpen: true, nextOpenAt: null };
+      this.applyOpeningHours();
+    }, delay);
   }
 
   /** The form's markup; hidden until updatePreChat decides it is needed. Labels name every field,
@@ -685,11 +756,12 @@ export default class ErghiWidget {
           <div class="header-brand" id="cf-brand">
             <div class="header-text">
               <p class="header-title">${escapeHtml(this.config.title)}</p>
-              <p class="header-sub">${escapeHtml(this.tr('widget.header.subtitle', 'We typically reply in minutes'))}</p>
+              <p class="header-sub" id="cf-header-sub">${escapeHtml(this.headerSubtitle())}</p>
             </div>
           </div>
           <button type="button" class="icon-btn" id="cf-close" aria-label="${escapeHtml(this.tr('widget.aria.close', 'Close chat'))}">&times;</button>
         </div>
+        <p class="away-notice" id="cf-away" role="status" hidden></p>
         <div class="messages" id="cf-messages"></div>
         <div class="typing" id="cf-typing"><span></span><span></span><span></span></div>
         ${this.buildPreChatHtml()}
@@ -718,6 +790,7 @@ export default class ErghiWidget {
     `;
     this.shadow.appendChild(root);
     this.attachLogo();
+    this.applyOpeningHours();
 
     document.body.appendChild(this.host);
     this.bindEvents();
@@ -796,6 +869,7 @@ export default class ErghiWidget {
   }
 
   public open(): void {
+    if (this.unavailable) return;
     this.isOpen = true;
     this.$('cf-panel')?.classList.add('open');
     this.$('cf-bubble')?.classList.add('hidden');
@@ -913,6 +987,8 @@ export default class ErghiWidget {
     this.clearReplyTimeout();
     this.clearDrafts();
     this.clearCampaignTimer();
+    if (this.openingHoursTimer) clearTimeout(this.openingHoursTimer);
+    this.openingHoursTimer = null;
     this.cancelRecording();
     this.stopSpeaking();
     void this.realtime.disconnect();
@@ -1102,7 +1178,7 @@ export default class ErghiWidget {
     if (input && fromInput) input.value = '';
     // The file is on its way (or will be reported failed); either way the chip's job is done.
     if (fromInput && file) this.setPendingFile(null);
-    this.setTyping(true);
+    if (!this.humanHandled) this.setTyping(true);
 
     try {
       let attachments: Array<{ id: string; filename: string; contentType: string; size: number; url: string }> | undefined;
@@ -1137,7 +1213,7 @@ export default class ErghiWidget {
       const serverId = saved.id ?? saved.Id;
       this.replaceTempId(tempId, serverId);
       this.knownMessageIds.add(serverId);
-      this.awaitReply();
+      this.afterVisitorSend();
     } catch (err) {
       console.error('[Erghi] Send failed:', err);
       this.setTyping(false);
@@ -1317,7 +1393,7 @@ export default class ErghiWidget {
         source: 'voice',
       });
       this.shadow?.querySelector(`[data-id="${tempId}"]`)?.classList.add('pending');
-      this.setTyping(true);
+      if (!this.humanHandled) this.setTyping(true);
 
       const form = new FormData();
       form.append('file', clip, `voice-note.${fileExtension(clip.type)}`);
@@ -1337,7 +1413,7 @@ export default class ErghiWidget {
         const serverId = String(saved.id ?? saved.Id);
         this.replaceTempId(tempId, serverId);
         this.setMessageText(serverId, String(saved.content ?? saved.Content ?? ''));
-        this.awaitReply();
+        this.afterVisitorSend();
         return;
       }
 
@@ -1476,6 +1552,24 @@ export default class ErghiWidget {
     return Array.isArray(list) ? (list as Message[]) : [];
   }
 
+  /** After a visitor message is saved: wait for the AI's reply, unless a person handles the chat.
+   * People take longer than any timer, so a "trouble getting a response" notice would be false. */
+  private afterVisitorSend(): void {
+    if (this.humanHandled) {
+      this.setTyping(false);
+      return;
+    }
+    this.awaitReply();
+  }
+
+  /** The conversation went to a person (queued or assigned): stop waiting for an AI reply. */
+  private markHumanHandled(): void {
+    this.humanHandled = true;
+    this.awaitingReply = false;
+    this.clearReplyTimeout();
+    this.setTyping(false);
+  }
+
   private awaitReply(timeoutMs: number = ErghiWidget.REPLY_TIMEOUT_MS): void {
     this.awaitingReply = true;
     this.setTyping(true);
@@ -1558,10 +1652,10 @@ export default class ErghiWidget {
           this.assignedAt = Date.now();
           this.clearDrafts();
           this.pruneWaitingNotices();
-          this.awaitingReply = false;
-          this.clearReplyTimeout();
-          this.setTyping(false);
+          this.markHumanHandled();
         },
+        // The server posts its own queue notice as a message; this only stops the reply timer.
+        onEscalated: () => this.markHumanHandled(),
         onStateChange: (connected) => {
           if (connected) {
             this.stopFallbackPoll();
@@ -2097,6 +2191,7 @@ export default class ErghiWidget {
     this.visitorToken = null;
     this.secureContextExpiresAt = 0;
     this.awaitingReply = false;
+    this.humanHandled = !this.aiEnabled;
     this.clearReplyTimeout();
     this.clearSession();
     void this.realtime.disconnect();
@@ -2143,6 +2238,7 @@ export default class ErghiWidget {
 
       this.conversationId = conversationId;
       this.visitorToken = visitorToken;
+      if (status === 'queued' || status === 'assigned') this.humanHandled = true;
       void this.loadPublicBranding(conv.workspaceId ?? conv.WorkspaceId);
       await this.loadMessageHistory();
       await this.connectRealtime();
@@ -2210,7 +2306,8 @@ type PublicWidgetConfig = Partial<Record<
   | 'termsUrl' | 'TermsUrl' | 'privacyUrl' | 'PrivacyUrl' | 'supportUrl' | 'SupportUrl'
   | 'voiceInputEnabled' | 'VoiceInputEnabled' | 'voiceOutputEnabled' | 'VoiceOutputEnabled'
   | 'attachmentsEnabled' | 'AttachmentsEnabled' | 'messageRatingEnabled' | 'MessageRatingEnabled'
-  | 'showPoweredBy' | 'ShowPoweredBy' | 'campaigns' | 'Campaigns',
+  | 'showPoweredBy' | 'ShowPoweredBy' | 'campaigns' | 'Campaigns'
+  | 'enableAI' | 'EnableAI' | 'businessHours' | 'BusinessHours',
   unknown
 >>;
 
@@ -2322,18 +2419,57 @@ export function safeLogoUrl(value: unknown, apiUrl: string): string {
  * GET and parse JSON, giving up after `timeoutMs` for the whole exchange (headers and body).
  * Never throws: any failure, non-2xx, or timeout comes back as null.
  */
-async function fetchJsonWithTimeout(url: string, timeoutMs: number): Promise<unknown> {
+type FetchResult = { ok: true; body: unknown } | { ok: false; status: number };
+
+/** status 0: no answer (timeout, network error, unreadable body). */
+async function fetchWithTimeout(url: string, timeoutMs: number): Promise<FetchResult> {
   // AbortController + setTimeout rather than AbortSignal.timeout, which older Safari lacks.
   const controller = typeof AbortController === 'function' ? new AbortController() : null;
   const timer = setTimeout(() => controller?.abort(), timeoutMs);
   try {
     const res = await fetch(url, controller ? { signal: controller.signal } : undefined);
-    if (!res.ok) return null;
-    return await res.json();
+    if (!res.ok) return { ok: false, status: res.status };
+    return { ok: true, body: await res.json() };
   } catch {
-    return null;
+    return { ok: false, status: 0 };
   } finally {
     clearTimeout(timer);
+  }
+}
+
+async function fetchJsonWithTimeout(url: string, timeoutMs: number): Promise<unknown> {
+  const result = await fetchWithTimeout(url, timeoutMs);
+  return result.ok ? result.body : null;
+}
+
+/** The public opening status ({ isOpen, nextOpenAt, timeZone }); null when absent or malformed. */
+export function parseOpeningHours(value: unknown): { isOpen: boolean; nextOpenAt: number | null } | null {
+  if (!value || typeof value !== 'object') return null;
+  const obj = value as Record<string, unknown>;
+  const isOpen = obj.isOpen ?? obj.IsOpen;
+  if (typeof isOpen !== 'boolean') return null;
+  const next = obj.nextOpenAt ?? obj.NextOpenAt;
+  let nextOpenAt: number | null = null;
+  if (!isOpen && typeof next === 'string' && next) {
+    // The API sends UTC; a stamp without a zone is read as UTC, not the visitor's local time.
+    const stamp = /(Z|[+-]\d\d:?\d\d)$/i.test(next) ? next : `${next}Z`;
+    const ms = Date.parse(stamp);
+    nextOpenAt = Number.isFinite(ms) ? ms : null;
+  }
+  return { isOpen, nextOpenAt };
+}
+
+/** "Mon 09:00"-style reopening time in the visitor's zone and language; the day is left out
+ * when it is today. */
+export function formatReopening(at: number, locale: string, now: number = Date.now()): string {
+  const when = new Date(at);
+  const sameDay = new Date(now).toDateString() === when.toDateString();
+  try {
+    return new Intl.DateTimeFormat(locale, sameDay
+      ? { hour: 'numeric', minute: '2-digit' }
+      : { weekday: 'short', hour: 'numeric', minute: '2-digit' }).format(when);
+  } catch {
+    return when.toLocaleString();
   }
 }
 
