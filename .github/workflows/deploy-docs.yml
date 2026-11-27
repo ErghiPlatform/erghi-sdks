@@ -1,26 +1,17 @@
-# Deploys the Docusaurus docs site (in docs/) to Cloudflare Pages, matching
-# the deploy pattern used by erghi-landing/erghi-admin-portal/erghi-widget-host
-# in the Erghi repo (see Erghi/.github/workflows/reusable-cloudflare-pages-deploy.yml).
-# Implemented directly here (not as a cross-repo reusable-workflow call) since
-# this repo is separate from Erghi and cross-repo `uses:` references need extra
-# org-level Actions permissions plus duplicated Cloudflare secrets anyway.
+# Deploys the Docusaurus docs site (docs/) to docs.erghi.ai: S3 + CloudFront, defined in the Erghi
+# repo (infrastructure/aws/docs.tf). It was on Cloudflare Pages until 2026-11-27; some Egyptian
+# ISPs drop the Cloudflare addresses Pages is served from.
 #
-# This replaces the previous docs.yml, which deployed to GitHub Pages at
-# https://erghi-sdks.github.io/erghi-sdks/ -- disconnected from docs.erghi.ai.
+# Needs, on this repo:
+#   secrets DOCS_AWS_ACCESS_KEY_ID / DOCS_AWS_SECRET_ACCESS_KEY: the key of the docs deploy user
+#     (tofu output docs_deploy_user_name), which can only write the docs bucket and clear its cache
+#   variables DOCS_S3_BUCKET / DOCS_CLOUDFRONT_DISTRIBUTION_ID (tofu outputs docs_bucket and
+#     docs_distribution_id) and AWS_REGION (eu-north-1)
 #
-# Setup required before first deploy:
-#   1. Create a Cloudflare Pages project named "erghi-docs" in the dashboard.
-#   2. Add a custom domain "docs.erghi.ai" to the project (same Cloudflare
-#      account/zone as erghi.ai -- this also creates the DNS record for you).
-#   3. Set these repository secrets on THIS repo (erghi-sdks), separately from
-#      the Erghi repo's copies of the same names:
-#        CLOUDFLARE_API_TOKEN  — API token with Cloudflare Pages:Edit permission
-#        CLOUDFLARE_ACCOUNT_ID — your Cloudflare account ID
-#
-# Cloudflare Pages URL (before custom domain):
-#   https://erghi-docs.pages.dev
+# Cache-Control: hashed assets (assets/*) for a year, immutable; everything else browsers
+# revalidate on every load, and the edge keeps it until the invalidation at the end.
 
-name: Deploy Docs to Cloudflare Pages
+name: Deploy Docs
 
 on:
   workflow_dispatch:
@@ -34,6 +25,7 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      - '.github/workflows/deploy-docs.yml'
 
 concurrency:
   group: deploy-erghi-docs
@@ -45,15 +37,17 @@ permissions:
 jobs:
   deploy:
     name: Build & Deploy erghi-docs
-    runs-on: ubuntu-latest
+    if: vars.DOCS_S3_BUCKET != '' && vars.DOCS_CLOUDFRONT_DISTRIBUTION_ID != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: docs
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: npm
@@ -65,9 +59,24 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy docs/build --project-name=erghi-docs --branch=main
+          aws-access-key-id: ${{ secrets.DOCS_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.DOCS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION || 'eu-north-1' }}
+
+      - name: Upload and invalidate
+        env:
+          BUCKET: ${{ vars.DOCS_S3_BUCKET }}
+          DISTRIBUTION_ID: ${{ vars.DOCS_CLOUDFRONT_DISTRIBUTION_ID }}
+        run: |
+          set -euo pipefail
+          [ -f build/index.html ] && [ -f build/404.html ] || { echo "Not a docs build" >&2; exit 1; }
+          aws s3 sync build/assets "s3://$BUCKET/assets" \
+            --cache-control "public, max-age=31536000, immutable" --only-show-errors
+          aws s3 sync build "s3://$BUCKET" --delete --exclude "assets/*" \
+            --cache-control "public, max-age=0, must-revalidate, s-maxage=31536000" --only-show-errors
+          id=$(aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*" \
+            --query Invalidation.Id --output text)
+          aws cloudfront wait invalidation-completed --distribution-id "$DISTRIBUTION_ID" --id "$id"
+          echo "Deployed to s3://$BUCKET; invalidation $id completed."
